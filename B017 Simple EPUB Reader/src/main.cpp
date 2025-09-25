@@ -2431,9 +2431,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         {
             g_framerateTimer = timeSetEvent(1000, 0, OnFrameRateTimer, 0, TIME_PERIODIC);
         }
+
+        std::string book_path = w2a(g_book->get_book_path());
         g_vd->clear();
         g_recorder->flush();
-        g_recorder->openBook(w2a(g_book->get_book_path()));
+        g_recorder->openBook(book_path);
    
         DumpBookRecord();
 
@@ -2464,6 +2466,18 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         g_vd->load_book();
         g_vd->load_html(g_book->ocf_pkg_.spine[spine_id].href);
 
+
+  
+        std::string title;
+        auto t = g_book->get_title();
+        if (t.empty()) { t = fs::path(book_path).filename().generic_string(); }
+        if (!t.empty()) { title += t + " - "; }
+        auto a = g_book->get_author();
+        if (!a.empty()) { title += a + " - "; }
+        title += g_cfg.appName;
+        SetWindowTextW(g_hWnd, a2w(title).c_str());
+ 
+  
         UpdateCache();          // 复用前面给出的 UpdateCache()
 
         
@@ -3305,16 +3319,7 @@ void SimpleContainer::import_css(litehtml::string& text,
 // ---------- 2. 标题 ----------------------------------------------------
 void SimpleContainer::set_caption(const char* cap)
 {
-    if (cap && g_hWnd) {
-        std::string title;
-        auto t = g_book->get_title();
-        if (!t.empty()) { title += t + " - "; }
-        auto a = g_book->get_author();
-        if (!a.empty()) { title += a + " - "; }
-        title += g_cfg.appName;
-        SetWindowTextW(g_hWnd, a2w(title).c_str());
-        //OutputDebugStringW((a2w(cap)+L"\n").c_str());
-    }
+    return;
 }
 
 // ---------- 3. base url -------------------------------------------------
