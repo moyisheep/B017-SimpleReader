@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\SimpleContainer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="src\resource.rc">
@@ -29,7 +30,9 @@
   <ItemGroup>
     <ClInclude Include="src\3rdParty\stb_image.h" />
     <ClInclude Include="src\main.h" />
+    <ClInclude Include="src\MemFile.h" />
     <ClInclude Include="src\resource.h" />
+    <ClInclude Include="src\SimpleContainer.h" />
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="res\homepage.html" />
