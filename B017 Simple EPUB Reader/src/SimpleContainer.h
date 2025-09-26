@@ -29,6 +29,7 @@ using Microsoft::WRL::ComPtr;
 
 #include <lunasvg/lunasvg.h>
 #include "3rdParty/stb_image.h"
+#include "FontKey.h"
 #include "MemFile.h"
 
 
@@ -42,26 +43,6 @@ struct ImageFrame
 };
 
 
-struct FontKey {
-    std::wstring family;
-    int          weight;
-    bool         italic;
-    int          size;          // px
-    bool operator==(const FontKey& o) const noexcept = default;
-};
-namespace std {
-    template<>
-    struct hash<FontKey> {
-        size_t operator()(const FontKey& k) const noexcept {
-            std::wstring txt;
-            txt += k.family;
-            txt += std::to_wstring(k.weight);
-            txt += std::to_wstring(k.italic);
-            txt += std::to_wstring(k.size);
-            return std::hash<std::wstring>{}(txt);
-        }
-    };
-}
 
 
 // 一个字符在窗口坐标系中的包围盒
