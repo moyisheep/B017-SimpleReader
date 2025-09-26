@@ -10,7 +10,7 @@
 #include <unordered_map>
 #include <regex>
 
-#include <Windows.h>
+
 
 #include <gumbo.h>
 #include <miniz/miniz.h>
@@ -21,6 +21,7 @@
 
 #include "MemFile.h"
 #include "FontKey.h"
+#include "a2w_w2a.h"
 
 
 

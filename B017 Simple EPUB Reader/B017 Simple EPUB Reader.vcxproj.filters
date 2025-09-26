@@ -22,6 +22,12 @@
     <ClInclude Include="src\FontKey.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="src\MML2SVG.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\a2w_w2a.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\app.ico">
@@ -61,6 +67,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="src\EPUBBook.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\MML2SVG.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

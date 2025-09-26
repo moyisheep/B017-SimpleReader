@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClCompile Include="src\EPUBBook.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\MML2SVG.cpp" />
     <ClCompile Include="src\SimpleContainer.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -30,10 +31,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\3rdParty\stb_image.h" />
+    <ClInclude Include="src\a2w_w2a.h" />
     <ClInclude Include="src\EPUBBook.h" />
     <ClInclude Include="src\FontKey.h" />
     <ClInclude Include="src\main.h" />
     <ClInclude Include="src\MemFile.h" />
+    <ClInclude Include="src\MML2SVG.h" />
     <ClInclude Include="src\resource.h" />
     <ClInclude Include="src\SimpleContainer.h" />
   </ItemGroup>

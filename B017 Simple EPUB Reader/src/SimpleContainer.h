@@ -31,7 +31,7 @@ using Microsoft::WRL::ComPtr;
 #include "3rdParty/stb_image.h"
 #include "FontKey.h"
 #include "MemFile.h"
-
+#include "a2w_w2a.h"
 
 struct ImageFrame
 {
