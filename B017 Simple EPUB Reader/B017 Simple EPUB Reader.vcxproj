@@ -24,6 +24,7 @@
     <ClCompile Include="src\MML2SVG.cpp" />
     <ClCompile Include="src\ReadingRecord.cpp" />
     <ClCompile Include="src\SimpleContainer.cpp" />
+    <ClCompile Include="src\VirtualDoc.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="src\resource.rc">
@@ -41,6 +42,7 @@
     <ClInclude Include="src\ReadingRecord.h" />
     <ClInclude Include="src\resource.h" />
     <ClInclude Include="src\SimpleContainer.h" />
+    <ClInclude Include="src\VirtualDoc.h" />
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="res\homepage.html" />
