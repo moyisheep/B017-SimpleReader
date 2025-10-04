@@ -11,6 +11,7 @@
 #include <queue>
 
 #include <gumbo.h>
+#include <litehtml.h>
 
 #include "a2w_w2a.h"
 #include "EPUBBook.h"
@@ -32,42 +33,104 @@ struct BodyBlock {
 
 };
 
+//struct HtmlBlock {
+//    int spine_id;
+//    float height = 0.0f;
+//    std::string head;
+//    std::vector<BodyBlock> body_blocks;
+//};
 struct HtmlBlock {
     int spine_id;
-    float height = 0.0f;
-    std::string head;
-    std::vector<BodyBlock> body_blocks;
+    std::string html;
+
+};
+
+struct DocBlock {
+    int spine_id;
+    litehtml::document::ptr doc;
 };
 
 
+class HtmlBlockColl {
+public:
+    void push_back(const HtmlBlock& block);
+    void push_front(const HtmlBlock& block);
+    HtmlBlock get(int spine_id) ;
 
+    size_t size() const;
 
+    bool empty();
+    HtmlBlock& front();
+    HtmlBlock& back();
+    void clear();
+    bool exists(int spine_id);
+private:
+    mutable std::mutex m_mutex;
+    std::vector<HtmlBlock> m_blocks;
+};
+
+class DocBlockColl
+{
+public:
+    void push_back( DocBlock block);
+    void push_front( DocBlock block);
+    size_t size() const;
+
+    bool empty();
+    DocBlock& front();
+    DocBlock& back();
+    void clear();
+    bool exists(int spine_id);
+    float height();
+    float height(int spine_id);
+    DocBlock get(ScrollPosition sp);
+
+    // 迭代器支持
+    std::vector<DocBlock> get_snapshot() const;
+private:
+    mutable std::mutex m_mutex;
+    std::vector<DocBlock> m_blocks;
+};
+
+class SafeScrollPosition
+{
+public:
+ 
+    ScrollPosition get_position() ;
+    void set_position(ScrollPosition pos);
+    void clear();
+private:
+    mutable std::mutex m_mutex;
+    ScrollPosition m_sp{};
+};
 class VirtualDoc {
 public:
     VirtualDoc();
     ~VirtualDoc();
-    void load_book(std::shared_ptr<EPUBBook> book, std::shared_ptr<SimpleContainer> container);
+    void load_book(std::shared_ptr<EPUBBook> book, std::shared_ptr<SimpleContainer> container, HWND hwnd);
     void OnTreeSelChanged(std::wstring href);
-    void update_doc(int client_h, float offsetY);
+    //void update_doc(int client_h, float offsetY);
     void load_html(std::wstring& href);
     void clear();
-    ScrollPosition get_scroll_position();
+    ScrollPosition get_scroll_position() ;
     void set_scroll_position(ScrollPosition sp);
-    std::vector<HtmlBlock> m_blocks;
-    float get_height_by_id(int spine_id);
+    
     void reload();
     bool exists(int spine_id);
-    //void draw(int x, int y, int w, int h, float offsetY);
-    litehtml::document::ptr m_doc;
-    std::atomic<bool>        m_isReloading{ false };
-    std::atomic<bool>        m_isAnchor{ false };
-    float m_percent = 0.0;
-    float  m_height = 0.0f;
-    std::string m_anchor_id = "";
-    std::atomic<bool>        m_workerBusy{ false }; // 是否正在干活
+    void present(int width, int height);
+
+    void convert_coordinate(int& x, int& y, ScrollPosition sp);
+
+    void on_lbutton_down(int x, int y);
+    void on_lbutton_up(int x, int y);
+    void on_lbutton_dblclk(int x, int y);
+    void on_mouse_move(int x, int y);
+    void on_mouse_wheel(int delta);
+    void on_mouse_leave(int x, int y);
+    void set_document_width(int width);
 private:
-    HtmlBlock get_html_block(std::string html, int spine_id);
-    void merge_block(HtmlBlock& dst, HtmlBlock& src, bool isAddToBottom = true);
+    //HtmlBlock get_html_block(std::string html, int spine_id);
+    //void merge_block(HtmlBlock& dst, HtmlBlock& src, bool isAddToBottom = true);
     int get_id_by_href(std::wstring& href);
     std::wstring get_href_by_id(int spine_id);
     std::string get_head(std::string& html);
@@ -79,14 +142,14 @@ private:
 
 
 
-    bool insert_next_chapter();
+    //bool insert_next_chapter();
 
     void workerLoop();
 
 
     float get_height();
-    bool insert_chapter(int spine_id);
-    bool insert_prev_chapter();
+    bool insert_chapter(int spine_id, bool insertAtFront = false);
+    //bool insert_prev_chapter();
 
 
     bool load_by_id(int spine_id, bool isPushBack);
@@ -99,6 +162,7 @@ private:
     std::vector<OCFRef> m_spine;
     std::shared_ptr<EPUBBook> m_book;
     std::shared_ptr<SimpleContainer> m_container;
+    HWND m_hwnd = nullptr;
     //std::vector<DocCache> m_doc_cache;
 
     // 放在 VirtualDoc 内，仅这 5 个
@@ -112,8 +176,19 @@ private:
     std::queue<Task>         m_taskQueue;       // 待处理任务
 
     std::condition_variable m_cvFinish;
-    std::atomic<bool> m_cancelFlag{ false };
-    float m_offsetY = 0.0f;
+
+    std::atomic<float> m_offsetY = 0.0f;
+    std::atomic<float>  m_height{ 0.0f };
+    DocBlockColl m_docs;
+    std::atomic<bool>        m_isReloading{ false };
+    std::atomic<bool>        m_isAnchor{ false };
+    HtmlBlockColl m_blocks;
+    SafeScrollPosition m_sp;
+    float m_percent = 0.0;
+
+    std::string m_anchor_id = "";
+    std::atomic<bool>        m_workerBusy{ false }; // 是否正在干活
+    std::atomic<int>      m_doc_width{ 600};
 };
 
 

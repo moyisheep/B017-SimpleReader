@@ -99,7 +99,22 @@ std::unique_ptr<ScrollBarEx> g_scrollbar;
 //std::vector<std::wstring> g_fontNames;       // 保存字体名
 // 1. 在全局或合适位置声明
     // 整篇文档的所有行
+static int64_t nowUs() {
+    return std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+}
 
+std::string documents_dir()
+{
+    PWSTR pszPath = nullptr;
+    if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_Documents, 0, NULL, &pszPath)))
+    {
+        fs::path path(pszPath);
+        CoTaskMemFree(pszPath);
+        return path.generic_string();
+    }
+    return ""; // 或抛出异常
+}
 void CheckAllMenuItem()
 {
     CheckMenuItem(GetMenu(g_hWnd), IDM_TOGGLE_CSS,
@@ -668,39 +683,39 @@ void CALLBACK OnFrameRateTimer(UINT, UINT, DWORD_PTR, DWORD_PTR, DWORD_PTR)
 
 }
 
-void CALLBACK OnScrollTimer(UINT, UINT, DWORD_PTR, DWORD_PTR, DWORD_PTR)
-{
-
-    float dt = 0.001f;
-
-
-    // 物理惯性：v = v * e^(-k*dt)
-    const float friction = 8.0f;   // 越大越快停
-    float v = g_velocity.load(std::memory_order_relaxed) * std::exp(-friction * dt);
-
-    // 位移
-    float cur = g_offsetY.load(std::memory_order_relaxed);
-    float newY = cur + v * dt;
-
-    // 边界
-    RECT rc;
-    GetClientRect(g_hView, &rc);
-    float h = float(rc.bottom - rc.top);
-    newY = std::clamp(newY, -h/2.0f, std::max(0.0f, g_vd->m_height - h));
-    //OutputDebugStringA(std::to_string(newY).c_str());
-    //OutputDebugStringA("\n");
-    g_offsetY.store(newY, std::memory_order_relaxed);
-    g_velocity.store(v, std::memory_order_relaxed);
-
-    InvalidateRect(g_hView, nullptr, FALSE);
-
-    // 速度接近 0 时停止定时器
-    if (std::fabs(v) < 0.1f) {
-        g_velocity.store(0.0f);
-        timeKillEvent(g_scrollTimer);
-        g_scrollTimer = 0;
-    }
-}
+//void CALLBACK OnScrollTimer(UINT, UINT, DWORD_PTR, DWORD_PTR, DWORD_PTR)
+//{
+//
+//    float dt = 0.001f;
+//
+//
+//    // 物理惯性：v = v * e^(-k*dt)
+//    const float friction = 8.0f;   // 越大越快停
+//    float v = g_velocity.load(std::memory_order_relaxed) * std::exp(-friction * dt);
+//
+//    // 位移
+//    float cur = g_offsetY.load(std::memory_order_relaxed);
+//    float newY = cur + v * dt;
+//
+//    // 边界
+//    RECT rc;
+//    GetClientRect(g_hView, &rc);
+//    float h = float(rc.bottom - rc.top);
+//    newY = std::clamp(newY, -h/2.0f, std::max(0.0f, g_vd->m_height - h));
+//    //OutputDebugStringA(std::to_string(newY).c_str());
+//    //OutputDebugStringA("\n");
+//    g_offsetY.store(newY, std::memory_order_relaxed);
+//    g_velocity.store(v, std::memory_order_relaxed);
+//
+//    InvalidateRect(g_hView, nullptr, FALSE);
+//
+//    // 速度接近 0 时停止定时器
+//    if (std::fabs(v) < 0.1f) {
+//        g_velocity.store(0.0f);
+//        timeKillEvent(g_scrollTimer);
+//        g_scrollTimer = 0;
+//    }
+//}
 
 
 
@@ -715,13 +730,82 @@ void convert_coordinate(POINT& pt)
 
 }
 
-
+void CALLBACK OnFlush(UINT, UINT, DWORD_PTR, DWORD_PTR, DWORD_PTR)
+{
+    //// 直接在工作线程/回调里刷新
+    OutputDebugStringA("OnFlush\n");
+    if (g_recorder) { g_recorder->flush(); }
+    g_flushTimer = 0;
+}
 
 void CALLBACK Tick(UINT, UINT, DWORD_PTR, DWORD_PTR, DWORD_PTR)
 {
     // 直接在工作线程/回调里刷新
-    if (g_recorder && !g_vd->m_blocks.empty()) { g_recorder->updateRecord(); }
+    if (g_recorder) 
+    { 
+        auto& bookRecord = g_recorder->getBookRecord();
+        auto& settingRecord = g_recorder->getSettingRecord();
+        if (bookRecord.id < 0) { return; }
+
+        if (g_book)
+        {
+
+            bookRecord.enableCSS = g_cfg.enableCSS;
+            bookRecord.enableGlobalCSS = g_cfg.enableGlobalCSS;
+            bookRecord.enableCustomFont = g_cfg.enableCustomFont;
+            bookRecord.fontName = w2a(g_cfg.font_name);
+
+
+            bookRecord.fontSize = g_cfg.font_size;
+            bookRecord.lineHeightMul = g_cfg.line_height;
+            bookRecord.docWidth = g_cfg.document_width;
+            bookRecord.totalTime += 1;
+
+
+            if (bookRecord.title.empty() && g_book && !g_book->ocf_pkg_.meta.empty())
+            {
+                auto titIt = g_book->ocf_pkg_.meta.find(L"dc:title");
+                bookRecord.title = titIt != g_book->ocf_pkg_.meta.end() ? w2a(titIt->second) : "";
+            }
+            if (bookRecord.author.empty() && g_book && !g_book->ocf_pkg_.meta.empty())
+            {
+                auto authIt = g_book->ocf_pkg_.meta.find(L"dc:creator");
+                bookRecord.author = authIt != g_book->ocf_pkg_.meta.end() ? w2a(authIt->second) : "";
+            }
+
+            TimeFragment tf;
+            tf.path = bookRecord.path;
+            tf.title = bookRecord.title;
+            tf.author = bookRecord.author;
+            tf.timestamp = nowUs();
+
+            if (g_vd) {
+                ScrollPosition p = g_vd->get_scroll_position();
+                bookRecord.lastSpineId = p.spine_id;
+                bookRecord.lastOffset = p.offset;
+
+                tf.spine_id = p.spine_id;
+                tf.chapter = w2a(g_book->get_chapter_name_by_id(p.spine_id));
+            }
+            g_recorder->pushTimeFrag(std::move(tf));
+
+
+            settingRecord.displayFrameRate = g_cfg.displayFrameRate;
+            settingRecord.displayScrollBar = g_cfg.displayScrollBar;
+            settingRecord.displayStatusBar = g_cfg.displayStatusBar;
+            settingRecord.displayTOC = g_cfg.displayTOC;
+            settingRecord.enableClickPreview = g_cfg.enableClickPreview;
+            settingRecord.enableFontRealtimePreview = g_cfg.enableFontRealtimePreview;
+            settingRecord.enableHoverPreview = g_cfg.enableHoverPreview;
+            settingRecord.enableLoadEPUBFonts = g_cfg.enableEPUBFonts;
+            settingRecord.enableScrollAnimation = g_cfg.enableScrollAnimation;
+        }
+    }
    // OutputDebugStringA("定时器触发\n");
+    if (g_recorder && !g_flushTimer)
+    {
+        g_flushTimer = timeSetEvent(g_cfg.record_flush_interval_ms, 0, OnFlush, 0, TIME_ONESHOT);
+    }
     g_tickTimer = 0;
 }
 LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
@@ -735,22 +819,27 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             RECT rcClient;
             GetClientRect(hwnd, &rcClient);   // ← 这才是客户区
             g_cMain->resize(rcClient.right, rcClient.bottom);
-            UpdateCache();
+            //UpdateCache();
         }
         return 0;
     }
     case WM_LBUTTONDOWN:
     {
-        if (!g_cMain || !g_cMain->m_doc) { return 0; }
-
-        POINT pt{ GET_X_LPARAM(lp), GET_Y_LPARAM(lp) };
-        g_cMain->on_lbutton_down(pt.x/g_cMain->m_zoom_factor, pt.y/g_cMain->m_zoom_factor);
-        convert_coordinate(pt);
-        litehtml::position::vector redraw_boxes;
-        g_cMain->m_doc->on_lbutton_down(pt.x, pt.y, 0, 0, redraw_boxes);
-        if (!redraw_boxes.empty()) {
-            InvalidateRect(hwnd, nullptr, false);
+        if (!g_tickTimer)
+        {
+            g_tickTimer = timeSetEvent(g_cfg.record_update_interval_ms, 0, Tick, 0, TIME_ONESHOT);
         }
+        //if (!g_cMain || !g_cMain->m_doc) { return 0; }
+
+        //POINT pt{ GET_X_LPARAM(lp), GET_Y_LPARAM(lp) };
+        //g_cMain->on_lbutton_down(pt.x/g_cMain->m_zoom_factor, pt.y/g_cMain->m_zoom_factor);
+        //convert_coordinate(pt);
+        //litehtml::position::vector redraw_boxes;
+        //g_cMain->m_doc->on_lbutton_down(pt.x, pt.y, 0, 0, redraw_boxes);
+        //if (!redraw_boxes.empty()) {
+        //    InvalidateRect(hwnd, nullptr, false);
+        //}
+        if (g_vd) { g_vd->on_lbutton_down(GET_X_LPARAM(lp), GET_Y_LPARAM(lp)); }
         return 0;
     }
     case WM_LBUTTONUP:
@@ -761,19 +850,20 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             g_tickTimer = timeSetEvent(g_cfg.record_update_interval_ms, 0, Tick, 0, TIME_ONESHOT);
         }
 
-        if (g_cMain && g_cMain->m_doc)
-        {
-            POINT pt{ GET_X_LPARAM(lp), GET_Y_LPARAM(lp) };
-            g_cMain->on_lbutton_up();
-            convert_coordinate(pt);
+        //if (g_cMain && g_cMain->m_doc)
+        //{
+        //    POINT pt{ GET_X_LPARAM(lp), GET_Y_LPARAM(lp) };
+        //    g_cMain->on_lbutton_up();
+        //    convert_coordinate(pt);
 
-            litehtml::position::vector redraw_boxes;
-            g_cMain->m_doc->on_lbutton_up(pt.x, pt.y, 0, 0, redraw_boxes);
-            if (!redraw_boxes.empty()) {
-                InvalidateRect(hwnd, nullptr, false);
-            }
+        //    litehtml::position::vector redraw_boxes;
+        //    g_cMain->m_doc->on_lbutton_up(pt.x, pt.y, 0, 0, redraw_boxes);
+        //    if (!redraw_boxes.empty()) {
+        //        InvalidateRect(hwnd, nullptr, false);
+        //    }
    
-        }
+        //}
+        if (g_vd) { g_vd->on_lbutton_up(GET_X_LPARAM(lp), GET_Y_LPARAM(lp)); }
         return 0;
     }
     case WM_LBUTTONDBLCLK:
@@ -782,12 +872,13 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         {
             g_tickTimer = timeSetEvent(g_cfg.record_update_interval_ms, 0, Tick, 0, TIME_ONESHOT);
         }
-        if (g_cMain)
-        {
-            POINT pt{ GET_X_LPARAM(lp), GET_Y_LPARAM(lp) };
-            g_cMain->on_lbutton_dblclk(pt.x / g_cMain->m_zoom_factor, pt.y / g_cMain->m_zoom_factor);
-            InvalidateRect(hwnd, nullptr, false);
-        }
+        //if (g_cMain)
+        //{
+        //    POINT pt{ GET_X_LPARAM(lp), GET_Y_LPARAM(lp) };
+        //    g_cMain->on_lbutton_dblclk(pt.x / g_cMain->m_zoom_factor, pt.y / g_cMain->m_zoom_factor);
+        //    InvalidateRect(hwnd, nullptr, false);
+        //}
+        if (g_vd) { g_vd->on_lbutton_dblclk(GET_X_LPARAM(lp), GET_Y_LPARAM(lp)); }
         return 0;
     }
     case WM_MOUSEMOVE:
@@ -797,22 +888,22 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         {
             g_tickTimer = timeSetEvent(g_cfg.record_update_interval_ms, 0, Tick, 0, TIME_ONESHOT);
         }
-        if (g_cMain && g_cMain->m_doc)
-        {
-            POINT pt{ GET_X_LPARAM(lp), GET_Y_LPARAM(lp) };
-            g_cMain->on_mouse_move(pt.x / g_cMain->m_zoom_factor, pt.y / g_cMain->m_zoom_factor);
-            convert_coordinate(pt);
+        //if (g_cMain && g_cMain->m_doc)
+        //{
+        //    POINT pt{ GET_X_LPARAM(lp), GET_Y_LPARAM(lp) };
+        //    g_cMain->on_mouse_move(pt.x / g_cMain->m_zoom_factor, pt.y / g_cMain->m_zoom_factor);
+        //    convert_coordinate(pt);
 
 
 
-            litehtml::position::vector redraw_boxes;
-            g_cMain->m_doc->on_mouse_over(pt.x, pt.y, 0, 0, redraw_boxes);
-            if (!redraw_boxes.empty()) {
-                InvalidateRect(hwnd, nullptr, false);
-            }
+        //    litehtml::position::vector redraw_boxes;
+        //    g_cMain->m_doc->on_mouse_over(pt.x, pt.y, 0, 0, redraw_boxes);
+        //    if (!redraw_boxes.empty()) {
+        //        InvalidateRect(hwnd, nullptr, false);
+        //    }
       
-        }
-  
+        //}
+        if (g_vd) { g_vd->on_mouse_move(GET_X_LPARAM(lp), GET_Y_LPARAM(lp)); }
         return 0;
     }
 
@@ -834,7 +925,7 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             }
             free(sel);          // 对应 _wcsdup
         }
-        UpdateCache();
+        //UpdateCache();
         InvalidateRect(hwnd, nullptr, FALSE);
         UpdateWindow(g_hView);
 
@@ -858,15 +949,15 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
     case WM_MOUSELEAVE:
     {
-        if(g_cMain && g_cMain->m_doc)
-        {
-            litehtml::position::vector redraw_boxes;
-            g_cMain->m_doc->on_mouse_leave(redraw_boxes);
-            if (!redraw_boxes.empty()) {
-                InvalidateRect(hwnd, nullptr, false);
-            }
-        }
-
+        //if(g_cMain && g_cMain->m_doc)
+        //{
+        //    litehtml::position::vector redraw_boxes;
+        //    g_cMain->m_doc->on_mouse_leave(redraw_boxes);
+        //    if (!redraw_boxes.empty()) {
+        //        InvalidateRect(hwnd, nullptr, false);
+        //    }
+        //}
+        if (g_vd) { g_vd->on_mouse_leave(GET_X_LPARAM(lp), GET_Y_LPARAM(lp)); }
 
         return 0;
     }
@@ -877,7 +968,7 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         {
             // Ctrl+中键被按下
             g_cMain->m_zoom_factor = 1.0f;
-            UpdateCache();
+           // UpdateCache();
             // 3. 重绘
             InvalidateRect(hwnd, NULL, FALSE);
             return 0;  // 已处理该消息
@@ -886,84 +977,96 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     }
     case WM_MOUSEWHEEL:
     {
-        if (g_cMain) { g_cMain->clear_selection(); }
-        if (GetKeyState(VK_CONTROL) & 0x8000)
-        {
-            int delta = GET_WHEEL_DELTA_WPARAM(wp);   // ±120
-            float factor = (delta > 0) ? 1.1f : 0.9f;     // 放大 / 缩小系数
+        //if (g_cMain) { g_cMain->clear_selection(); }
+        //if (GetKeyState(VK_CONTROL) & 0x8000)
+        //{
+        //    int delta = GET_WHEEL_DELTA_WPARAM(wp);   // ±120
+        //    float factor = (delta > 0) ? 1.1f : 0.9f;     // 放大 / 缩小系数
 
-            // 2. 更新全局缩放
-            g_cMain->m_zoom_factor = std::clamp(g_cMain->m_zoom_factor * factor, 0.25f, 5.0f);
-            UpdateCache();
-            // 3. 重绘
-            InvalidateRect(hwnd, NULL, FALSE);
-        
-            return 0;   // 已处理，不再传递
-        }
+        //    // 2. 更新全局缩放
+        //    g_cMain->m_zoom_factor = std::clamp(g_cMain->m_zoom_factor * factor, 0.25f, 5.0f);
+        //    UpdateCache();
+        //    // 3. 重绘
+        //    InvalidateRect(hwnd, NULL, FALSE);
+        //
+        //    return 0;   // 已处理，不再传递
+        //}
  
+        if (g_vd) { g_vd->on_mouse_wheel(GET_WHEEL_DELTA_WPARAM(wp)); }
+        //RECT rc;
+        //GetClientRect(hwnd, &rc);
+        //float h = float(rc.bottom - rc.top);
 
-        RECT rc;
-        GetClientRect(hwnd, &rc);
-        float h = float(rc.bottom - rc.top);
+        //int zDelta = GET_WHEEL_DELTA_WPARAM(wp);
+        //// 每格 3 行 → 每行像素 * 3
+        //float pxPerLine = g_cfg.font_size * g_cfg.line_height ;
+        //float pxDelta = -zDelta / 120.0f * pxPerLine * 3.0f;   // 负号：上滚为负
 
-        int zDelta = GET_WHEEL_DELTA_WPARAM(wp);
-        // 每格 3 行 → 每行像素 * 3
-        float pxPerLine = g_cfg.font_size * g_cfg.line_height ;
-        float pxDelta = -zDelta / 120.0f * pxPerLine * 3.0f;   // 负号：上滚为负
+        //if(g_cfg.enableScrollAnimation)
+        //{
+        //    // 累加速度，而不是直接改目标
+        //    g_velocity.fetch_add(pxDelta * 12.0f, std::memory_order_relaxed);
 
-        if(g_cfg.enableScrollAnimation)
-        {
-            // 累加速度，而不是直接改目标
-            g_velocity.fetch_add(pxDelta * 12.0f, std::memory_order_relaxed);
-
-            // 启动 1 kHz 高精度定时器
-            if (g_scrollTimer == 0) {
-                g_scrollTimer = timeSetEvent(1, 0, OnScrollTimer, 0, TIME_PERIODIC);
-            }
-        }
-        else
-        {
-            float cur = g_offsetY.load(std::memory_order_relaxed);
-            cur = std::clamp(cur + pxDelta, -h/2.0f, std::max(g_vd->m_height - h / 2.0f, 0.0f));
-            g_offsetY.store(cur, std::memory_order_relaxed);
-        }
+        //    // 启动 1 kHz 高精度定时器
+        //    if (g_scrollTimer == 0) {
+        //        g_scrollTimer = timeSetEvent(1, 0, OnScrollTimer, 0, TIME_PERIODIC);
+        //    }
+        //}
+        //else
+        //{
+        //    float cur = g_offsetY.load(std::memory_order_relaxed);
+        //    cur = std::clamp(cur + pxDelta, -h/2.0f, std::max(g_vd->m_height - h / 2.0f, 0.0f));
+        //    g_offsetY.store(cur, std::memory_order_relaxed);
+        //}
 
         // 更新阅读记录
         if (!g_tickTimer)
         {
             g_tickTimer = timeSetEvent(g_cfg.record_update_interval_ms, 0, Tick, 0, TIME_ONESHOT);
         }
-        litehtml::position::vector redraw_box;
-        if (g_cMain && g_cMain->m_doc)
-        {
-            g_cMain->m_doc->on_mouse_leave(redraw_box);
+        //litehtml::position::vector redraw_box;
+        //if (g_cMain && g_cMain->m_doc)
+        //{
+        //    g_cMain->m_doc->on_mouse_leave(redraw_box);
 
-        }
-        UpdateCache();
-        InvalidateRect(hwnd, nullptr, FALSE);
+        //}
+        //UpdateCache();
+        //InvalidateRect(hwnd, nullptr, FALSE);
+
         return 0;
     }
 
     case WM_PAINT:
+    {
         PAINTSTRUCT ps; BeginPaint(hwnd, &ps);
-    
-        if (g_cMain  && g_cMain->m_doc )
+
+        //if (g_cMain  && g_cMain->m_doc )
+        //{
+        //    g_frame_count += 1;
+        //    OutputDebugStringA("[View] WM_PAINT\n");
+        //    RECT rc;
+        //    GetClientRect(g_hView, &rc);
+        //    int x = g_center_offset;
+        //    int y = -g_offsetY.load(std::memory_order_relaxed);
+        //    float w = g_cfg.document_width;
+        //    float h = rc.bottom - rc.top;
+        //    litehtml::position clip(x, 0, w, h/g_cMain->m_zoom_factor);
+        //    g_cMain->present(x, y, &clip);
+
+        //}
+        RECT rc;
+        GetClientRect(g_hView, &rc);
+        int width = rc.right - rc.left;
+        int height = rc.bottom - rc.top;
+        if (g_vd && width > 0 && height > 0)
         {
-            g_frame_count += 1;
-            OutputDebugStringA("[View] WM_PAINT\n");
-            RECT rc;
-            GetClientRect(g_hView, &rc);
-            int x = g_center_offset;
-            int y = -g_offsetY.load(std::memory_order_relaxed);
-            float w = g_cfg.document_width;
-            float h = rc.bottom - rc.top;
-            litehtml::position clip(x, 0, w, h/g_cMain->m_zoom_factor);
-            g_cMain->present(x, y, &clip);
+
+            g_vd->present(width, height);
 
         }
         EndPaint(hwnd, &ps);
         return 0;
-
+    }
     case WM_ERASEBKGND:
         return 1;
     }
@@ -996,7 +1099,7 @@ void UpdateCache()
     w /= g_cMain->m_zoom_factor;
     h /= g_cMain->m_zoom_factor;
 
-    g_vd->update_doc(h, g_offsetY.load(std::memory_order_relaxed));
+   // g_vd->update_doc(h, g_offsetY.load(std::memory_order_relaxed));
  
 
     g_center_offset = (w - g_cfg.document_width) * 0.5f;
@@ -1543,33 +1646,33 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     }
     case WM_KEYDOWN:
     {
-        RECT rc; GetClientRect(hwnd, &rc);
-        float page = rc.bottom - rc.top;
-        float line = g_cMain->m_line_height;
+        //RECT rc; GetClientRect(hwnd, &rc);
+        //float page = rc.bottom - rc.top;
+        //float line = g_cMain->m_line_height;
 
-        float delta = 0.f;
-        switch (wp)
-        {
-        case VK_UP:     delta = -line;  break;
-        case VK_DOWN:   delta = line;  break;
-        case VK_PRIOR:  delta = -page;  break;
-        case VK_NEXT:   delta = page;  break;
-        default:        return DefWindowProc(hwnd, msg, wp, lp);
-        }
+        //float delta = 0.f;
+        //switch (wp)
+        //{
+        //case VK_UP:     delta = -line;  break;
+        //case VK_DOWN:   delta = line;  break;
+        //case VK_PRIOR:  delta = -page;  break;
+        //case VK_NEXT:   delta = page;  break;
+        //default:        return DefWindowProc(hwnd, msg, wp, lp);
+        //}
 
-        // 原子读-改-写
-        float old = g_offsetY.load(std::memory_order_relaxed);
-        float desired;
-        do {
-            desired = std::clamp(old + delta,
-                -1.0f,
-                std::max(0.0f, g_vd->m_height - page));
-        } while (!g_offsetY.compare_exchange_weak(old, desired,
-            std::memory_order_relaxed,
-            std::memory_order_relaxed));
+        //// 原子读-改-写
+        //float old = g_offsetY.load(std::memory_order_relaxed);
+        //float desired;
+        //do {
+        //    desired = std::clamp(old + delta,
+        //        -1.0f,
+        //        std::max(0.0f, g_vd->m_height - page));
+        //} while (!g_offsetY.compare_exchange_weak(old, desired,
+        //    std::memory_order_relaxed,
+        //    std::memory_order_relaxed));
 
-        UpdateCache();
-        InvalidateRect(g_hView, nullptr, FALSE);
+        //UpdateCache();
+        //InvalidateRect(g_hView, nullptr, FALSE);
         return 0;
     }
 
@@ -1693,10 +1796,13 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         // 更新设置
         auto& record = g_recorder->m_book_record;
         auto spine_id = record.lastSpineId;
-        g_offsetY.store(record.lastOffset, std::memory_order_relaxed) ;
+
+
+        
+       //g_offsetY.store(record.lastOffset, std::memory_order_relaxed) ;
         g_cfg.font_size = record.fontSize > 0 ? record.fontSize:g_cfg.default_font_size;
         g_cfg.line_height = record.lineHeightMul > 0 ? record.lineHeightMul : g_cfg.default_line_height;
-        g_cfg.document_width = record.docWidth > 0 ? record.docWidth : g_cfg.default_document_width;
+        g_vd->set_document_width(record.docWidth > 0 ? record.docWidth : g_cfg.default_document_width);
     
         int spine_size = g_book->ocf_pkg_.spine.size();
         SendMessage(g_hViewScroll, SBM_SETSPINECOUNT, spine_size, 0);
@@ -1714,9 +1820,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             MF_BYCOMMAND | (g_cfg.enableCustomFont ? MF_CHECKED : MF_UNCHECKED));
 
         g_cfg.font_name = a2w(record.fontName);
-        g_vd->load_book(g_book, g_cMain);
+        g_vd->load_book(g_book, g_cMain, g_hView);
         g_vd->load_html(g_book->ocf_pkg_.spine[spine_id].href);
-
+        ScrollPosition sp{};
+        sp.spine_id = spine_id;
+        sp.offset = record.lastOffset;
+        g_vd->set_scroll_position(sp);
 
   
         std::string title;
@@ -1729,11 +1838,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         SetWindowTextW(g_hWnd, a2w(title).c_str());
  
   
-        UpdateCache();          // 复用前面给出的 UpdateCache()
+        //UpdateCache();          // 复用前面给出的 UpdateCache()
 
         
         PostMessage(hwnd, WM_SIZE, 0, 0);
-
+        InvalidateRect(g_hView, nullptr, true);
         SetStatus(STATUSBAR_INFO, L"加载完成");
         SetForegroundWindow(hwnd);          // 关键：把输入焦点抢过来
         return 0;
@@ -1879,34 +1988,34 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     }
     case WM_EPUB_CACHE_UPDATED:
     {
-        if (g_vd->m_isReloading.exchange(false)) {
-            g_offsetY.store(g_vd->m_percent * g_vd->m_height,
-                std::memory_order_relaxed);
-        }
+        //if (g_vd->m_isReloading.exchange(false)) {
+        //    g_offsetY.store(g_vd->m_percent * g_vd->m_height,
+        //        std::memory_order_relaxed);
+        //}
 
-        float delta = static_cast<float>(lp);
-        // 原子 += delta
-        float old = g_offsetY.load(std::memory_order_relaxed);
-        float desired;
-        do {
-            desired = old + delta;
-        } while (!g_offsetY.compare_exchange_weak(old, desired,
-            std::memory_order_relaxed,
-            std::memory_order_relaxed));
+        //float delta = static_cast<float>(lp);
+        //// 原子 += delta
+        //float old = g_offsetY.load(std::memory_order_relaxed);
+        //float desired;
+        //do {
+        //    desired = old + delta;
+        //} while (!g_offsetY.compare_exchange_weak(old, desired,
+        //    std::memory_order_relaxed,
+        //    std::memory_order_relaxed));
 
-        g_cMain->m_doc = std::move(g_vd->m_doc);
+        //g_cMain->m_doc = std::move(g_vd->m_doc);
 
-        if (g_vd->m_isAnchor.exchange(false)) {
-            std::string cssSel = "[id=\"" + g_vd->m_anchor_id + "\"]";
-            if (auto el = g_cMain->m_doc->root()->select_one(cssSel.c_str())) {
-                g_offsetY.store(el->get_placement().y,
-                    std::memory_order_relaxed);
-            }
-        }
+        //if (g_vd->m_isAnchor.exchange(false)) {
+        //    std::string cssSel = "[id=\"" + g_vd->m_anchor_id + "\"]";
+        //    if (auto el = g_cMain->m_doc->root()->select_one(cssSel.c_str())) {
+        //        g_offsetY.store(el->get_placement().y,
+        //            std::memory_order_relaxed);
+        //    }
+        //}
 
-        UpdateCache();
-        InvalidateRect(g_hView, nullptr, FALSE);
-        return 0;
+        //UpdateCache();
+        //InvalidateRect(g_hView, nullptr, FALSE);
+        //return 0;
     }
     case WM_DESTROY: {
         timeKillEvent(g_framerateTimer);
@@ -3131,7 +3240,8 @@ AppBootstrap::AppBootstrap() {
 
     if(!g_recorder)
     { 
-        g_recorder = std::make_unique<ReadingRecorder>(); 
+       
+        g_recorder = std::make_unique<ReadingRecorder>(documents_dir()); 
         if(g_recorder)
         {
             auto& settings = g_recorder->m_setting_record;

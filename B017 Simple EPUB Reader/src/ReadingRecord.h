@@ -5,6 +5,7 @@
 #include <chrono>
 #include <filesystem>
 #include <Shlobj.h>      // SHGetKnownFolderPath
+#include <mutex>
 
 #include <sqlite3.h>
 
@@ -41,7 +42,7 @@ struct SettingRecord
     bool displayScrollBar = true;
     bool displayFrameRate = true;
 };
-struct timeFragment
+struct TimeFragment
 {
     std::string path;
     std::string title;
@@ -53,7 +54,7 @@ struct timeFragment
 
 class ReadingRecorder {
 public:
-    ReadingRecorder();
+    ReadingRecorder(const std::string saveDir);
     ~ReadingRecorder();
 
     void openBook(const std::string absolutePath); // 返回记录（读或建）
@@ -62,6 +63,9 @@ public:
     // 一次性写回
     void flushBookRecord();
     void flushTimeRecord();
+    BookRecord& getBookRecord();
+    SettingRecord& getSettingRecord();
+    void pushTimeFrag(TimeFragment frag);
     void updateRecord();
     int64_t getTotalTime();
     int64_t getBookTotalTime() const;
@@ -69,6 +73,7 @@ public:
     BookRecord m_book_record;
     SettingRecord m_setting_record;
 private:
+    std::string m_base_dir = "";
     void initDB();
 
     bool loadSettings();
@@ -79,8 +84,8 @@ private:
     sqlite3* m_dbTime = nullptr;
     sqlite3* m_dbSetting = nullptr;
 
-    std::vector<timeFragment> m_time_frag;
-
+    std::vector<TimeFragment> m_time_frag;
+    mutable std::mutex m_mutex;
 
 
 };

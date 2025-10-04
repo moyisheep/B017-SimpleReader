@@ -252,13 +252,16 @@ public:
 
 
     void	get_viewport(litehtml::position& viewport) const override;
-    void	import_css(litehtml::string& text, const litehtml::string& url, litehtml::string& baseurl) override;
-
     void	set_caption(const char* caption) override;
     void	set_base_url(const char* base_url) override;
+    void	set_cursor(const char* cursor) override;
+
+    void	import_css(litehtml::string& text, const litehtml::string& url, litehtml::string& baseurl) override;
+
+
     void	link(const std::shared_ptr<litehtml::document>& doc, const litehtml::element::ptr& el) override;
 
-    void	set_cursor(const char* cursor) override;
+
     void	transform_text(litehtml::string& text, litehtml::text_transform tt) override;
 
     litehtml::element::ptr	create_element(const char* tag_name, const litehtml::string_map& attributes, const std::shared_ptr<litehtml::document>& doc) override;
@@ -288,6 +291,7 @@ public:
     void draw_conic_gradient(litehtml::uint_ptr hdc, const litehtml::background_layer& layer, const litehtml::background_layer::conic_gradient& gradient) override;
     void draw_borders(litehtml::uint_ptr hdc, const litehtml::borders& borders, const litehtml::position& draw_pos, bool root) override;
     void	draw_list_marker(litehtml::uint_ptr hdc, const litehtml::list_marker& marker) override;
+   
     litehtml::uint_ptr	create_font(const litehtml::font_description& descr, const litehtml::document* doc, litehtml::font_metrics* fm) override;
     void				delete_font(litehtml::uint_ptr hFont) override;
     litehtml::pixel_t	text_width(const char* text, litehtml::uint_ptr hFont) override;
@@ -297,7 +301,8 @@ public:
     void	load_image(const char* src, const char* baseurl, bool redraw_on_ready) override;
     void	get_image_size(const char* src, const char* baseurl, litehtml::size& sz) override;
 
-
+    void BeginDraw();
+    void EndDraw();
     void resize(int width, int height);
 
     bool isImageCached(std::string src);
@@ -323,7 +328,9 @@ public:
     void on_lbutton_dblclk(int x, int y);
     void on_lbutton_up();
     void on_lbutton_down(int x, int y);
+    void on_lbutton_up(int x, int y);
     void on_mouse_move(int x, int y);
+    void on_mouse_wheel(int delta);
     void copy_to_clipboard();
     void present(float x, float y, litehtml::position* clip);
 

@@ -219,6 +219,35 @@ std::vector<RECT> SimpleContainer::get_selection_rows() const
     return merged;
 }
 
+void SimpleContainer::BeginDraw()
+{
+    m_dc->BeginDraw();
+    m_dc->Clear(D2D1::ColorF(D2D1::ColorF::White));
+
+    // 保存原始矩阵
+    m_dc->GetTransform(&m_oldMatrix);
+
+    // 缩放
+    m_dc->SetTransform(
+        D2D1::Matrix3x2F::Scale(
+            m_zoom_factor,
+            m_zoom_factor,
+            D2D1::Point2F(0.0f, 0.0f)));
+}
+void SimpleContainer::EndDraw()
+{
+    m_dc->SetTransform(m_oldMatrix);
+
+    HRESULT hr = m_dc->EndDraw();
+    if (hr == D2DERR_RECREATE_TARGET)
+    {
+        // 设备丢失，重建
+        return;
+    }
+
+    // 呈现
+    m_swapChain->Present(1, 0);
+}
 void SimpleContainer::present(float x, float y, litehtml::position* clip)
 {
     m_lines.clear();
@@ -490,6 +519,7 @@ void SimpleContainer::addImageCache(std::string hash, std::string svg)
 
 void SimpleContainer::load_image(const char* src, const char* baseurl, bool redraw_on_ready)
 {
+    OutputDebugStringA("load_image\n");
     //if (!src) { return; }
     //std::lock_guard<std::mutex> lock(m_imgCacheMutex);
     //if (m_img_cache.contains(src)) return;
@@ -553,6 +583,7 @@ void SimpleContainer::get_image_size(const char* src, const char* baseurl, liteh
 // get_client_rect -> get_viewport
 void SimpleContainer::get_viewport(litehtml::position& client) const
 {
+    OutputDebugStringA("get_viewport\n");
     // 1. 取客户区物理像素
     //RECT rc{};
     //GetClientRect(m_hwnd, &rc);
@@ -583,7 +614,7 @@ void SimpleContainer::import_css(litehtml::string& text,
     const litehtml::string& url,
     litehtml::string& baseurl)
 {
-
+    OutputDebugStringA("import_css\n");
     //if (!g_cfg.enableCSS) {
     //    //text.clear();           // 禁用所有外部/内部 CSS
     //    return;
@@ -630,12 +661,14 @@ void SimpleContainer::import_css(litehtml::string& text,
 // ---------- 2. 标题 ----------------------------------------------------
 void SimpleContainer::set_caption(const char* cap)
 {
+    OutputDebugStringA("set_caption\n");
     return;
 }
 
 // ---------- 3. base url -------------------------------------------------
 void SimpleContainer::set_base_url(const char* base)
 {
+    OutputDebugStringA("set_base_url\n");
     return;
 }
 
@@ -680,8 +713,8 @@ void SimpleContainer::on_anchor_click(const char* url,
 
 bool SimpleContainer::on_element_click(const litehtml::element::ptr& el)
 {
-    //OutputDebugStringA(el->get_tagName());
-    //OutputDebugStringA("\n");
+    OutputDebugStringA(el->get_tagName());
+    OutputDebugStringA("\n");
     //el->set_pseudo_class(litehtml::_hover_, true);
     //if (std::strcmp(el->get_tagName(), "img") == 0 && g_cfg.enableClickPreview && !g_book->find_link_in_chain(el))
     //{
@@ -693,6 +726,11 @@ bool SimpleContainer::on_element_click(const litehtml::element::ptr& el)
 void SimpleContainer::on_mouse_event(const litehtml::element::ptr& el,
     litehtml::mouse_event event)
 {
+    if (event == litehtml::mouse_event::mouse_event_enter)
+    {
+        OutputDebugStringA("On Mouse Move\n");
+    }
+    else { OutputDebugStringA("On Mouse Leave\n"); }
     //if (!g_cfg.enableHoverPreview) return;
 
     //if (event == litehtml::mouse_event::mouse_event_enter)
@@ -861,6 +899,7 @@ static const std::unordered_map<std::string, LPCWSTR> kSysCursors = {
 };
 void SimpleContainer::set_cursor(const char* cursor)
 {
+    //OutputDebugStringA("set_cursor\n");
     //m_currentCursor = IDC_ARROW;           // 默认箭头
 
     if (!cursor) return;
@@ -883,6 +922,7 @@ void SimpleContainer::set_cursor(const char* cursor)
 void SimpleContainer::transform_text(litehtml::string& text,
     litehtml::text_transform tt)
 {
+    OutputDebugStringA("transform_text\n");
     if (text.empty()) return;
     std::wstring w = a2w(text.c_str());
     switch (tt)
@@ -940,6 +980,7 @@ void SimpleContainer::get_media_features(litehtml::media_features& mf) const
 void SimpleContainer::get_language(litehtml::string& language,
     litehtml::string& culture) const
 {
+    OutputDebugStringA("get_language\n");
     language = "en";
     culture = "US";
     // 真正 EPUB 可从 OPF <dc:language> 读
@@ -955,6 +996,7 @@ void SimpleContainer::init_dpi() {
 // 保持 pt_to_px 不变
 litehtml::pixel_t SimpleContainer::pt_to_px(float pt) const {
     // 乘法 + 位移，比 MulDiv 更快
+    OutputDebugStringA("pt_to_px\n");
     return pt * m_px_per_pt;
 }
 
@@ -2225,6 +2267,8 @@ SimpleContainer::SimpleContainer(int w, int h, HWND hwnd) :
     // 5) 创建 D2D 设备上下文
     m_d2dDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, &m_dc);
 
+    m_dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+    m_dc->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_CLEARTYPE);
     // 6) 创建交换链
     DXGI_SWAP_CHAIN_DESC1 scDesc{};
     scDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
@@ -2249,10 +2293,11 @@ SimpleContainer::SimpleContainer(int w, int h, HWND hwnd) :
         D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
         D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED));
 
+    
     m_dc->CreateBitmapFromDxgiSurface(backBuffer.Get(), bmpProps, &m_targetBmp);
     m_dc->SetTarget(m_targetBmp.Get());
     m_dc->SetDpi(dpiX, dpiY);
-
+   
 
     /* 4) DirectWrite 工厂 */
     IDWriteFactory* pRaw = nullptr;

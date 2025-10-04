@@ -8,20 +8,11 @@ static int64_t nowUs() {
 }
 
 
-fs::path documents_dir()
-{
-    PWSTR pszPath = nullptr;
-    if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_Documents, 0, NULL, &pszPath)))
-    {
-        fs::path path(pszPath);
-        CoTaskMemFree(pszPath);
-        return path;
-    }
-    return L""; // 或抛出异常
-}
+
 
 /* ---------- 构造/析构 ---------- */
-ReadingRecorder::ReadingRecorder()
+ReadingRecorder::ReadingRecorder(const std::string saveDir)
+    :m_base_dir(saveDir)
 {
     m_book_record = {};
     m_time_frag = {};
@@ -39,7 +30,7 @@ ReadingRecorder::~ReadingRecorder()
 /* ---------- 初始化数据库 ---------- */
 void ReadingRecorder::initDB() {
 
-    fs::path db_path = documents_dir() / "Simple EPUB Reader" / "data";
+    fs::path db_path = fs::path(m_base_dir)/ "Simple EPUB Reader" / "data";
     fs::create_directories(db_path);
     fs::path db_book_path = db_path / "Books.db";
     fs::path db_time_path = db_path / "Time.db";
@@ -152,6 +143,7 @@ bool ReadingRecorder::loadSettings() {
 }
 /* ---------- 打开书 ---------- */
 void ReadingRecorder::openBook(const std::string absolutePath) {
+    std::lock_guard<std::mutex> lock(m_mutex);
     m_book_record = {};
     m_time_frag = {};
     BookRecord rec;
@@ -214,6 +206,7 @@ void ReadingRecorder::openBook(const std::string absolutePath) {
 }
 int64_t ReadingRecorder::getTotalTime()
 {
+    std::lock_guard<std::mutex> lock(m_mutex);
     const char* sql = "SELECT COALESCE(SUM(duration),0) FROM reading_time;";
     sqlite3_stmt* stmt = nullptr;
     int64_t totalUs = 0;
@@ -228,11 +221,12 @@ int64_t ReadingRecorder::getTotalTime()
 }
 int64_t ReadingRecorder::getBookTotalTime() const
 {
-
+    std::lock_guard<std::mutex> lock(m_mutex);
     return m_book_record.totalTime;
 }
 /* ---------- 写入 ---------- */
 void ReadingRecorder::flush() {
+    std::lock_guard<std::mutex> lock(m_mutex);
     if (m_book_record.id < 0) return;   // 无效记录
 
     flushBookRecord();
@@ -361,12 +355,12 @@ void ReadingRecorder::flushTimeRecord()
     if (m_time_frag.empty()) return;
 
     /* 0. 先把缓存拿出来，防止 flush 期间又被写入 */
-    std::vector<timeFragment> batch = std::move(m_time_frag);
+    std::vector<TimeFragment> batch = std::move(m_time_frag);
     m_time_frag.clear();                 // 立即清空原缓存
 
     /* 1. 按时间升序 */
     std::sort(batch.begin(), batch.end(),
-        [](const timeFragment& a, const timeFragment& b)
+        [](const TimeFragment& a, const TimeFragment& b)
         { return a.timestamp < b.timestamp; });
 
     /* 2. 事务开始 */
@@ -380,7 +374,7 @@ void ReadingRecorder::flushTimeRecord()
 
     constexpr int64_t MERGE_THRESHOLD_US = 2'000'000;
 
-    for (const timeFragment& frag : batch)
+    for (const TimeFragment& frag : batch)
     {
         /* 3. 查询最近一条 */
         const char* sqlSel = R"(
@@ -470,12 +464,20 @@ void ReadingRecorder::flushTimeRecord()
         sqlite3_free(err);
     }
 }
-void CALLBACK OnFlush(UINT, UINT, DWORD_PTR, DWORD_PTR, DWORD_PTR)
+BookRecord& ReadingRecorder::getBookRecord() 
+{ 
+    std::lock_guard<std::mutex> lock(m_mutex); 
+    return m_book_record; 
+}
+SettingRecord& ReadingRecorder::getSettingRecord()
 {
-    //// 直接在工作线程/回调里刷新
-    //OutputDebugStringA("OnFlush\n");
-    //if (g_recorder) { g_recorder->flush(); }
-    //g_flushTimer = 0;
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_setting_record;
+}
+void ReadingRecorder::pushTimeFrag(TimeFragment frag)
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_time_frag.push_back(frag);
 }
 void ReadingRecorder::updateRecord()
 {
