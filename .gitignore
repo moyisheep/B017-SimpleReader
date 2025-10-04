@@ -362,3 +362,4 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 /Project1/data
+/B017 Simple EPUB Reader/TODO.txt
