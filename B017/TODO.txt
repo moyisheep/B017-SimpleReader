@@ -1,0 +1,22 @@
+//  在TOCpanel 复制时 复制hover时候的名称
+
+// 当拼接的html css不同时会卡住；digital restoration from start to finish
+
+// 选择文字有性能问题
+
+// 鼠标移动时cpu占用高
+
+// draw_image 存在问题 The Elements of Computing Systems, 2E C6.6
+
+<dc:title id="title">The Elements of Computing Systems, Second Edition</dc:title>
+<dc:title id="subtitle">Building a Modern Computer from First Principles</dc:title>
+
+// 滚动时保持选中
+// 优化选择文字
+//一次滚动三行-> 一行 ;
+// 文字模糊
+// 可以复制图片
+// 超链接（ctrl点击后使用浏览器打开链接）
+// 增加鼠标返回之前阅读位置
+// 修改Time.db 只记录每次tick，不再合并数据
+// 右键图片新增另存为菜单

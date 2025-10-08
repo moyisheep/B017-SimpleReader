@@ -1842,7 +1842,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 
         
         PostMessage(hwnd, WM_SIZE, 0, 0);
-        InvalidateRect(g_hView, nullptr, true);
+        //InvalidateRect(g_hView, nullptr, true);
         SetStatus(STATUSBAR_INFO, L"加载完成");
         SetForegroundWindow(hwnd);          // 关键：把输入焦点抢过来
         return 0;

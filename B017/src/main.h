@@ -150,11 +150,6 @@ public:
 
 
 
-
-
-
-
-
 struct AppSettings {
     bool enableCSS = true;   // 默认启用 css
     bool enableJS = false;   // 默认禁用 JS
@@ -194,7 +189,7 @@ struct AppSettings {
     std::wstring temp_dir = L"epub_book";
 
     int tooltip_width = 500;
-    std::string appName = "Simple EPUB Reader";
+    std::string appName = "Simple EPUB";
     int split_space_height = 300; // 单位:px
     std::wstring default_serif = L"Georgia";
     std::wstring default_sans_serif = L"Verdana";
@@ -207,7 +202,7 @@ struct AppSettings {
     Gdiplus::Color scrollbar_dot_color_highlight{ 255, 238, 165, 102 };
     Gdiplus::Color scrollbar_dot_color{ 209, 202, 197, 80 };
     COLORREF highlight_color_cr = RGB(238, 165, 102);  // #eea566
-    COLORREF hover_color_cr = RGB(240, 240, 240);  
+    COLORREF hover_color_cr = RGB(240, 240, 240);
     // 2) D2D1 颜色（保持原透明度 0.4，可按需改）
     D2D1::ColorF highlight_color_d2d{
         238.0f / 255.0f,  // R
@@ -217,6 +212,11 @@ struct AppSettings {
     };
 
 };
+
+
+
+
+
 struct AppStates {
     // ---- 取消令牌 ----
     std::shared_ptr<std::atomic_bool> cancelToken;

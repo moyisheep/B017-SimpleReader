@@ -2269,6 +2269,7 @@ SimpleContainer::SimpleContainer(int w, int h, HWND hwnd) :
 
     m_dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
     m_dc->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_CLEARTYPE);
+
     // 6) 创建交换链
     DXGI_SWAP_CHAIN_DESC1 scDesc{};
     scDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;

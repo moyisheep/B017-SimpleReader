@@ -10,8 +10,8 @@
 #pragma code_page(65001)   // UTF-8
 
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION     1, 80, 0, 0
-PRODUCTVERSION  1, 80, 0, 0
+FILEVERSION     1, 90, 0, 0
+PRODUCTVERSION  1, 90, 0, 0
 FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
 FILEFLAGS       0
 FILEOS          VOS__WINDOWS32
@@ -25,12 +25,12 @@ BEGIN
 BLOCK "080404B0"
 BEGIN
 VALUE "CompanyName", "azx1"
-VALUE "FileDescription", "Simple EPUB Reader"
-VALUE "FileVersion", "1.0.0.0"
-VALUE "InternalName", "SimpleEPUBReader"
-VALUE "OriginalFilename", "SimpleEPUBReader.exe"
-VALUE "ProductName", "Simple EPUB Reader"
-VALUE "ProductVersion", "1.0.0.0"
+VALUE "FileDescription", "A Simple EPUB Reader"
+VALUE "FileVersion", "1.90.0.0"
+VALUE "InternalName", "SimpleEPUB"
+VALUE "OriginalFilename", "SimpleEPUB.exe"
+VALUE "ProductName", "Simple EPUB"
+VALUE "ProductVersion", "1.90.0.0"
 END
 END
 BLOCK "VarFileInfo"

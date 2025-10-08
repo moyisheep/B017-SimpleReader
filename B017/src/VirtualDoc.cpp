@@ -586,6 +586,7 @@ void VirtualDoc::workerLoop()
 
 
         //PostMessage(g_hWnd, WM_EPUB_CACHE_UPDATED, 0, static_cast<LPARAM>(delta));
+        InvalidateRect(m_hwnd, nullptr, FALSE);
         OutputDebugStringA("[VirtualDod thread] ¸üÐÂ½áÊø\n");
     }
 }
@@ -659,7 +660,9 @@ void VirtualDoc::on_lbutton_up(int x, int y)
 }
 void VirtualDoc::on_lbutton_dblclk(int x, int y)
 {
-    auto sp = get_scroll_position();
+    //auto sp = get_scroll_position();
+    //convert_coordinate(x, y, sp);
+    //m_container->on_lbutton_dblclk(x, y);
 
 }
 void VirtualDoc::on_mouse_move(int x, int y)
