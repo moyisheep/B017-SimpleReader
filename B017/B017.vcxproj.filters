@@ -37,17 +37,23 @@
     <ClInclude Include="src\EPUBParser.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="src\IFileProvider.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="src\ZipFileProvider.h">
-      <Filter>头文件</Filter>
+    <ClInclude Include="src\EPUBFileProvider.h">
+      <Filter>FileProvider</Filter>
     </ClInclude>
     <ClInclude Include="src\LocalFileProvider.h">
-      <Filter>头文件</Filter>
+      <Filter>FileProvider</Filter>
     </ClInclude>
-    <ClInclude Include="src\EPUBFileProvider.h">
-      <Filter>头文件</Filter>
+    <ClInclude Include="src\IFileProvider.h">
+      <Filter>FileProvider</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ScrollbarWindow.h">
+      <Filter>Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="src\TocWindow.h">
+      <Filter>Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ZipFileProvider.h">
+      <Filter>FileProvider</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -79,6 +85,12 @@
     <Filter Include="源文件">
       <UniqueIdentifier>{45e756fa-c1df-4e36-94b0-27227043c444}</UniqueIdentifier>
     </Filter>
+    <Filter Include="FileProvider">
+      <UniqueIdentifier>{f5eba821-3c43-43c4-82ab-3b49d30fa394}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Windows">
+      <UniqueIdentifier>{a1fdd904-2a05-4fc2-b5a7-9e165361bc0d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -103,16 +115,22 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="src\ZipFileProvider.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="src\LocalFileProvider.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="src\IFileProvider.cpp">
-      <Filter>源文件</Filter>
+      <Filter>FileProvider</Filter>
     </ClCompile>
     <ClCompile Include="src\EPUBFileProvider.cpp">
-      <Filter>源文件</Filter>
+      <Filter>FileProvider</Filter>
+    </ClCompile>
+    <ClCompile Include="src\LocalFileProvider.cpp">
+      <Filter>FileProvider</Filter>
+    </ClCompile>
+    <ClCompile Include="src\IFileProvider.cpp">
+      <Filter>FileProvider</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ScrollbarWindow.cpp">
+      <Filter>Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="src\TocWindow.cpp">
+      <Filter>Windows</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -27,7 +27,9 @@
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\MML2SVG.cpp" />
     <ClCompile Include="src\ReadingRecord.cpp" />
+    <ClCompile Include="src\ScrollbarWindow.cpp" />
     <ClCompile Include="src\SimpleContainer.cpp" />
+    <ClCompile Include="src\TocWindow.cpp" />
     <ClCompile Include="src\VirtualDoc.cpp" />
     <ClCompile Include="src\ZipFileProvider.cpp" />
   </ItemGroup>
@@ -50,7 +52,9 @@
     <ClInclude Include="src\MML2SVG.h" />
     <ClInclude Include="src\ReadingRecord.h" />
     <ClInclude Include="src\resource.h" />
+    <ClInclude Include="src\ScrollbarWindow.h" />
     <ClInclude Include="src\SimpleContainer.h" />
+    <ClInclude Include="src\TocWindow.h" />
     <ClInclude Include="src\VirtualDoc.h" />
     <ClInclude Include="src\ZipFileProvider.h" />
   </ItemGroup>

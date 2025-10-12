@@ -118,6 +118,8 @@ using namespace Gdiplus;
 #include "a2w_w2a.h"
 #include "ReadingRecord.h"
 #include "VirtualDoc.h"
+#include "ScrollbarWindow.h"
+#include "TocWindow.h"
 namespace fs = std::filesystem;
 
 
@@ -235,73 +237,6 @@ struct AppStates {
 
 
 
-class TocPanel
-{
-public:
-    using OnNavigate = std::function<void(const std::wstring& href)>;
-    struct TreeNode {
-        const OCFNavPoint* nav = nullptr;
-        std::vector<size_t> childIdx;
-        // 仅用于自绘面板
-        bool expanded = false;   // 当前是否展开
-        int  spineId = -1;      //
-    };
-
-
-
-    TocPanel();
-    ~TocPanel();
-    void clear();
-    void GetWindow(HWND hwnd);
-
-    void Load(const OCFPackage& pkg);
-    void SetOnNavigate(OnNavigate cb) { m_onNavigate = std::move(cb); }
-    static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
-    size_t getTargetNode(const ScrollPosition& sp);
-    void SetHighlight(ScrollPosition sp);
-private:
-    struct Node : TreeNode{};
-
-    // 消息泵
-
-    LRESULT HandleMsg(UINT, WPARAM, LPARAM);
-
-    // 内部工具
-    void RebuildVisible();
-    int  HitTest(int y) const;
-    void Toggle(int line);
-    void EnsureVisible(int line);
-
-    // 绘制
-    void OnPaint(HDC);
-    void OnVScroll(int code, int pos);
-    void OnMouseWheel(int delta);
-    void OnLButtonDown(int x, int y);
-
-    float getAnchorOffsetY(const std::wstring& href);
-    void OnMouseMove(int x, int y);
-    void OnMouseLeave(int x, int y);
-    // 数据
-    std::vector<Node>          m_nodes;
-    std::vector<size_t>        m_roots;
-    std::vector<size_t>        m_visible;      // 可见行索引
-    int                        m_lineH = 20;
-    int                        m_scrollY = 0;
-    int                        m_totalH = 0;
-    int                        m_selLine = -1;
-    OnNavigate                 m_onNavigate;
-    HWND m_hTip = nullptr;
-    
-    HFONT m_hFont = nullptr;
-    HWND m_hwnd = nullptr;
-    int m_marginTop = 4;   // 顶部留白
-    int m_marginLeft = 10;  // 左侧留白
-    int m_marginBottom = 10;
-    HBRUSH   m_hightlightBrush;
-    HBRUSH   m_hoverBrush;
-    int m_curTarget = 0;
-    int m_curHover = -1;
-};
 
 
 struct GetDocParam
@@ -356,52 +291,6 @@ private:
     HWND m_hwnd;
 };
 
-
-class ScrollBarEx
-{
-public:
-    ScrollBarEx();
-    ~ScrollBarEx();
-    void GetWindow(HWND hwnd);
-    // API
-    void SetSpineCount(int n);
-
-    void SetPosition(int spineId, float totalHeightPx, float offsetPx);
-    static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
-private:
-
-
-    void OnPaint();
-
-    void OnLButtonDown(int x, int y);
-    void OnMouseLeave(int x, int y);
-    void OnMouseMove(int x, int y);
-    void OnLButtonUp();
-
-    void OnRButtonUp();
-
-    int m_count = 0;
-    ScrollPosition m_pos;
-
-    bool m_dragging = false;
-    int  m_dragAnchor = 0;
-    int dot_r;      // 普通圆点半径
-    int ACTIVE_R = 6;      // 当前圆点半径
-    int thumbH = 24;     // 滑块高度
-    int LINE_W = 2;      // 竖线宽
-    int GUTTER_W = 14;     // 整个滚动条宽
-
-    bool m_mouseIn = false;
-    struct ThumbState
-    {
-        bool hot = false;
-        bool drag = false;
-        int  dragY = 0;     // 鼠标按下时相对滑块顶部的偏移
-    };
-    ThumbState m_thumb;
-    HWND m_hwnd = nullptr;
-    HICON m_hIcon = nullptr;
-};
 
 
 struct BmpHeader {
