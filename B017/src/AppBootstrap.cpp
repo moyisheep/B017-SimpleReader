@@ -1,4 +1,22 @@
 #include "AppBootstrap.h"
+// 注册 Cambria Math（常规字重，非粗非斜）
+bool lunasvgRegisterCambriaMath()
+{
+
+    wchar_t fontDir[MAX_PATH]{};
+    if (FAILED(SHGetFolderPathW(nullptr, CSIDL_FONTS, nullptr, SHGFP_TYPE_CURRENT, fontDir)))
+        return false;
+
+    wchar_t fullPath[MAX_PATH]{};
+    PathCombineW(fullPath, fontDir, L"cambria.ttc");   // Cambria Math 在 .ttc 里
+
+    char utf8Path[MAX_PATH * 3]{};
+    WideCharToMultiByte(CP_UTF8, 0, fullPath, -1, utf8Path, sizeof(utf8Path), nullptr, nullptr);
+
+    // 把 Cambria Math 的 Regular face 注册为 "Cambria Math"
+    return lunasvg_add_font_face_from_file("Cambria Math", false, false, utf8Path);
+
+}
 
 AppBootstrap::AppBootstrap() {
     //make_tooltip_backend();
