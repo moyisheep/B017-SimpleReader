@@ -2,25 +2,11 @@
 
 namespace fs = std::filesystem;
 
-
-bool is_xhtml(const std::wstring& file_path)
+EPUBBook::EPUBBook()
 {
-    auto dot = file_path.rfind(L'.');
-    if (dot == std::wstring::npos) return false;
 
-    std::wstring ext = file_path.substr(dot + 1);
-
-    // 1. 小写
-    std::transform(ext.begin(), ext.end(), ext.begin(), ::towlower);
-
-    // 2. 去掉控制字符
-    ext.erase(std::remove_if(ext.begin(), ext.end(),
-        [](wchar_t c) { return c < 32 || c > 126; }),
-        ext.end());
-
-    // 3. 比较
-    return ext == L"xhtml" || ext == L"html";
 }
+
 
 static void gumbo_serialize(const GumboNode* node, std::string& out)
 {
@@ -110,9 +96,7 @@ bool EPUBBook::load(const std::wstring& epub_path) {
     }
 
     m_current_book_path = epub_path;
-    parse_ocf_();
-    parse_opf_();
-    parse_toc_();
+
     //if (g_cfg.enableEPUBFonts) { build_epub_font_index(); }
 
     LoadToc();
@@ -123,166 +107,14 @@ std::wstring EPUBBook::get_current_dir()
     return fs::path(m_current_html_path).parent_path();
 }
 
-// -------------- 实现（直接粘到 EPUBBook 末尾即可） --------------
-void EPUBBook::parse_ocf_() {
-    ocf_pkg_ = {};  // 清空
-    auto container = read_zip(L"META-INF/container.xml");
-    if (container.data.empty()) return;
-
-    tinyxml2::XMLDocument doc;
-    if (doc.Parse(container.begin(), container.size()) != tinyxml2::XML_SUCCESS) return;
-
-    auto* rootfile = doc.FirstChildElement("container")
-        ? doc.FirstChildElement("container")->FirstChildElement("rootfiles")
-        : nullptr;
-    rootfile = rootfile ? rootfile->FirstChildElement("rootfile") : nullptr;
-    if (!rootfile || !rootfile->Attribute("full-path")) return;
-
-    ocf_pkg_.rootfile = a2w(rootfile->Attribute("full-path"));
-    ocf_pkg_.opf_dir = ocf_pkg_.rootfile.substr(0, ocf_pkg_.rootfile.find_last_of(L'/') + 1);
-
-}
-std::wstring EPUBBook::url_decode(const std::wstring& in)
-{
-    //wchar_t out[INTERNET_MAX_URL_LENGTH];
-    //DWORD len = INTERNET_MAX_URL_LENGTH;
-    //if (SUCCEEDED(UrlCanonicalizeW(in.c_str(), out, &len, URL_UNESCAPE)))
-    //    return std::wstring(out, len);
-    return in;
-}
 
 
-std::wstring EPUBBook::resolve_path(std::wstring base_url, std::wstring href)
-{
-    fs::path p = fs::path(base_url) / url_decode(href);
-    return p.lexically_normal().generic_wstring();
-}
+
+
+
 std::wstring EPUBBook::get_book_path()
 {
     return m_current_book_path;
-}
-void EPUBBook::parse_opf_() {
-    auto opf = read_zip(ocf_pkg_.rootfile.c_str());
-    std::string xml(opf.begin(), opf.begin() + opf.size());
-    if (opf.data.empty()) return;
-    tinyxml2::XMLDocument doc;
-    if (doc.Parse(xml.c_str(), xml.size()) != tinyxml2::XML_SUCCESS) return;
-
-    auto* man = doc.RootElement()
-        ? doc.RootElement()->FirstChildElement("manifest")
-        : nullptr;
-
-    for (auto* it = man ? man->FirstChildElement("item") : nullptr;
-        it; it = it->NextSiblingElement("item"))
-    {
-        OCFItem item;
-        item.id = a2w(it->Attribute("id") ? it->Attribute("id") : "");
-        item.href = a2w(it->Attribute("href") ? it->Attribute("href") : "");
-        item.media_type = a2w(it->Attribute("media-type") ? it->Attribute("media-type") : "");
-        item.properties = a2w(it->Attribute("properties") ? it->Attribute("properties") : "");
-
-
-        // 只在 href 非空时拼绝对路径
-        if (!item.href.empty())
-            item.href = resolve_path(ocf_pkg_.opf_dir, item.href);
-
-        ocf_pkg_.manifest.emplace_back(std::move(item));
-    }
-
-    // spine
-    auto* spine = doc.RootElement()
-        ? doc.RootElement()->FirstChildElement("spine")
-        : nullptr;
-    // 先把 manifest 做成 id -> href 的映射
-    std::unordered_map<std::wstring, std::wstring> id2href;
-    for (const auto& m : ocf_pkg_.manifest)
-        id2href[m.id] = m.href;
-
-    // 再解析 spine
-    for (auto* it = spine ? spine->FirstChildElement("itemref") : nullptr;
-        it; it = it->NextSiblingElement("itemref")) {
-
-        OCFRef ref;
-        ref.idref = a2w(it->Attribute("idref") ? it->Attribute("idref") : "");
-        ref.href = id2href[ref.idref];   // 直接填进去
-        ref.linear = a2w(it->Attribute("linear") ? it->Attribute("linear") : "yes");
-        ocf_pkg_.spine.emplace_back(std::move(ref));
-    }
-    // meta
-    auto* meta = doc.RootElement()
-        ? doc.RootElement()->FirstChildElement("metadata")
-        : nullptr;
-    for (auto* it = meta ? meta->FirstChildElement() : nullptr;
-        it; it = it->NextSiblingElement()) {
-        ocf_pkg_.meta[a2w(it->Name())] = a2w(it->GetText() ? it->GetText() : "");
-    }
-}
-
-
-void EPUBBook::parse_toc_()
-{
-    std::wstring toc_path;
-    for (const auto& it : ocf_pkg_.manifest)
-    {
-        if (it.properties.find(L"nav") != std::wstring::npos ||
-            it.id.find(L"ncx") != std::wstring::npos)
-        {
-            toc_path = it.href;
-            break;
-        }
-    }
-    if (toc_path.empty())
-    {
-        for (const auto& it : ocf_pkg_.manifest)
-        {
-            if (it.id.find(L"toc") != std::wstring::npos)
-            {
-                toc_path = it.href;
-                break;
-            }
-        }
-        if (toc_path.empty()) { return; }
-    }
-
-    ocf_pkg_.toc_path = toc_path;
-    auto toc = read_zip(toc_path.c_str());
-    if (toc.data.empty()) return;
-
-    tinyxml2::XMLDocument doc;
-    if (doc.Parse(toc.begin(), toc.size()) != tinyxml2::XML_SUCCESS) return;
-
-    bool is_nav = is_xhtml(toc_path);
-    std::string opf_dir = w2a(ocf_pkg_.opf_dir);
-
-    ocf_pkg_.toc.clear();
-
-    if (is_nav)
-    {
-        auto* body = doc.FirstChildElement("html")
-            ? doc.FirstChildElement("html")->FirstChildElement("body")
-            : nullptr;
-        if (!body) return;
-
-        for (auto* nav = body->FirstChildElement("nav") ? body->FirstChildElement("nav") : body->FirstChild()->FirstChildElement("nav");
-            nav;
-            nav = nav->NextSiblingElement("nav"))
-        {
-            const char* type = nav->Attribute("epub:type");
-            if (type && std::string(type) == "toc")
-            {
-                parse_nav_list(nav->FirstChildElement("ol"), 0, opf_dir, ocf_pkg_.toc);
-                break;   // 找到就停
-            }
-        }
-    }
-    else // NCX
-    {
-        auto* navMap = doc.RootElement()
-            ? doc.RootElement()->FirstChildElement("navMap")
-            : nullptr;
-        if (navMap)
-            parse_ncx_points(navMap->FirstChildElement("navPoint"), 0, opf_dir, ocf_pkg_.toc);
-    }
 }
 
 
@@ -729,83 +561,8 @@ std::string EPUBBook::get_anchor_html(litehtml::document* doc,
 
 
 
-void EPUBBook::parse_ncx_points(tinyxml2::XMLElement* navPoint, int level,
-    const std::string& opf_dir,
-    std::vector<OCFNavPoint>& out)
-{
-    if (!navPoint) return;
-    for (auto* pt = navPoint; pt; pt = pt->NextSiblingElement("navPoint"))
-    {
-        auto* lbl = pt->FirstChildElement("navLabel");
-        auto* txt = lbl ? lbl->FirstChildElement("text") : nullptr;
-        auto* con = pt->FirstChildElement("content");
-
-        OCFNavPoint np;
-
-        np.label = txt ? extract_text(txt) : L"";
-        np.href = a2w(con && con->Attribute("src") ? con->Attribute("src") : "");
-        if (!np.href.empty())
-            np.href = resolve_path(fs::path(ocf_pkg_.toc_path).parent_path(), np.href);
-        np.order = level;               // 层级深度
-        out.emplace_back(std::move(np));
-
-        // 递归子 <navPoint>
-        parse_ncx_points(pt->FirstChildElement("navPoint"), level + 1, opf_dir, out);
-    }
-}
-
-void EPUBBook::parse_nav_list(tinyxml2::XMLElement* ol, int level,
-    const std::string& opf_dir,
-    std::vector<OCFNavPoint>& out)
-{
-    if (!ol) return;
-    for (auto* li = ol->FirstChildElement("li"); li; li = li->NextSiblingElement("li"))
-    {
-        auto* a = li->FirstChildElement("a");
-        if (!a) continue;
-
-        OCFNavPoint np;
-        np.label = extract_text(a);
-        np.href = a2w(a->Attribute("href") ? a->Attribute("href") : "");
-        if (!np.href.empty())
-            np.href = resolve_path(fs::path(ocf_pkg_.toc_path).parent_path(), np.href);
-        np.order = level;               // 层级深度
-        out.emplace_back(std::move(np));
-
-        // 递归子 <ol>
-        if (auto* sub = li->FirstChildElement("ol"))
-            parse_nav_list(sub, level + 1, opf_dir, out);
-    }
-}
-
-std::wstring EPUBBook::extract_text(const tinyxml2::XMLElement* a)
-{
-    if (!a) return L"";
-
-    // 1. 拿到 <a> 的完整 XML 字符串
-    tinyxml2::XMLPrinter printer;
-    a->Accept(&printer);
-    std::string xml = printer.CStr();   // "<a ...><span ...>I</span>: The Meadow</a>"
-
-    // 2. 去掉最外层 <a ...> 和 </a>
-    size_t start = xml.find('>') + 1;
-    size_t end = xml.rfind('<');
-    if (start == std::string::npos || end == std::string::npos || end <= start)
-        return L"";
-
-    std::string inner = xml.substr(start, end - start);   // "<span ...>I</span>: The Meadow"
-
-    // 3. 简单剥掉所有标签（正则或手写）
-    std::regex tag_re("<[^>]*>");
-    std::string plain = std::regex_replace(inner, tag_re, "");
-
-    return a2w(plain);   // "I: The Meadow"
-}
-
-
-
 EPUBBook::~EPUBBook() {
-    mz_zip_reader_end(&zip);
+
 
     //for (const auto& path : g_tempFontFiles)
     //{
@@ -826,7 +583,7 @@ void EPUBBook::clear()
     mz_zip_reader_end(&zip);
     m_cache.clear();
 
-    ocf_pkg_ = {};
+
     m_fontBin.clear();
     m_current_book_path = L"";
     m_current_html_path = L"";
@@ -842,346 +599,6 @@ void EPUBBook::LoadToc()
     //}
 }
 
-ZipFileProvider::ZipFileProvider() {}
-ZipFileProvider::~ZipFileProvider()
-{
-    mz_zip_reader_end(&m_zip);           // 1. 先关闭旧 zip
-}
-bool ZipFileProvider::load(const std::wstring& file_path)
-{
-    namespace fs = std::filesystem;
-    if (!fs::exists(file_path))
-    {
-        OutputDebugStringW(L"[ZipProvider] 文件不存在\n");
-        return false;
-    }
-
-
-    mz_zip_reader_end(&m_zip);           // 1. 先关闭旧 zip
-    memset(&m_zip, 0, sizeof(m_zip));
-
-    if (!mz_zip_reader_init_file(&m_zip, w2a(file_path).c_str(), 0))
-    {
-        OutputDebugStringW((L"[ZipProvider] zip 打开失败：" +
-            std::to_wstring(mz_zip_get_last_error(&m_zip)) + L"\n").c_str());
-        return false;
-    }
-
-    return true;
-}
-MemFile ZipFileProvider::get(std::wstring path)
-{
-    MemFile mf;
-    std::string narrow_name = w2a(path);
-    size_t uncomp_size = 0;
-    void* p = mz_zip_reader_extract_file_to_heap(
-        const_cast<mz_zip_archive*>(&m_zip),
-        narrow_name.c_str(),
-        &uncomp_size, 0);
-
-    if (p) {
-        mf.data.assign(static_cast<uint8_t*>(p),
-            static_cast<uint8_t*>(p) + uncomp_size);
-        mz_free(p);
-    }
-    return mf;
-}
-
-MemFile LocalFileProvider::get(std::wstring path)
-{
-    namespace fs = std::filesystem;
-    std::error_code ec;
-
-    // 文件不存在或非普通文件
-    if (!fs::is_regular_file(path, ec) || ec)
-        return {};
-
-    std::ifstream file(path, std::ios::binary);
-    if (!file)
-        return {};
-
-    file.seekg(0, std::ios::end);
-    const auto len = static_cast<size_t>(file.tellg());
-    file.seekg(0);
-
-    MemFile mf;
-    mf.data.resize(len);
-    file.read(reinterpret_cast<char*>(mf.data.data()), len);
-
-    if (!file)        // 读取失败
-        return {};
-
-    return mf;        // NRVO / move
-}
-
-EPUBParser::EPUBParser() {}
-EPUBParser::~EPUBParser()
-{
-    m_fp.reset();
-}
-bool EPUBParser::load(std::shared_ptr<IFileProvider> fp)
-{
-    m_fp = fp;
-    parse_ocf();
-    parse_opf();
-    parse_toc();
-    return true;
-}
-
-bool EPUBParser::parse_ocf()
-{
-    m_ocf_pkg = {};  // 清空
-    auto mf = m_fp->get(L"META-INF/container.xml");
-    if (mf.data.empty()) return false;
-
-    tinyxml2::XMLDocument doc;
-    if (doc.Parse(mf.begin(), mf.size()) != tinyxml2::XML_SUCCESS) { return false; }
-
-    auto* rootfile = doc.FirstChildElement("container")
-        ? doc.FirstChildElement("container")->FirstChildElement("rootfiles")
-        : nullptr;
-    rootfile = rootfile ? rootfile->FirstChildElement("rootfile") : nullptr;
-    if (!rootfile || !rootfile->Attribute("full-path")) { return false; }
-
-    m_ocf_pkg.rootfile = a2w(rootfile->Attribute("full-path"));
-    m_ocf_pkg.opf_dir = m_ocf_pkg.rootfile.substr(0, m_ocf_pkg.rootfile.find_last_of(L'/') + 1);
-    return true;
-}
-bool EPUBParser::parse_opf()
-{
-    auto opf = m_fp->get(m_ocf_pkg.rootfile.c_str());
-    std::string xml(opf.begin(), opf.begin() + opf.size());
-    if (opf.data.empty()) return false;
-    tinyxml2::XMLDocument doc;
-    if (doc.Parse(xml.c_str(), xml.size()) != tinyxml2::XML_SUCCESS) return false;
-
-    auto* manifest = doc.RootElement()
-        ? doc.RootElement()->FirstChildElement("manifest")
-        : nullptr;
-
-    for (auto* it = manifest ? manifest->FirstChildElement("item") : nullptr;
-        it; it = it->NextSiblingElement("item"))
-    {
-        OCFItem item;
-        item.id = a2w(it->Attribute("id") ? it->Attribute("id") : "");
-        item.href = a2w(it->Attribute("href") ? it->Attribute("href") : "");
-        item.media_type = a2w(it->Attribute("media-type") ? it->Attribute("media-type") : "");
-        item.properties = a2w(it->Attribute("properties") ? it->Attribute("properties") : "");
-
-
-        // 只在 href 非空时拼绝对路径
-        if (!item.href.empty())
-            item.href = m_fp->find(item.href);
-
-        m_ocf_pkg.manifest.emplace_back(std::move(item));
-    }
-
-    // spine
-    auto* spine = doc.RootElement()
-        ? doc.RootElement()->FirstChildElement("spine")
-        : nullptr;
-    // 先把 manifest 做成 id -> href 的映射
-    std::unordered_map<std::wstring, std::wstring> id2href;
-    for (const auto& m : m_ocf_pkg.manifest)
-        id2href[m.id] = m.href;
-
-    // 再解析 spine
-    for (auto* it = spine ? spine->FirstChildElement("itemref") : nullptr;
-        it; it = it->NextSiblingElement("itemref")) {
-
-        OCFRef ref;
-        ref.idref = a2w(it->Attribute("idref") ? it->Attribute("idref") : "");
-        ref.href = id2href[ref.idref];   // 直接填进去
-        ref.linear = a2w(it->Attribute("linear") ? it->Attribute("linear") : "yes");
-        m_ocf_pkg.spine.emplace_back(std::move(ref));
-    }
-    // meta
-    auto* meta = doc.RootElement()
-        ? doc.RootElement()->FirstChildElement("metadata")
-        : nullptr;
-    for (auto* it = meta ? meta->FirstChildElement() : nullptr;
-        it; it = it->NextSiblingElement()) {
-        m_ocf_pkg.meta[a2w(it->Name())] = a2w(it->GetText() ? it->GetText() : "");
-    }
-    return true;
-}
-bool EPUBParser::parse_toc()
-{
-    std::wstring toc_path;
-    for (const auto& it : m_ocf_pkg.manifest)
-    {
-        if (it.properties.find(L"nav") != std::wstring::npos ||
-            it.id.find(L"ncx") != std::wstring::npos)
-        {
-            toc_path = it.href;
-            break;
-        }
-    }
-    if (toc_path.empty()) return false;
-
-    m_ocf_pkg.toc_path = toc_path;
-    auto toc = m_fp->get(toc_path.c_str());
-    if (toc.data.empty()) return false;
-
-    tinyxml2::XMLDocument doc;
-    if (doc.Parse(toc.begin(), toc.size()) != tinyxml2::XML_SUCCESS) return false;
-
-    bool is_nav = is_xhtml(toc_path);
-    std::string opf_dir = w2a(m_ocf_pkg.opf_dir);
-
-    m_ocf_pkg.toc.clear();
-
-    if (is_nav)
-    {
-        auto* body = doc.FirstChildElement("html")
-            ? doc.FirstChildElement("html")->FirstChildElement("body")
-            : nullptr;
-        if (!body) return false;
-
-        for (auto* nav = body->FirstChildElement("nav");
-            nav;
-            nav = nav->NextSiblingElement("nav"))
-        {
-            const char* type = nav->Attribute("epub:type");
-            if (type && std::string(type) == "toc")
-            {
-                parse_nav_list(nav->FirstChildElement("ol"), 0, opf_dir, m_ocf_pkg.toc);
-                break;   // 找到就停
-            }
-        }
-    }
-    else // NCX
-    {
-        auto* navMap = doc.RootElement()
-            ? doc.RootElement()->FirstChildElement("navMap")
-            : nullptr;
-        if (navMap)
-            parse_ncx_points(navMap->FirstChildElement("navPoint"), 0, opf_dir, m_ocf_pkg.toc);
-    }
-    return true;
-}
-
-void EPUBParser::parse_ncx_points(tinyxml2::XMLElement* navPoint, int level,
-    const std::string& opf_dir,
-    std::vector<OCFNavPoint>& out)
-{
-    if (!navPoint) return;
-    for (auto* pt = navPoint; pt; pt = pt->NextSiblingElement("navPoint"))
-    {
-        auto* lbl = pt->FirstChildElement("navLabel");
-        auto* txt = lbl ? lbl->FirstChildElement("text") : nullptr;
-        auto* con = pt->FirstChildElement("content");
-
-        OCFNavPoint np;
-
-        np.label = txt ? extract_text(txt) : L"";
-        np.href = a2w(con && con->Attribute("src") ? con->Attribute("src") : "");
-        if (!np.href.empty())
-            np.href = m_fp->find(np.href);
-        np.order = level;               // 层级深度
-        out.emplace_back(std::move(np));
-
-        // 递归子 <navPoint>
-        parse_ncx_points(pt->FirstChildElement("navPoint"), level + 1, opf_dir, out);
-    }
-}
-
-void EPUBParser::parse_nav_list(tinyxml2::XMLElement* ol, int level,
-    const std::string& opf_dir,
-    std::vector<OCFNavPoint>& out)
-{
-    if (!ol) return;
-    for (auto* li = ol->FirstChildElement("li"); li; li = li->NextSiblingElement("li"))
-    {
-        auto* a = li->FirstChildElement("a");
-        if (!a) continue;
-
-        OCFNavPoint np;
-        np.label = extract_text(a);
-        np.href = a2w(a->Attribute("href") ? a->Attribute("href") : "");
-        if (!np.href.empty())
-            np.href = m_fp->find(np.href);
-        np.order = level;               // 层级深度
-        out.emplace_back(std::move(np));
-
-        // 递归子 <ol>
-        if (auto* sub = li->FirstChildElement("ol"))
-            parse_nav_list(sub, level + 1, opf_dir, out);
-    }
-}
-
-std::wstring EPUBParser::extract_text(const tinyxml2::XMLElement* a)
-{
-    if (!a) return L"";
-
-    // 1. 拿到 <a> 的完整 XML 字符串
-    tinyxml2::XMLPrinter printer;
-    a->Accept(&printer);
-    std::string xml = printer.CStr();   // "<a ...><span ...>I</span>: The Meadow</a>"
-
-    // 2. 去掉最外层 <a ...> 和 </a>
-    size_t start = xml.find('>') + 1;
-    size_t end = xml.rfind('<');
-    if (start == std::string::npos || end == std::string::npos || end <= start)
-        return L"";
-
-    std::string inner = xml.substr(start, end - start);   // "<span ...>I</span>: The Meadow"
-
-    // 3. 简单剥掉所有标签（正则或手写）
-    std::regex tag_re("<[^>]*>");
-    std::string plain = std::regex_replace(inner, tag_re, "");
-
-    return a2w(plain);   // "I: The Meadow"
-}
-
-std::wstring EPUBBook::get_chapter_name_by_id(int spine_id)
-{
-    // 从给定 spine_id 开始，依次递减查找
-    for (int id = spine_id; id >= 0; --id)
-    {
-        // 1. 取出 spine 对应的 ref
-        if (id >= static_cast<int>(ocf_pkg_.spine.size()))
-            continue;
-
-        std::wstring href = ocf_pkg_.spine[id].href;
-
-
-        if (href.empty())
-            continue;
-
-        // 3. 去掉锚点
-        size_t pos = href.find(L'#');
-        if (pos != std::wstring::npos)
-            href = href.substr(0, pos);
-
-        // 4. 与 toc 中的 href比对（同样去掉锚点）
-        for (const auto& nav : ocf_pkg_.toc)
-        {
-            std::wstring nav_href = nav.href;
-            pos = nav_href.find(L'#');
-            if (pos != std::wstring::npos)
-                nav_href = nav_href.substr(0, pos);
-
-            if (nav_href == href)
-                return nav.label;
-        }
-    }
-
-    // 遍历到 id=0 仍未找到
-    return L"";
-}
-
-std::string EPUBBook::get_title()
-{
-    auto titIt = ocf_pkg_.meta.find(L"dc:title");
-    return titIt != ocf_pkg_.meta.end() ? w2a(titIt->second) : "";
-}
-
-std::string EPUBBook::get_author()
-{
-    auto titIt = ocf_pkg_.meta.find(L"dc:creator");
-    return titIt != ocf_pkg_.meta.end() ? w2a(titIt->second) : "";
-}
 
 
 
@@ -1220,39 +637,27 @@ void EPUBBook::cancel_delayed_tooltip()
     //hide_tooltip();   // 立即隐藏已显示的 tooltip
 }
 
-MemFile EPUBBook::get_binary(std::wstring base_url, std::wstring url)
-{
-    auto path = resolve_path(base_url, url);
-    std::error_code ec;  // 存储错误码
-    MemFile mf{};
-    if (fs::exists(path, ec))
-    {
-        size_t sz = fs::file_size(path, ec);
-        if (ec) return mf;                       // 文件不存在
-        std::ifstream ifs(path, std::ios::binary);
-        if (!ifs) return mf;
+//MemFile EPUBBook::get_binary(std::wstring base_url, std::wstring url)
+//{
+//    auto path = resolve_path(base_url, url);
+//    std::error_code ec;  // 存储错误码
+//    MemFile mf{};
+//    if (fs::exists(path, ec))
+//    {
+//        size_t sz = fs::file_size(path, ec);
+//        if (ec) return mf;                       // 文件不存在
+//        std::ifstream ifs(path, std::ios::binary);
+//        if (!ifs) return mf;
+//
+//        std::vector<uint8_t> buf(sz);
+//        ifs.read(reinterpret_cast<char*>(buf.data()), sz);
+//
+//        mf.data = std::move(buf);
+//    }
+//    else
+//    {
+//        mf = read_zip(path);
+//    }
+//    return mf;
+//}
 
-        std::vector<uint8_t> buf(sz);
-        ifs.read(reinterpret_cast<char*>(buf.data()), sz);
-
-        mf.data = std::move(buf);
-    }
-    else
-    {
-        mf = read_zip(path);
-    }
-    return mf;
-}
-
-bool EPUBBook::is_toc_item(int spine_id)
-{
-    if (spine_id < 0 || spine_id >= ocf_pkg_.spine.size()) { return false; }
-    for (auto& it : ocf_pkg_.toc)
-    {
-        if (it.href == ocf_pkg_.spine[spine_id].href)
-        {
-            return true;
-        }
-    }
-    return false;
-}

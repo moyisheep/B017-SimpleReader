@@ -552,40 +552,7 @@ void VirtualDoc::workerLoop()
         if (task.insertAtFront) { m_docs.push_front(DocBlock{ target.spine_id, doc }); }
         else { m_docs.push_back(DocBlock{ target.spine_id, doc }); }
     
-        //for (auto& b : target.body_blocks) 
-        //{
-        //    std::string html = "";
-        //    html += "<html>" + target.head + "<body>";
-        //    html += b.html;
-        //    html += "</body></html>";
-        //    auto doc = litehtml::document::createFromString(
-        //        { html.c_str(), litehtml::encoding::utf_8 }, m_container.get());
-        //    doc->render(m_doc_width.load(std::memory_order_acquire));
-        //    /* ---------- 5. 计算高度 ---------- */
 
-        //    auto height = m_height.load(std::memory_order_acquire);
-        //    height += doc->height();
-        //    m_height.store(height, std::memory_order_release);
-
-
-
-        //    if (task.insertAtFront) { m_docs.push_front(DocBlock{target.spine_id, doc}); }
-        //    else{ m_docs.push_back(DocBlock{ target.spine_id, doc }); }
-        //}
-
-
-
-        /* ---------- 4. render ---------- */
-
-        //std::string css = g_globalCSS;
-        //css += ":root,body,p,li,div,h1,h2,h3,h4,h5,h6,span, ul{line-height:" + std::to_string(g_cfg.line_height) + ";}\n";
-
-
-        //m_doc->render(g_cfg.document_width);
-
-
-
-        //PostMessage(g_hWnd, WM_EPUB_CACHE_UPDATED, 0, static_cast<LPARAM>(delta));
         InvalidateRect(m_hwnd, nullptr, FALSE);
         OutputDebugStringA("[VirtualDod thread] 更新结束\n");
     }

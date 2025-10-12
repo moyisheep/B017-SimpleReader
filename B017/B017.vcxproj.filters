@@ -34,6 +34,21 @@
     <ClInclude Include="src\VirtualDoc.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="src\EPUBParser.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\IFileProvider.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ZipFileProvider.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\LocalFileProvider.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\EPUBFileProvider.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\app.ico">
@@ -82,6 +97,21 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="src\VirtualDoc.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\EPUBParser.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ZipFileProvider.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\LocalFileProvider.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\IFileProvider.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\EPUBFileProvider.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
