@@ -55,6 +55,21 @@
     <ClInclude Include="src\ZipFileProvider.h">
       <Filter>FileProvider</Filter>
     </ClInclude>
+    <ClInclude Include="src\HomepageWindow.h">
+      <Filter>Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="src\HtmlWindow.h">
+      <Filter>Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ImageviewWindow.h">
+      <Filter>Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="src\TooltipWindow.h">
+      <Filter>Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ViewWindow.h">
+      <Filter>Windows</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\app.ico">
@@ -130,6 +145,21 @@
       <Filter>Windows</Filter>
     </ClCompile>
     <ClCompile Include="src\TocWindow.cpp">
+      <Filter>Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="src\HomepageWindow.cpp">
+      <Filter>Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="src\HtmlWindow.cpp">
+      <Filter>Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ImageviewWindow.cpp">
+      <Filter>Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="src\TooltipWindow.cpp">
+      <Filter>Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ViewWindow.cpp">
       <Filter>Windows</Filter>
     </ClCompile>
   </ItemGroup>

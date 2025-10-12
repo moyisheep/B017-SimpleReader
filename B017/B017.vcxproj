@@ -22,7 +22,10 @@
     <ClCompile Include="src\EPUBFileProvider.cpp" />
     <ClCompile Include="src\EPUBParser.cpp" />
     <ClCompile Include="src\EPUBBook.cpp" />
+    <ClCompile Include="src\HomepageWindow.cpp" />
+    <ClCompile Include="src\HtmlWindow.cpp" />
     <ClCompile Include="src\IFileProvider.cpp" />
+    <ClCompile Include="src\ImageviewWindow.cpp" />
     <ClCompile Include="src\LocalFileProvider.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\MML2SVG.cpp" />
@@ -30,6 +33,8 @@
     <ClCompile Include="src\ScrollbarWindow.cpp" />
     <ClCompile Include="src\SimpleContainer.cpp" />
     <ClCompile Include="src\TocWindow.cpp" />
+    <ClCompile Include="src\TooltipWindow.cpp" />
+    <ClCompile Include="src\ViewWindow.cpp" />
     <ClCompile Include="src\VirtualDoc.cpp" />
     <ClCompile Include="src\ZipFileProvider.cpp" />
   </ItemGroup>
@@ -41,11 +46,14 @@
   <ItemGroup>
     <ClInclude Include="src\EPUBFileProvider.h" />
     <ClInclude Include="src\EPUBParser.h" />
+    <ClInclude Include="src\HomepageWindow.h" />
+    <ClInclude Include="src\HtmlWindow.h" />
     <ClInclude Include="src\IFileProvider.h" />
     <ClInclude Include="src\3rdParty\stb_image.h" />
     <ClInclude Include="src\a2w_w2a.h" />
     <ClInclude Include="src\EPUBBook.h" />
     <ClInclude Include="src\FontKey.h" />
+    <ClInclude Include="src\ImageviewWindow.h" />
     <ClInclude Include="src\LocalFileProvider.h" />
     <ClInclude Include="src\main.h" />
     <ClInclude Include="src\MemFile.h" />
@@ -55,6 +63,8 @@
     <ClInclude Include="src\ScrollbarWindow.h" />
     <ClInclude Include="src\SimpleContainer.h" />
     <ClInclude Include="src\TocWindow.h" />
+    <ClInclude Include="src\TooltipWindow.h" />
+    <ClInclude Include="src\ViewWindow.h" />
     <ClInclude Include="src\VirtualDoc.h" />
     <ClInclude Include="src\ZipFileProvider.h" />
   </ItemGroup>
