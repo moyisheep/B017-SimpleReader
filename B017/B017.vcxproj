@@ -27,6 +27,7 @@
     <ClCompile Include="src\FontWindow.cpp" />
     <ClCompile Include="src\HomepageWindow.cpp" />
     <ClCompile Include="src\HtmlWindow.cpp" />
+    <ClCompile Include="src\IBaseWindow.cpp" />
     <ClCompile Include="src\IFileProvider.cpp" />
     <ClCompile Include="src\ImageviewWindow.cpp" />
     <ClCompile Include="src\LocalFileProvider.cpp" />
@@ -55,6 +56,7 @@
     <ClInclude Include="src\FontWindow.h" />
     <ClInclude Include="src\HomepageWindow.h" />
     <ClInclude Include="src\HtmlWindow.h" />
+    <ClInclude Include="src\IBaseWindow.h" />
     <ClInclude Include="src\IFileProvider.h" />
     <ClInclude Include="src\3rdParty\stb_image.h" />
     <ClInclude Include="src\a2w_w2a.h" />

@@ -412,12 +412,7 @@ void replace_math_with_svg(std::string& html) {
 //
 
 
-struct HtmlFeatureFlags {
-    bool has_svg = false;
-    bool has_math = false;
-    bool has_script = false;
-    bool all() const { return has_svg && has_math && has_script; }
-};
+
 
 inline HtmlFeatureFlags detect_html_features(const std::string& html) noexcept {
     HtmlFeatureFlags f;
