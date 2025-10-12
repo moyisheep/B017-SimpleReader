@@ -23,6 +23,7 @@
     <ClCompile Include="src\EPUBFileProvider.cpp" />
     <ClCompile Include="src\EPUBParser.cpp" />
     <ClCompile Include="src\EPUBBook.cpp" />
+    <ClCompile Include="src\FontWindow.cpp" />
     <ClCompile Include="src\HomepageWindow.cpp" />
     <ClCompile Include="src\HtmlWindow.cpp" />
     <ClCompile Include="src\IFileProvider.cpp" />
@@ -49,6 +50,7 @@
     <ClInclude Include="src\AppBootstrap.h" />
     <ClInclude Include="src\EPUBFileProvider.h" />
     <ClInclude Include="src\EPUBParser.h" />
+    <ClInclude Include="src\FontWindow.h" />
     <ClInclude Include="src\HomepageWindow.h" />
     <ClInclude Include="src\HtmlWindow.h" />
     <ClInclude Include="src\IFileProvider.h" />

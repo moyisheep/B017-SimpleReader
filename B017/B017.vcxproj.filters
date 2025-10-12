@@ -73,7 +73,12 @@
     <ClInclude Include="src\AppBootstrap.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="src\PreprocessHTML.h" />
+    <ClInclude Include="src\PreprocessHTML.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\FontWindow.h">
+      <Filter>Windows</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\app.ico">
@@ -169,7 +174,12 @@
     <ClCompile Include="src\AppBootstrap.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="src\PreprocessHTML.cpp" />
+    <ClCompile Include="src\PreprocessHTML.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\FontWindow.cpp">
+      <Filter>Windows</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="src\resource.rc">
