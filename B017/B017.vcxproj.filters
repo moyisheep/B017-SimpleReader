@@ -79,6 +79,9 @@
     <ClInclude Include="src\FontWindow.h">
       <Filter>Windows</Filter>
     </ClInclude>
+    <ClInclude Include="src\AppSettings.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\app.ico">
@@ -179,6 +182,9 @@
     </ClCompile>
     <ClCompile Include="src\FontWindow.cpp">
       <Filter>Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="src\AppStates.h">
+      <Filter>头文件</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

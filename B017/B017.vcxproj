@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\AppBootstrap.cpp" />
+    <ClCompile Include="src\AppStates.h" />
     <ClCompile Include="src\EPUBFileProvider.cpp" />
     <ClCompile Include="src\EPUBParser.cpp" />
     <ClCompile Include="src\EPUBBook.cpp" />
@@ -48,6 +49,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\AppBootstrap.h" />
+    <ClInclude Include="src\AppSettings.h" />
     <ClInclude Include="src\EPUBFileProvider.h" />
     <ClInclude Include="src\EPUBParser.h" />
     <ClInclude Include="src\FontWindow.h" />
