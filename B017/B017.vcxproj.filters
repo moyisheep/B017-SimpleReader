@@ -70,6 +70,7 @@
     <ClInclude Include="src\ViewWindow.h">
       <Filter>Windows</Filter>
     </ClInclude>
+    <ClInclude Include="src\AppBootstrap.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\app.ico">
@@ -162,6 +163,7 @@
     <ClCompile Include="src\ViewWindow.cpp">
       <Filter>Windows</Filter>
     </ClCompile>
+    <ClCompile Include="src\AppBootstrap.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="src\resource.rc">
