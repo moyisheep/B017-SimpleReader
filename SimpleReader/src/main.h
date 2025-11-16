@@ -477,7 +477,7 @@ struct AppSettings {
     std::wstring temp_dir = L"epub_book";
 
     int tooltip_width = 500;
-    std::string appName = "Simple EPUB Reader";
+    std::string appName = "Simple Reader";
     int split_space_height = 300; // 单位:px
     std::wstring default_serif = L"Georgia";
     std::wstring default_sans_serif = L"Verdana";

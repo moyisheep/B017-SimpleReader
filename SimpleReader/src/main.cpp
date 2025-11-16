@@ -2984,7 +2984,7 @@ int WINAPI wWinMain(HINSTANCE h, HINSTANCE, LPWSTR, int n)
     LocalFree(argv);
 
     // ---------- 2. 单例检测 ----------
-    CreateMutex(nullptr, TRUE, L"SimpleEPUBReader_SingleInstance");
+    CreateMutex(nullptr, TRUE, L"SimpleReader_SingleInstance");
     if (GetLastError() == ERROR_ALREADY_EXISTS)
     {
         //LogToFile("[firstFile]\n");
@@ -4382,7 +4382,7 @@ void SimpleContainer::record_char_boxes(ID2D1DeviceContext* rt,
     m_lines.emplace_back(std::move(line));
 
     // 同时累积纯文本
-    m_plainText += wtxt;
+    m_plainText += wtxt + L" ";
 }
 
 

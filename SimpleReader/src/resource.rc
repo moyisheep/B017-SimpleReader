@@ -25,12 +25,12 @@ BEGIN
 BLOCK "080404B0"
 BEGIN
 VALUE "CompanyName", "azx1"
-VALUE "FileDescription", "Simple EPUB Reader"
-VALUE "FileVersion", "1.0.0.0"
-VALUE "InternalName", "SimpleEPUBReader"
-VALUE "OriginalFilename", "SimpleEPUBReader.exe"
-VALUE "ProductName", "Simple EPUB Reader"
-VALUE "ProductVersion", "1.0.0.0"
+VALUE "FileDescription", "Simple Reader"
+VALUE "FileVersion", "1.100.0.0"
+VALUE "InternalName", "SimpleReader"
+VALUE "OriginalFilename", "SimpleReader.exe"
+VALUE "ProductName", "Simple Reader"
+VALUE "ProductVersion", "1.100.0.0"
 END
 END
 BLOCK "VarFileInfo"
