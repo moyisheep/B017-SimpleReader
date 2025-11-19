@@ -661,6 +661,7 @@ public:
     void on_lbutton_up();
     void on_lbutton_down(int x, int y);
     void on_mouse_move(int x, int y);
+    void on_mouse_wheel(float delta);
     void copy_to_clipboard();
     void present(float x, float y, litehtml::position* clip);
 
@@ -736,6 +737,9 @@ private:
     Microsoft::WRL::ComPtr<IDXGISwapChain1>   m_swapChain;
     Microsoft::WRL::ComPtr<ID2D1Bitmap1> m_targetBmp;
     Microsoft::WRL::ComPtr<IDXGISurface> m_backBuffer;
+
+    float m_sel_delta = 0;
+    std::vector<D2D1_RECT_F> m_sel_rects = {};
 
 };
 

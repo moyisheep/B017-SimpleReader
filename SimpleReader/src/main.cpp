@@ -1635,7 +1635,7 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     }
     case WM_MOUSEWHEEL:
     {
-        if (g_cMain) { g_cMain->clear_selection(); }
+   
         if (GetKeyState(VK_CONTROL) & 0x8000)
         {
             int delta = GET_WHEEL_DELTA_WPARAM(wp);   // ±120
@@ -1659,7 +1659,7 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         // 每格 3 行 → 每行像素 * 3
         float pxPerLine = g_cfg.font_size * g_cfg.line_height;
         float pxDelta = -zDelta / 120.0f * pxPerLine * 3.0f;   // 负号：上滚为负
-
+        if (g_cMain) { g_cMain->on_mouse_wheel(-pxDelta); }
         if(g_cfg.enableScrollAnimation)
         {
             // 累加速度，而不是直接改目标
@@ -8963,7 +8963,7 @@ int64_t SimpleContainer::hit_test(float x, float y)
 void SimpleContainer::on_lbutton_down(int x, int y)
 {
     m_selecting = true;
-
+    m_sel_rects = {};
     m_selStart = m_selEnd = -1;
     UpdateCache();
 }
@@ -8981,14 +8981,37 @@ void SimpleContainer::on_mouse_move(int x, int y)
         {
             if (m_selStart < 0) { m_selStart = result; }
             m_selEnd = result; 
+            m_sel_rects = {};
+            for (const auto& row : get_selection_rows())
+            {
+
+                D2D1_RECT_F r = D2D1::RectF(
+                    row.left, row.top, row.right, row.bottom);
+                m_sel_rects.push_back(r);
+            }
             InvalidateRect(m_hwnd, nullptr, false);
         }
 
     }
 }
 
+void SimpleContainer::on_mouse_wheel(float delta)
+{
+    if (m_selStart != m_selEnd && m_selStart >= 0 && m_selEnd >= 0)
+    {
+
+        for ( auto& r : m_sel_rects)
+        {
+            r.bottom += delta;
+            r.top += delta;
+        }
+    }
+
+}
+
 void SimpleContainer::on_lbutton_up()
 {
+
 
     m_selecting = false;
 
@@ -9123,10 +9146,8 @@ void SimpleContainer::present(float x, float y, litehtml::position* clip)
     if (m_selStart != m_selEnd && m_selBrush && m_selStart >= 0 && m_selEnd >= 0)
     {
         m_dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
-        for (const auto& row : get_selection_rows())
+        for (const auto& r : m_sel_rects)
         {
-            D2D1_RECT_F r = D2D1::RectF(
-                row.left, row.top, row.right, row.bottom);
             m_dc->FillRectangle(r, m_selBrush.Get());
         }
     }
@@ -9204,6 +9225,8 @@ void SimpleContainer::clear_selection()
 {
     m_selStart = m_selEnd = -1;
     m_selecting = false;
+    m_sel_delta = 0;
+    m_sel_rects = {};
 }
 
 
@@ -9257,6 +9280,17 @@ void SimpleContainer::on_lbutton_dblclk(int x, int y)
     /* 5. 更新选区 */
     m_selStart = wordStart;
     m_selEnd = wordEnd;
+    if (m_selStart != m_selEnd && m_selStart >= 0 && m_selEnd >= 0)
+    {
+
+        for (const auto& row : get_selection_rows())
+        {
+
+            D2D1_RECT_F r = D2D1::RectF(
+                row.left, row.top, row.right, row.bottom);
+            m_sel_rects.push_back(r);
+        }
+    }
     //UpdateCache();
 }
 //void SimpleContainer::on_lbutton_dblclk(int x, int y)
