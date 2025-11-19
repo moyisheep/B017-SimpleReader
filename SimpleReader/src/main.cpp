@@ -144,7 +144,15 @@ std::wstring seconds2string(int64_t sec)
     timeStr += std::to_wstring(seconds) + L"秒";
     return timeStr;
 }
+bool IsMouseOverWindow(HWND hWnd) {
+    POINT ptCursor;
+    GetCursorPos(&ptCursor); // 获取鼠标的屏幕坐标
 
+    RECT rectWindow;
+    GetWindowRect(hWnd, &rectWindow); // 获取窗口的屏幕坐标矩形
+
+    return PtInRect(&rectWindow, ptCursor);
+}
 // 工具：把路径拷到堆，返回指针
 inline wchar_t* DupPath(const wchar_t* src)
 {
@@ -2826,7 +2834,16 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             break;
         case ID_EDIT_COPY:
         {
-             g_cMain->copy_to_clipboard(); 
+            if (IsMouseOverWindow(g_hView)) {
+                // 鼠标在主窗口上
+                g_cMain->copy_to_clipboard();
+            }
+
+            if (IsMouseOverWindow(g_hToc)) {
+                // 鼠标在目录窗口上
+                g_toc->copy_to_clipboard();
+            }
+       
             break;
         }
         case ID_FILE_OPEN:
@@ -8072,11 +8089,12 @@ void TocPanel::OnMouseMove(int x, int y)
         return;
     }
     if (m_curHover == line) {  return; }
-    if (line == m_selLine) { m_curHover = -1; if (m_hTip) { ShowWindow(m_hTip, SW_HIDE); }return; }
+    //if (line == m_selLine) { m_curHover = -1; if (m_hTip) { ShowWindow(m_hTip, SW_HIDE); }return; }
 
     m_curHover = line;
     SetCursor(LoadCursor(nullptr, IDC_HAND));
     std::wstring wtxt = m_nodes[m_visible[line]].nav->label;
+    m_sel_text = wtxt;
     // 2. 判断文字是否被截断
     HDC hdc = GetDC(m_hwnd);
     HFONT old = (HFONT)SelectObject(hdc, m_hFont);   // 你的字体
@@ -11293,4 +11311,30 @@ bool EPUBBook::is_toc_item(int spine_id)
         }
     }
     return false;
+}
+
+void TocPanel::copy_to_clipboard()
+{
+    if (m_sel_text.empty()) return;
+
+    const size_t bufSize = (m_sel_text.size() + 1) * sizeof(wchar_t);
+    if (HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, bufSize)) {
+        if (wchar_t* dst = static_cast<wchar_t*>(GlobalLock(hMem))) {
+            // 直接复制整个字符串内容
+            wcscpy_s(dst, m_sel_text.size() + 1, m_sel_text.c_str());
+            GlobalUnlock(hMem);
+
+            if (OpenClipboard(g_hWnd)) {
+                EmptyClipboard();
+                SetClipboardData(CF_UNICODETEXT, hMem);
+                CloseClipboard();
+            }
+            else {
+                GlobalFree(hMem);
+            }
+        }
+        else {
+            GlobalFree(hMem);
+        }
+    }
 }

@@ -952,6 +952,7 @@ public:
     static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
     size_t getTargetNode(const ScrollPosition& sp);
     void SetHighlight(ScrollPosition sp);
+    void copy_to_clipboard();
 private:
     struct Node : TreeNode{};
 
@@ -994,6 +995,7 @@ private:
     HBRUSH   m_hoverBrush;
     int m_curTarget = 0;
     int m_curHover = -1;
+    std::wstring m_sel_text = L"";
 };
 
 //  file system
@@ -1349,3 +1351,5 @@ struct FontItem
     std::wstring familyName;   // 字体原名（en-us）
     std::wstring displayName;  // 中文名（zh-cn），没有就用 familyName
 };
+
+bool IsMouseOverWindow(HWND hWnd);
