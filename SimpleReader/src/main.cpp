@@ -3387,8 +3387,10 @@ void SimpleContainer::on_mouse_event(const litehtml::element::ptr& el,
 
         std::string html;
         if (!link) { return ; }
+   
         const char* href_raw = link->get_attr("href");
         if (!href_raw) { return; }
+        m_sel_text = a2w(std::string(href_raw));
         std::string id = g_book->extract_anchor(href_raw);
         if (id.empty()) {  return; }
         html = g_book->html_of_anchor_paragraph(g_cMain->m_doc.get(), id);
@@ -9012,7 +9014,7 @@ void SimpleContainer::on_mouse_wheel(float delta)
 void SimpleContainer::on_lbutton_up()
 {
 
-
+    m_sel_text = get_selection_text();
     m_selecting = false;
 
     m_currentCursor = IDC_ARROW;
@@ -9021,35 +9023,27 @@ void SimpleContainer::on_lbutton_up()
 }
 void SimpleContainer::copy_to_clipboard()
 {
-    if (m_selStart == m_selEnd) return;
+    if (m_sel_text.empty()) return;
 
-    // 确保选区不越界
-    size_t start = std::min(m_selStart, m_selEnd);
-    size_t end = std::max(m_selStart, m_selEnd);
-    end = std::min(end, m_plainText.size());
-    if (start >= end) return;
+    const size_t bufSize = (m_sel_text.size() + 1) * sizeof(wchar_t);
+    if (HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, bufSize)) {
+        if (wchar_t* dst = static_cast<wchar_t*>(GlobalLock(hMem))) {
+            // 直接复制整个字符串内容
+            wcscpy_s(dst, m_sel_text.size() + 1, m_sel_text.c_str());
+            GlobalUnlock(hMem);
 
-    size_t len = end - start;
-
-    HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, (len + 1) * sizeof(wchar_t));
-    if (!hMem) return;                       // 内存不足
-    wchar_t* dst = (wchar_t*)GlobalLock(hMem);
-    if (!dst) { GlobalFree(hMem); return; }  // 锁失败
-
-    memcpy(dst, m_plainText.c_str() + start, len * sizeof(wchar_t));
-    dst[len] = L'\0';
-
-    GlobalUnlock(hMem);
-
-    if (OpenClipboard(g_hWnd))
-    {
-        EmptyClipboard();
-        SetClipboardData(CF_UNICODETEXT, hMem);
-        CloseClipboard();
-    }
-    else
-    {
-        GlobalFree(hMem);
+            if (OpenClipboard(g_hWnd)) {
+                EmptyClipboard();
+                SetClipboardData(CF_UNICODETEXT, hMem);
+                CloseClipboard();
+            }
+            else {
+                GlobalFree(hMem);
+            }
+        }
+        else {
+            GlobalFree(hMem);
+        }
     }
 }
 
@@ -9113,6 +9107,22 @@ std::vector<RECT> SimpleContainer::get_selection_rows() const
     }
     merged.push_back(cur);
     return merged;
+}
+
+std::wstring SimpleContainer::get_selection_text() const
+{
+    if (m_selStart == m_selEnd)
+        return L"";
+
+    // 确保选区不越界
+    const size_t start = std::min(m_selStart, m_selEnd);
+    const size_t end = std::min(std::max(m_selStart, m_selEnd), static_cast<int64_t>(m_plainText.size()));
+
+    if (start >= end)
+        return L"";
+
+    // 直接使用substr安全地获取子字符串
+    return m_plainText.substr(start, end - start);
 }
 
 void SimpleContainer::present(float x, float y, litehtml::position* clip)
@@ -9291,6 +9301,7 @@ void SimpleContainer::on_lbutton_dblclk(int x, int y)
             m_sel_rects.push_back(r);
         }
     }
+    m_sel_text = get_selection_text();
     //UpdateCache();
 }
 //void SimpleContainer::on_lbutton_dblclk(int x, int y)

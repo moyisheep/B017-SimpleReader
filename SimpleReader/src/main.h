@@ -673,6 +673,7 @@ private:
     float m_px_per_pt{ 96.0f / 72.0f };   // 默认 96 DPI
 
     std::vector<RECT> get_selection_rows() const;
+    std::wstring get_selection_text() const;
 
 
 
@@ -740,6 +741,7 @@ private:
 
     float m_sel_delta = 0;
     std::vector<D2D1_RECT_F> m_sel_rects = {};
+    std::wstring m_sel_text = L"";
 
 };
 
