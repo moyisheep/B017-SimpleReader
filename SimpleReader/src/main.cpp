@@ -2976,11 +2976,9 @@ void LogToFile(const std::string& message)
 }
 
 
-
 // ---------- 入口 ----------
 int WINAPI wWinMain(HINSTANCE h, HINSTANCE, LPWSTR, int n)
 {
- 
 
     // ---------- 1. 解析命令行 ----------
     int argc = 0;
@@ -3117,6 +3115,8 @@ int WINAPI wWinMain(HINSTANCE h, HINSTANCE, LPWSTR, int n)
     // ====================
     ShowWindow(g_hWnd, n);
     UpdateWindow(g_hWnd);
+
+
 
     // ---------- 4. 首次启动时如有文件立即加载 ----------
     if (firstFile && fs::exists(firstFile))
@@ -7256,9 +7256,9 @@ void VirtualDoc::update_doc(int client_h)
 
     float offsetY = g_offsetY.load(std::memory_order_relaxed);
 
-    OutputDebugStringA("[before] ");
-    OutputDebugStringA(std::to_string(offsetY).c_str());
-    OutputDebugStringA("\n");
+    //OutputDebugStringA("[before] ");
+    //OutputDebugStringA(std::to_string(offsetY).c_str());
+    //OutputDebugStringA("\n");
 
 
     if (offsetY < 0)

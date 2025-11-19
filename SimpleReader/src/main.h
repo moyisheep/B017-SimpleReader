@@ -124,6 +124,12 @@ using namespace Gdiplus;
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "comctl32.lib")
 #pragma comment(lib, "winmm.lib")
+
+#include <stdio.h>
+#include <io.h>
+#include <fcntl.h>
+#include <cstdio>
+
 using Microsoft::WRL::ComPtr;
 
 namespace fs = std::filesystem;
@@ -477,7 +483,7 @@ struct AppSettings {
     std::wstring temp_dir = L"epub_book";
 
     int tooltip_width = 500;
-    std::string appName = "Simple Reader";
+    std::string appName = "Simple Reader TEST";
     int split_space_height = 300; // 单位:px
     std::wstring default_serif = L"Georgia";
     std::wstring default_sans_serif = L"Verdana";

@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.14.36327.8 d17.14
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.36602.28
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SimpleReader", "SimpleReader\SimpleReader.vcxproj", "{741782D1-25D4-42B6-968E-150804FAF41B}"
 EndProject
@@ -11,6 +11,8 @@ Global
 		Debug|x86 = Debug|x86
 		Release|x64 = Release|x64
 		Release|x86 = Release|x86
+		RelWithDgb|x64 = RelWithDgb|x64
+		RelWithDgb|x86 = RelWithDgb|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{741782D1-25D4-42B6-968E-150804FAF41B}.Debug|x64.ActiveCfg = Debug|x64
@@ -21,6 +23,10 @@ Global
 		{741782D1-25D4-42B6-968E-150804FAF41B}.Release|x64.Build.0 = Release|x64
 		{741782D1-25D4-42B6-968E-150804FAF41B}.Release|x86.ActiveCfg = Release|Win32
 		{741782D1-25D4-42B6-968E-150804FAF41B}.Release|x86.Build.0 = Release|Win32
+		{741782D1-25D4-42B6-968E-150804FAF41B}.RelWithDgb|x64.ActiveCfg = RelWithDgb|x64
+		{741782D1-25D4-42B6-968E-150804FAF41B}.RelWithDgb|x64.Build.0 = RelWithDgb|x64
+		{741782D1-25D4-42B6-968E-150804FAF41B}.RelWithDgb|x86.ActiveCfg = RelWithDgb|Win32
+		{741782D1-25D4-42B6-968E-150804FAF41B}.RelWithDgb|x86.Build.0 = RelWithDgb|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
