@@ -8256,20 +8256,17 @@ void TocPanel::OnLButtonDown(int x, int y)
     ShowWindow(m_hTip, SW_HIDE);
     const Node& n = m_nodes[m_visible[line]];
     m_curTarget = m_visible[line];
-    if (n.childIdx.empty())
-    {
-        m_selLine = line;
-        InvalidateRect(m_hwnd, nullptr, false);
-        UpdateWindow(m_hwnd);
 
-        if (m_onNavigate) m_onNavigate(n.nav->href);
-    }
-    else
+    m_selLine = line;
+    InvalidateRect(m_hwnd, nullptr, false);
+    UpdateWindow(m_hwnd);
+    if (m_onNavigate) m_onNavigate(n.nav->href);
+    
+    if (!n.childIdx.empty())
     {
-        m_selLine = line;
-
         Toggle(line);
     }
+
 }
 float TocPanel::getAnchorOffsetY(const std::wstring& href)
 {
