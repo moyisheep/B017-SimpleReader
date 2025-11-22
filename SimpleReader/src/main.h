@@ -125,10 +125,16 @@ using namespace Gdiplus;
 #pragma comment(lib, "comctl32.lib")
 #pragma comment(lib, "winmm.lib")
 
-#include <stdio.h>
-#include <io.h>
-#include <fcntl.h>
-#include <cstdio>
+#include <unicode/unistr.h>
+#include <unicode/brkiter.h>
+#include <unicode/utypes.h>
+#include <unicode/uchar.h>
+#include <unicode/utf8.h>
+#include <unicode/rbbi.h>
+#include <unicode/ubrk.h>
+#include <unicode/ustring.h>
+
+
 
 using Microsoft::WRL::ComPtr;
 
@@ -483,7 +489,7 @@ struct AppSettings {
     std::wstring temp_dir = L"epub_book";
 
     int tooltip_width = 500;
-    std::string appName = "Simple Reader TEST";
+    std::string appName = "Simple Reader";
     int split_space_height = 300; // 单位:px
     std::wstring default_serif = L"Georgia";
     std::wstring default_sans_serif = L"Verdana";

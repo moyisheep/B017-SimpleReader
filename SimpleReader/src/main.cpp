@@ -1650,7 +1650,9 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             float factor = (delta > 0) ? 1.1f : 0.9f;     // 放大 / 缩小系数
 
             // 2. 更新全局缩放
+            g_cMain->clear_selection();
             g_cMain->m_zoom_factor = std::clamp(g_cMain->m_zoom_factor * factor, 0.25f, 5.0f);
+   
             UpdateCache();
             // 3. 重绘
             InvalidateRect(hwnd, NULL, FALSE);
@@ -2114,9 +2116,7 @@ void register_homepage_class()
     RegisterClassExW(&wc);
 }
 
-#include <Windows.h>
-#include <vector>
-#include <string>
+
 
 std::vector<std::wstring> GetSystemFonts() {
     std::vector<std::wstring> fonts;
@@ -2638,6 +2638,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             std::memory_order_relaxed));
 
         g_cMain->m_doc = std::move(g_vd->m_doc);
+       
 
         if (g_vd->m_isAnchor.exchange(false)) {
             std::string cssSel = "[id=\"" + g_vd->m_anchor_id + "\"]";
@@ -3142,6 +3143,8 @@ void VirtualDoc::OnTreeSelChanged(std::wstring href)
 {
     if (href.empty()) return;
 
+    // 清除高亮选区
+    m_container->clear_selection();
 
     /* 1. 分离文件路径与锚点 */
 
@@ -5896,6 +5899,8 @@ void SimpleContainer::resize(int w, int h)
     m_w = w;
     m_h = h;
 
+    // 清除高亮选择的文字
+    clear_selection();
     // 1) 释放所有依赖后台缓冲的 D2D 资源
     m_dc->SetTarget(nullptr);          // 解绑
     m_targetBmp.Reset();               // 你之前叫 targetBmp，这里起名叫 m_targetBmp
@@ -9255,73 +9260,10 @@ void SimpleContainer::clear_selection()
 }
 
 
-void SimpleContainer::on_lbutton_dblclk(int x, int y)
-{
-    if (m_plainText.empty() || m_lines.empty()) return;
-
-    /* 1. 字符偏移 */
-    size_t clickPos = hit_test(x, y);
-    if (clickPos == size_t(-1) || clickPos >= m_plainText.size())
-        return;
-
-    /* 2. 在 m_lines 里找到当前行 */
-    size_t lineStart = 0, lineEnd = 0;
-    for (const auto& line : m_lines)
-    {
-        if (line.empty()) continue;
-        lineStart = line.front().offset;
-        lineEnd = line.back().offset + 1;   // [start , end)
-        if (clickPos >= lineStart && clickPos < lineEnd)
-            break;
-    }
-    if (lineEnd <= lineStart) return;   // 没找到行
-
-    /* 3. 自定义“选词”：空格/制表/换行 + ASCII 标点视为分隔符 */
-    auto isDelimiter = [](unsigned char c) -> bool
-        {
-            return std::isspace(c) || std::ispunct(c);
-        };
-
-    /* 3.1 找词起始 */
-    size_t wordStart = clickPos;
-    while (wordStart > lineStart && !isDelimiter(m_plainText[wordStart - 1]))
-        --wordStart;
-
-    /* 3.2 找词结束 */
-    size_t wordEnd = clickPos;
-    while (wordEnd < lineEnd && !isDelimiter(m_plainText[wordEnd]))
-        ++wordEnd;
-
-    if (wordStart >= wordEnd) return;
-
-    /* 4. 裁剪首尾空格/标点（可选，与 ICU 版本保持一致） */
-    while (wordStart < wordEnd && isDelimiter(m_plainText[wordStart]))
-        ++wordStart;
-    while (wordEnd > wordStart && isDelimiter(m_plainText[wordEnd - 1]))
-        --wordEnd;
-
-    if (wordStart >= wordEnd) return;
-
-    /* 5. 更新选区 */
-    m_selStart = wordStart;
-    m_selEnd = wordEnd;
-    if (m_selStart != m_selEnd && m_selStart >= 0 && m_selEnd >= 0)
-    {
-
-        for (const auto& row : get_selection_rows())
-        {
-
-            D2D1_RECT_F r = D2D1::RectF(
-                row.left, row.top, row.right, row.bottom);
-            m_sel_rects.push_back(r);
-        }
-    }
-    m_sel_text = get_selection_text();
-    //UpdateCache();
-}
 //void SimpleContainer::on_lbutton_dblclk(int x, int y)
 //{
 //    if (m_plainText.empty() || m_lines.empty()) return;
+//
 //    /* 1. 字符偏移 */
 //    size_t clickPos = hit_test(x, y);
 //    if (clickPos == size_t(-1) || clickPos >= m_plainText.size())
@@ -9339,56 +9281,131 @@ void SimpleContainer::on_lbutton_dblclk(int x, int y)
 //    }
 //    if (lineEnd <= lineStart) return;   // 没找到行
 //
-//    /* 3. 在这一行里用 ICU 选词 */
-//    icu::UnicodeString us(m_plainText.data(), m_plainText.size());
-//    const UChar* buf = us.getBuffer();
-//
-//    UErrorCode err = U_ZERO_ERROR;
-//    UBreakIterator* wordBI = ubrk_open(
-//        UBRK_WORD, nullptr,
-//        buf + lineStart,
-//        static_cast<int32_t>(lineEnd - lineStart),
-//        &err);
-//    if (U_FAILURE(err)) return;
-//
-//    int32_t relPos = static_cast<int32_t>(clickPos - lineStart);
-//
-//    int32_t wordStartRel = ubrk_preceding(wordBI, relPos);
-//    if (wordStartRel == UBRK_DONE) wordStartRel = 0;
-//
-//    int32_t wordEndRel = ubrk_following(wordBI, relPos);
-//    if (wordEndRel == UBRK_DONE) wordEndRel = lineEnd - lineStart;
-//
-//    ubrk_close(wordBI);
-//
-//    int32_t wordStart = lineStart + wordStartRel;
-//    int32_t wordEnd = lineStart + wordEndRel;
-//
-//    /* 4. 裁剪首尾空格/标点 */
-//    auto isVisible = [](UChar32 c) {
-//        return !u_isspace(c) && (u_isalnum(c) || c == 0x2019);
+//    /* 3. 自定义“选词”：空格/制表/换行 + ASCII 标点视为分隔符 */
+//    auto isDelimiter = [](unsigned char c) -> bool
+//        {
+//            return std::isspace(c) || std::ispunct(c);
 //        };
 //
-//    while (wordStart < wordEnd) {
-//        UChar32 c; int32_t idx = wordStart;
-//        U16_NEXT(buf, idx, wordEnd, c);
-//        if (isVisible(c)) break;
-//        wordStart = idx;
-//    }
-//    while (wordEnd > wordStart) {
-//        UChar32 c; int32_t idx = wordEnd;
-//        U16_PREV(buf, wordStart, idx, c);
-//        if (isVisible(c)) { wordEnd = idx + U16_LENGTH(c); break; }
-//        wordEnd = idx;
-//    }
+//    /* 3.1 找词起始 */
+//    size_t wordStart = clickPos;
+//    while (wordStart > lineStart && !isDelimiter(m_plainText[wordStart - 1]))
+//        --wordStart;
+//
+//    /* 3.2 找词结束 */
+//    size_t wordEnd = clickPos;
+//    while (wordEnd < lineEnd && !isDelimiter(m_plainText[wordEnd]))
+//        ++wordEnd;
+//
+//    if (wordStart >= wordEnd) return;
+//
+//    /* 4. 裁剪首尾空格/标点（可选，与 ICU 版本保持一致） */
+//    while (wordStart < wordEnd && isDelimiter(m_plainText[wordStart]))
+//        ++wordStart;
+//    while (wordEnd > wordStart && isDelimiter(m_plainText[wordEnd - 1]))
+//        --wordEnd;
 //
 //    if (wordStart >= wordEnd) return;
 //
 //    /* 5. 更新选区 */
-//    m_selStart = static_cast<size_t>(wordStart);
-//    m_selEnd = static_cast<size_t>(wordEnd);
+//    m_selStart = wordStart;
+//    m_selEnd = wordEnd;
+//    if (m_selStart != m_selEnd && m_selStart >= 0 && m_selEnd >= 0)
+//    {
+//
+//        for (const auto& row : get_selection_rows())
+//        {
+//
+//            D2D1_RECT_F r = D2D1::RectF(
+//                row.left, row.top, row.right, row.bottom);
+//            m_sel_rects.push_back(r);
+//        }
+//    }
+//    m_sel_text = get_selection_text();
 //    UpdateCache();
 //}
+void SimpleContainer::on_lbutton_dblclk(int x, int y)
+{
+    if (m_plainText.empty() || m_lines.empty()) return;
+    /* 1. 字符偏移 */
+    size_t clickPos = hit_test(x, y);
+    if (clickPos == size_t(-1) || clickPos >= m_plainText.size())
+        return;
+
+    /* 2. 在 m_lines 里找到当前行 */
+    size_t lineStart = 0, lineEnd = 0;
+    for (const auto& line : m_lines)
+    {
+        if (line.empty()) continue;
+        lineStart = line.front().offset;
+        lineEnd = line.back().offset + 1;   // [start , end)
+        if (clickPos >= lineStart && clickPos < lineEnd)
+            break;
+    }
+    if (lineEnd <= lineStart) return;   // 没找到行
+
+    /* 3. 在这一行里用 ICU 选词 */
+    icu::UnicodeString us(m_plainText.data(), m_plainText.size());
+    const UChar* buf = us.getBuffer();
+
+    UErrorCode err = U_ZERO_ERROR;
+    UBreakIterator* wordBI = ubrk_open(
+        UBRK_WORD, nullptr,
+        buf + lineStart,
+        static_cast<int32_t>(lineEnd - lineStart),
+        &err);
+    if (U_FAILURE(err)) return;
+
+    int32_t relPos = static_cast<int32_t>(clickPos - lineStart);
+
+    int32_t wordStartRel = ubrk_preceding(wordBI, relPos);
+    if (wordStartRel == UBRK_DONE) wordStartRel = 0;
+
+    int32_t wordEndRel = ubrk_following(wordBI, relPos);
+    if (wordEndRel == UBRK_DONE) wordEndRel = lineEnd - lineStart;
+
+    ubrk_close(wordBI);
+
+    int32_t wordStart = lineStart + wordStartRel;
+    int32_t wordEnd = lineStart + wordEndRel;
+
+    /* 4. 裁剪首尾空格/标点 */
+    auto isVisible = [](UChar32 c) {
+        return !u_isspace(c) && (u_isalnum(c) || c == 0x2019);
+        };
+
+    while (wordStart < wordEnd) {
+        UChar32 c; int32_t idx = wordStart;
+        U16_NEXT(buf, idx, wordEnd, c);
+        if (isVisible(c)) break;
+        wordStart = idx;
+    }
+    while (wordEnd > wordStart) {
+        UChar32 c; int32_t idx = wordEnd;
+        U16_PREV(buf, wordStart, idx, c);
+        if (isVisible(c)) { wordEnd = idx + U16_LENGTH(c); break; }
+        wordEnd = idx;
+    }
+
+    if (wordStart >= wordEnd) return;
+
+    /* 5. 更新选区 */
+    m_selStart = static_cast<size_t>(wordStart);
+    m_selEnd = static_cast<size_t>(wordEnd);
+    if (m_selStart != m_selEnd && m_selStart >= 0 && m_selEnd >= 0)
+    {
+
+        for (const auto& row : get_selection_rows())
+        {
+
+            D2D1_RECT_F r = D2D1::RectF(
+                row.left, row.top, row.right, row.bottom);
+            m_sel_rects.push_back(r);
+        }
+    }
+    m_sel_text = get_selection_text();
+    //UpdateCache();
+}
 
 
 //namespace mathml2tex {
