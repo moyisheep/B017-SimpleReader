@@ -46,6 +46,11 @@ This software includes the following third-party components:
     - License: Microsoft Proprietary (allowed for runtime use)
     - Source: https://developer.microsoft.com/
 
+
+12. ICU (International Components for Unicode)
+   - License: Unicode License 
+   - Source: https://github.com/unicode-org/icu
+
 ---
 
 The MIT License (MIT) applies to the original code in this project.

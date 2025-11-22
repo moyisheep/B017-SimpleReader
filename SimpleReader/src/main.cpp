@@ -9175,7 +9175,7 @@ void SimpleContainer::present(float x, float y, litehtml::position* clip)
     }
     if (m_selStart != m_selEnd && m_selBrush && m_selStart >= 0 && m_selEnd >= 0)
     {
-        m_dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
+        //m_dc->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
         for (const auto& r : m_sel_rects)
         {
             m_dc->FillRectangle(r, m_selBrush.Get());
@@ -9350,7 +9350,7 @@ void SimpleContainer::on_lbutton_dblclk(int x, int y)
 
     UErrorCode err = U_ZERO_ERROR;
     UBreakIterator* wordBI = ubrk_open(
-        UBRK_WORD, nullptr,
+        UBRK_LINE, nullptr,
         buf + lineStart,
         static_cast<int32_t>(lineEnd - lineStart),
         &err);
