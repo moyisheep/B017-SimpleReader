@@ -162,6 +162,12 @@ inline wchar_t* DupPath(const wchar_t* src)
     return buf;
 }
 
+/* ---------- 工具 ---------- */
+static int64_t nowUs() {
+    return std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
 // HTML 转义辅助函数
 inline bool save_rgba_as_bmp(const std::wstring& path,
     const uint8_t* rgba,
@@ -2972,7 +2978,7 @@ void LogToFile(const std::string& message)
     std::ofstream log(debug_path, std::ios::app);
     if (log.is_open())
     {
-        log << message << std::endl;
+        log << std::to_string(nowUs()) << " " << message << std::endl;
     }
 }
 
@@ -3046,7 +3052,9 @@ int WINAPI wWinMain(HINSTANCE h, HINSTANCE, LPWSTR, int n)
         CW_USEDEFAULT, 0, 800, 600,
         nullptr, nullptr, h, nullptr);
  
-
+    // ---------- 4. 首次启动时如有文件立即加载 ----------
+    if (firstFile && fs::exists(firstFile))
+        PostMessage(g_hWnd, WM_EPUB_OPEN, 0, (LPARAM)firstFile);
 
 
     // 1. 在全局或合适位置声明
@@ -3119,9 +3127,7 @@ int WINAPI wWinMain(HINSTANCE h, HINSTANCE, LPWSTR, int n)
 
 
 
-    // ---------- 4. 首次启动时如有文件立即加载 ----------
-    if (firstFile && fs::exists(firstFile))
-        PostMessage(g_hWnd, WM_EPUB_OPEN, 0, (LPARAM)firstFile);
+
     MSG msg{};
     while (GetMessage(&msg, nullptr, 0, 0)) {
         if (!gAccel.translate(&msg)) {   // ← 先给 AccelManager
@@ -7383,12 +7389,51 @@ void VirtualDoc::workerLoop()
 
 
 
+        //// ********************测试开始**********************
+        //LogToFile(m_book->get_title());
+        //auto start = nowUs();
+        //for (int i = 0; i<m_spine.size(); i++)
+        //{
+        //    auto now = nowUs();
+        //    if (!load_by_id(i, true))
+        //    {
+        //        continue;
+        //    }
+        //    // 2. 组装 HTML
+        //    float height = 0.0f;
+        //    HtmlBlock& target = m_blocks.back();
+
+
+        //    std::string html = "";
+   
+        //        html += "<html>" + target.head + "<body>";
+        //        for (auto& b : target.body_blocks) html += b.html;
+        //        html += "</body></html>";
+      
+
+        //    /* ---------- 4. render ---------- */
+
+        //    std::string css = g_globalCSS;
+        //    css += ":root,body,p,li,div,h1,h2,h3,h4,h5,h6,span, ul{line-height:" + std::to_string(g_cfg.line_height) + ";}\n";
+
+        //    m_doc = litehtml::document::createFromString(
+        //        { html.c_str(), litehtml::encoding::utf_8 }, m_container.get(), litehtml::master_css, css);
+        //    m_doc->render(g_cfg.document_width);
+        //    std::string message = std::to_string(i) + " " + "height=" + std::to_string(m_doc->height()) + " ";
+        //    message += "time=" + std::to_string((nowUs() - now) / 1000) + "ms";
+        //    LogToFile(message);
+
+        //}
+        //std::string total_time = "total_time=" + std::to_string((nowUs() - start) / 1000) + "ms";
+        //LogToFile(total_time);
+        //LogToFile(" ");
+        //// ********************测试结束**********************
+         
+        
         if (!load_by_id(task.chapterId, !task.insertAtFront))
         {
             continue;
         }
-
-
 
         // 2. 组装 HTML
         float height = 0.0f;
@@ -7451,11 +7496,7 @@ void VirtualDoc::clear()
 }
 
 
-/* ---------- 工具 ---------- */
-static int64_t nowUs() {
-    return std::chrono::duration_cast<std::chrono::microseconds>(
-        std::chrono::system_clock::now().time_since_epoch()).count();
-}
+
 
 /* ---------- 构造/析构 ---------- */
 ReadingRecorder::ReadingRecorder() 
@@ -9196,55 +9237,7 @@ void SimpleContainer::present(float x, float y, litehtml::position* clip)
     m_swapChain->Present(1, 0);
 }
 
-//void SimpleContainer::present(float x, float y, litehtml::position* clip)
-//{
-//
-//    m_lines.clear();
-//    m_plainText.clear();
-//
-//    m_rt->BeginDraw();
-//    m_rt->Clear(D2D1::ColorF(D2D1::ColorF::White));
-//
-//    // 1. 保存原始矩阵
-//    m_rt->GetTransform(&m_oldMatrix);
-//
-//    // 3. 以鼠标位置为中心整体缩放
-//    m_rt->SetTransform(
-//        D2D1::Matrix3x2F::Scale(
-//            m_zoom_factor,
-//            m_zoom_factor,
-//            D2D1::Point2F(static_cast<float>(0),
-//                static_cast<float>(0))));
-//    m_doc->draw(getContext(),   // 强制转换
-//        x, y, clip);
-//
-//
-//    // 高亮选中行
-//    if (!m_selBrush)
-//    {
-//        m_rt->CreateSolidColorBrush(
-//            g_cfg.highlight_color_d2d,   // 半透明蓝
-//            &m_selBrush);
-//    }
-//    if (m_selStart != m_selEnd && m_selBrush && m_selStart >= 0 && m_selEnd >= 0)
-//    {
-//        m_rt->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
-//        for (const auto& row : get_selection_rows())
-//        {
-//            D2D1_RECT_F r = D2D1::RectF(
-//                row.left ,
-//                row.top ,
-//                row.right ,
-//                row.bottom );
-//            m_rt->FillRectangle(r, m_selBrush.Get());
-//        }
-//    }
-//    // 恢复原始矩阵
-//    m_rt->SetTransform(m_oldMatrix);
-//    m_rt->EndDraw();
-//
-//}
-// 判断是否为单词边界（空格、标点、换行）
+
 static bool is_word_boundary(wchar_t ch)
 {
     return iswspace(ch) || iswpunct(ch) || ch == L'\r' || ch == L'\n';

@@ -111,7 +111,8 @@ using namespace Gdiplus;
 #include <shobjidl.h> // 包含任务对话框头文件
 #include <mutex>
 #define STB_IMAGE_IMPLEMENTATION
-#include "3rdParty/stb_image.h"
+#include <stb_image.h>
+
 #pragma comment(lib, "comdlg32.lib")
 #pragma comment(lib, "windowscodecs.lib")
 #pragma comment(lib, "freetype.lib")

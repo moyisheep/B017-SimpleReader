@@ -7,9 +7,6 @@
     <ClInclude Include="src\resource.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="src\3rdParty\stb_image.h">
-      <Filter>第三方库</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\app.ico">
@@ -36,9 +33,6 @@
     </Filter>
     <Filter Include="资源文件">
       <UniqueIdentifier>{cd096fd4-9108-483c-a6f7-5c6791b01621}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="第三方库">
-      <UniqueIdentifier>{7c4362d5-c2ab-4d44-add7-c86a273f8d8d}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
