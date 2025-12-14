@@ -511,6 +511,18 @@ struct AppSettings {
         102.0f / 255.0f,  // B
         0.4f              // A
     };
+    D2D1::ColorF default_background_color{
+        255.0f / 255.0f,  // R
+        255.0f / 255.0f,  // G
+        255.0f / 255.0f,  // B
+        1.0f              // A
+    };
+    D2D1::ColorF background_color{
+    255.0f / 255.0f,  // R
+    255.0f / 255.0f,  // G
+    255.0f / 255.0f,  // B
+    1.0f              // A
+    };
 
 };
 struct AppStates {

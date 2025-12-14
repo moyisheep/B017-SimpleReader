@@ -109,6 +109,12 @@ BEGIN
         MENUITEM "显示目录栏", IDM_TOGGLE_TOC_WINDOW
         MENUITEM "刷新", ID_EPUB_RELOAD
         MENUITEM "选择字体", ID_CHOOSE_FONT
+        MENUITEM SEPARATOR
+        POPUP "背景色"           // ← 二级菜单
+        BEGIN
+        MENUITEM "默认", ID_BACKGROUND_COLOR_DEFAULT
+        MENUITEM "米色", ID_BACKGROUND_COLOR_BEIGE
+        END
     END
 END
 

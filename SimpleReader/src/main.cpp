@@ -2873,12 +2873,22 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             g_cMain->m_zoom_factor = 1.0f;
             if (g_vd) { g_vd->reload(); }
             break;
+        case ID_BACKGROUND_COLOR_DEFAULT:
+            g_cfg.background_color = g_cfg.default_background_color;
+            if (g_vd) { g_vd->reload(); }
+            break;
+        case ID_BACKGROUND_COLOR_BEIGE:
+            g_cfg.background_color = {246.0f/255.0f, 243.0f/255.0f, 233.0f/255.0f, 1.0f};
+            if (g_vd) { g_vd->reload(); }
+            break;
+
         case ID_RESET_ALL:
             g_cMain->m_zoom_factor = 1.0f;
             g_cfg.font_name = g_cfg.default_font_name;
             g_cfg.font_size = g_cfg.default_font_size;
             g_cfg.document_width = g_cfg.default_document_width;
             g_cfg.line_height = g_cfg.default_line_height;
+            g_cfg.background_color = g_cfg.default_background_color;
             g_cfg.displayFrameRate = true;
             g_cfg.displayScrollBar = true;
             g_cfg.displayStatusBar = true;
@@ -9192,7 +9202,7 @@ void SimpleContainer::present(float x, float y, litehtml::position* clip)
     m_plainText.clear();
 
     m_dc->BeginDraw();
-    m_dc->Clear(D2D1::ColorF(D2D1::ColorF::White));
+    m_dc->Clear(g_cfg.background_color);
 
     // 保存原始矩阵
     m_dc->GetTransform(&m_oldMatrix);
