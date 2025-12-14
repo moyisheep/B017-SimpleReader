@@ -9215,6 +9215,7 @@ void SimpleContainer::present(float x, float y, litehtml::position* clip)
             D2D1::Point2F(0.0f, 0.0f)));
 
     // 绘制 html
+    m_dc->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_CLEARTYPE);
     m_doc->draw(getContext(), x, y, clip);
 
     // 高亮选中行

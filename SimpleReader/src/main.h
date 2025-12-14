@@ -469,6 +469,7 @@ struct AppSettings {
     bool displayToolbar = true;
     bool displayFrameRate = true;
 
+
     int record_update_interval_ms = 1000;
     int record_flush_interval_ms = 10 * 1000;
     int tooltip_delay_ms = 300;
