@@ -60,6 +60,11 @@
   <ItemGroup>
     <CopyFileToFolders Include="res\global.css" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MML2SVG\MML2SVG.vcxproj">
+      <Project>{f6b0a70c-ff06-4c45-9b92-56d1e46bf5b7}</Project>
+    </ProjectReference>
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
@@ -204,7 +209,7 @@
       <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>Default</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\3rdParty\litehtml-master\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>E:\文件夹集合\B-编程\Projects\B017 Simple Reader\SimpleReader\MML2SVG;C:\3rdParty\litehtml-master\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <DebugInformationFormat>None</DebugInformationFormat>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
