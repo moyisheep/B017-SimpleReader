@@ -64,6 +64,9 @@
     <ProjectReference Include="..\MML2SVG\MML2SVG.vcxproj">
       <Project>{f6b0a70c-ff06-4c45-9b92-56d1e46bf5b7}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\ReadingRecorder\ReadingRecorder.vcxproj">
+      <Project>{a7d4baea-159a-4ad4-9b9d-b4714604038b}</Project>
+    </ProjectReference>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
@@ -209,7 +212,7 @@
       <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>Default</ConformanceMode>
-      <AdditionalIncludeDirectories>E:\文件夹集合\B-编程\Projects\B017 Simple Reader\SimpleReader\MML2SVG;C:\3rdParty\litehtml-master\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)ReadingRecorder;$(SolutionDir)MML2SVG;C:\3rdParty\litehtml-master\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <DebugInformationFormat>None</DebugInformationFormat>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>

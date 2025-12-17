@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SimpleReader", "SimpleReade
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MML2SVG", "MML2SVG\MML2SVG.vcxproj", "{F6B0A70C-FF06-4C45-9B92-56D1E46BF5B7}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ReadingRecorder", "ReadingRecorder\ReadingRecorder.vcxproj", "{A7D4BAEA-159A-4AD4-9B9D-B4714604038B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -41,6 +43,18 @@ Global
 		{F6B0A70C-FF06-4C45-9B92-56D1E46BF5B7}.RelWithDgb|x64.Build.0 = Release|x64
 		{F6B0A70C-FF06-4C45-9B92-56D1E46BF5B7}.RelWithDgb|x86.ActiveCfg = Release|Win32
 		{F6B0A70C-FF06-4C45-9B92-56D1E46BF5B7}.RelWithDgb|x86.Build.0 = Release|Win32
+		{A7D4BAEA-159A-4AD4-9B9D-B4714604038B}.Debug|x64.ActiveCfg = Debug|x64
+		{A7D4BAEA-159A-4AD4-9B9D-B4714604038B}.Debug|x64.Build.0 = Debug|x64
+		{A7D4BAEA-159A-4AD4-9B9D-B4714604038B}.Debug|x86.ActiveCfg = Debug|Win32
+		{A7D4BAEA-159A-4AD4-9B9D-B4714604038B}.Debug|x86.Build.0 = Debug|Win32
+		{A7D4BAEA-159A-4AD4-9B9D-B4714604038B}.Release|x64.ActiveCfg = Release|x64
+		{A7D4BAEA-159A-4AD4-9B9D-B4714604038B}.Release|x64.Build.0 = Release|x64
+		{A7D4BAEA-159A-4AD4-9B9D-B4714604038B}.Release|x86.ActiveCfg = Release|Win32
+		{A7D4BAEA-159A-4AD4-9B9D-B4714604038B}.Release|x86.Build.0 = Release|Win32
+		{A7D4BAEA-159A-4AD4-9B9D-B4714604038B}.RelWithDgb|x64.ActiveCfg = Release|x64
+		{A7D4BAEA-159A-4AD4-9B9D-B4714604038B}.RelWithDgb|x64.Build.0 = Release|x64
+		{A7D4BAEA-159A-4AD4-9B9D-B4714604038B}.RelWithDgb|x86.ActiveCfg = Release|Win32
+		{A7D4BAEA-159A-4AD4-9B9D-B4714604038B}.RelWithDgb|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

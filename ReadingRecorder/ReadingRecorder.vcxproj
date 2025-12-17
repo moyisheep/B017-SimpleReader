@@ -21,8 +21,8 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{f6b0a70c-ff06-4c45-9b92-56d1e46bf5b7}</ProjectGuid>
-    <RootNamespace>MML2SVG</RootNamespace>
+    <ProjectGuid>{a7d4baea-159a-4ad4-9b9d-b4714604038b}</ProjectGuid>
+    <RootNamespace>ReadingRecorder</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -81,7 +81,6 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\LIB\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -141,10 +140,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="MML2SVG.h" />
+    <ClCompile Include="ReadingRecorder.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="MML2SVG.cpp" />
+    <ClInclude Include="ReadingRecorder.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
