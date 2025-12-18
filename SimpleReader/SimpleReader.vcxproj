@@ -61,6 +61,9 @@
     <CopyFileToFolders Include="res\global.css" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\EPUBBook\EPUBBook.vcxproj">
+      <Project>{72281c37-f044-49a3-85b9-a7667ebb76d9}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\MML2SVG\MML2SVG.vcxproj">
       <Project>{f6b0a70c-ff06-4c45-9b92-56d1e46bf5b7}</Project>
     </ProjectReference>
@@ -212,7 +215,7 @@
       <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>Default</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)ReadingRecorder;$(SolutionDir)MML2SVG;C:\3rdParty\litehtml-master\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)EPUBBook;$(SolutionDir)ReadingRecorder;$(SolutionDir)MML2SVG;C:\3rdParty\litehtml-master\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <DebugInformationFormat>None</DebugInformationFormat>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>

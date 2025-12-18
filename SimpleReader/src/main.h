@@ -25,7 +25,7 @@
 #include <algorithm>
 #include <miniz/miniz.h>
 #include <tinyxml2.h>
-#include <lunasvg/lunasvg.h>"    
+#include <lunasvg/lunasvg.h>   
 using tinyxml2::XMLDocument;
 using tinyxml2::XMLElement;
 #include <litehtml.h>
@@ -133,6 +133,7 @@ using namespace Gdiplus;
 
 #include "MML2SVG.h"
 #include "ReadingRecorder.h"
+#include "EPUBBook.h"
 
 
 using Microsoft::WRL::ComPtr;
@@ -147,26 +148,7 @@ struct ImageFrame
     std::vector<uint8_t> rgba;     // 连续像素，8-bit * 4
     std::vector<uint8_t> raw_data;     // 连续像素，8-bit * 4
 };
-struct FontKey {
-    std::wstring family;
-    int          weight;
-    bool         italic;
-    int          size;          // px
-    bool operator==(const FontKey& o) const noexcept = default;
-};
-namespace std {
-    template<>
-    struct hash<FontKey> {
-        size_t operator()(const FontKey& k) const noexcept {
-            std::wstring txt;
-            txt += k.family;
-            txt += std::to_wstring(k.weight);
-            txt += std::to_wstring(k.italic);
-            txt += std::to_wstring(k.size);
-            return std::hash<std::wstring>{}(txt);
-        }
-    };
-}
+
 
 // 一个字符在窗口坐标系中的包围盒
 struct CharBox
@@ -203,6 +185,30 @@ public:
     void bind_host_objects();   // 新增
     //void make_tooltip_backend();
     void run_pending_scripts();
+
+    
+    void show_tooltip(const std::string html, int width);
+    void hide_imageview();
+    void hide_tooltip();
+    void delayed_show_tooltip(std::string txt, unsigned width = 300, unsigned delayMs = 300);
+    void cancel_delayed_tooltip();
+    void LoadToc();
+    std::string extract_anchor(const char* href);
+
+    litehtml::element::ptr find_link_in_chain(litehtml::element::ptr start);
+
+    static bool skip_attr(const std::string& val);
+
+    static std::string get_html(litehtml::element::ptr el);
+
+    std::string html_of_anchor_paragraph(litehtml::document* doc, const std::string& anchorId);
+
+    std::string get_html_of_image(litehtml::element::ptr start);
+
+    void show_imageview(const litehtml::element::ptr& el);
+    static std::string get_anchor_html(litehtml::document* doc, const std::string& anchor);
+    struct TooltipPayload { std::string html; unsigned width; };
+    MMRESULT m_tooltipTimer = 0;
 
 
     std::vector<script_info> m_pending_scripts;
@@ -333,120 +339,6 @@ private:
 
 
 
-
-// -------------- 新增数据结构 --------------
-struct OCFItem {
-    std::wstring id, href, media_type, properties;
-};
-struct OCFRef {
-    std::wstring idref, href, linear = L"yes";
-};
-struct OCFNavPoint {
-    std::wstring label, href;
-    int order = 0;
-};
-struct OCFPackage {
-    std::wstring rootfile;                // OPF 绝对路径
-    std::wstring opf_dir;                 // 目录，带 '/'
-    std::vector<OCFItem>   manifest;
-    std::vector<OCFRef>    spine;
-    std::vector<OCFNavPoint> toc;
-    std::map<std::wstring, std::wstring> meta;
-    std::wstring toc_path;
-};
-
-
-
-
-struct MemFile {
-    std::vector<uint8_t> data;
-    const char* begin() const { return reinterpret_cast<const char*>(data.data()); }
-    size_t      size()  const { return data.size(); }
-};
-// ---------- EPUB 零解压 ----------
-class EPUBBook {
-public:
-    mz_zip_archive zip = {};
-    std::map<std::wstring, MemFile> m_cache;
-    OCFPackage ocf_pkg_;                     // 解析结果
-
-    // -------------- EPUBBook 内部新增成员 --------------
-
-    void parse_ocf_(void);                       // 主解析入口
-    void parse_opf_(void);   // 解析 OPF
-    void parse_toc_(void);                        // 解析 TOC
-
-
-
-    std::wstring get_chapter_name_by_id(int spine_id);
-    //void OnTreeSelChanged(const wchar_t* href);
-    bool load(const std::wstring& epub_path);
-    std::wstring get_current_dir();
-    MemFile read_zip(std::wstring file_name) ;
-    std::string load_html(const std::wstring& path) ;
-
-    void load_all_fonts(void);
-
-
-
-    static std::wstring extract_text(const tinyxml2::XMLElement* a);
-
-    // 递归解析 EPUB3-Nav <ol>
-    void parse_nav_list(tinyxml2::XMLElement* ol, int level,
-        const std::string& opf_dir,
-        std::vector<OCFNavPoint>& out);
-
-
-    // 递归解析 NCX <navPoint>
-    void parse_ncx_points(tinyxml2::XMLElement* navPoint, int level,
-        const std::string& opf_dir,
-        std::vector<OCFNavPoint>& out);
-
-    std::string extract_anchor(const char* href);
-
-    litehtml::element::ptr find_link_in_chain(litehtml::element::ptr start);
-
-    static bool skip_attr(const std::string& val);
-
-    static std::string get_html(litehtml::element::ptr el);
-
-    std::string html_of_anchor_paragraph(litehtml::document* doc, const std::string& anchorId);
-
-    std::string get_html_of_image(litehtml::element::ptr start);
-
-    void show_imageview(const litehtml::element::ptr& el);
-
-    std::string get_title();
-    std::string get_author();
-
-    void delayed_show_tooltip(std::string txt, unsigned width=300, unsigned delayMs=300);
-    void cancel_delayed_tooltip();
-    MemFile get_binary( std::wstring base_url, std::wstring url);
-    bool is_toc_item(int spine_id);
-    void show_tooltip(const std::string html, int width);
-    void hide_imageview();
-    void hide_tooltip();
-    static std::string get_anchor_html(litehtml::document* doc, const std::string& anchor);
-    void clear();
-    void LoadToc();
-
-
-    void build_epub_font_index();
-    std::unordered_map<FontKey, std::vector<std::wstring>> m_fontBin;
-    std::wstring resolve_path(std::wstring base_url, std::wstring href);
-    std::wstring get_book_path();
-    EPUBBook() noexcept {}
-    ~EPUBBook();
-private:
-    struct TooltipPayload {  std::string html; unsigned width;};
-    MMRESULT m_tooltipTimer = 0;
-    static std::wstring url_decode(const std::wstring& in);
-
-
-    std::wstring m_current_book_path = L"";
-    std::wstring m_current_html_path = L"";
-    
-};
 
 
 struct AppSettings {
