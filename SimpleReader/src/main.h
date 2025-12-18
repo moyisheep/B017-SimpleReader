@@ -865,31 +865,6 @@ public:
     MemFile get(std::wstring path)  override;
 };
 
-class EPUBParser
-{
-public:
-    EPUBParser();
-    ~EPUBParser();
-    bool load(std::shared_ptr<IFileProvider> fp);
-private:
-    bool parse_ocf();
-    bool parse_opf();
-    bool parse_toc();
-    static std::wstring extract_text(const tinyxml2::XMLElement* a);
-
-    // 递归解析 EPUB3-Nav <ol>
-    void parse_nav_list(tinyxml2::XMLElement* ol, int level,
-        const std::string& opf_dir,
-        std::vector<OCFNavPoint>& out);
-
-
-    // 递归解析 NCX <navPoint>
-    void parse_ncx_points(tinyxml2::XMLElement* navPoint, int level,
-        const std::string& opf_dir,
-        std::vector<OCFNavPoint>& out);
-    std::shared_ptr<IFileProvider> m_fp;
-    OCFPackage m_ocf_pkg;
-};
 
 struct GetDocParam
 {
