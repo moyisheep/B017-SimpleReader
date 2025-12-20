@@ -8,14 +8,13 @@
         * {
             margin: 0;
             padding: 0;
-            background: white;
             box-sizing: border-box;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-family: "Microsoft YaHei", serif;
         }
 
         body {
-            background: #f8f8f8;
-            color: #333;
+            background: linear-gradient(135deg, #0a0806 0%, #050403 100%);
+            color: #d4d0c8;
             line-height: 1.6;
             min-height: 100vh;
             display: flex;
@@ -26,48 +25,64 @@
             overflow: hidden;
         }
 
+
+
         .container {
             width: 100%;
             max-width: 800px;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            background: linear-gradient(145deg, #1a1713, #0f0d0a);
+            border-radius: 10px;
+            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.7);
             overflow: hidden;
             position: relative;
-            border: 1px solid #eee;
+            border: 1px solid rgba(110, 80, 40, 0.4);
             z-index: 1;
         }
+
+
 
         /* 头部样式 */
         .header {
             padding: 35px 20px 25px;
             text-align: center;
-            background: white;
+            background: linear-gradient(180deg, #1a1713, #0f0d0a);
             position: relative;
-            border-bottom: 1px solid #f0f0f0;
+            border-bottom: 1px solid rgba(110, 80, 40, 0.3);
         }
 
+            .header::after {
+                content: "";
+                position: absolute;
+                bottom: -1px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 85%;
+                height: 15px;
+                background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="15" viewBox="0 0 100 15"><path d="M0,0 Q50,10 100,0 L100,15 L0,15 Z" fill="%231a1713" opacity="0.9"/></svg>') no-repeat;
+                background-size: 100% 100%;
+            }
+
         .logo {
-            font-size: 2.8rem;
-            font-weight: 700;
+            font-size: 3rem;
+            font-weight: bold;
             margin-bottom: 10px;
-            letter-spacing: 1px;
-            color: #222;
+            letter-spacing: 4px;
+            color: #b89f72;
+            text-shadow: 0 0 10px rgba(184, 159, 114, 0.3);
             position: relative;
         }
 
         .subtitle {
             margin-top: 5px;
             font-size: 0.9rem;
-            color: #777;
-            letter-spacing: 0.5px;
-            font-weight: 400;
+            opacity: 0.7;
+            color: #b89f72;
         }
 
         /* 内容区域 */
         .content {
-            padding: 30px 40px;
-            background: white;
+            padding: 35px 40px 25px;
+            background: rgba(15, 13, 10, 0.7);
         }
 
         .section {
@@ -82,7 +97,7 @@
                 left: 10%;
                 right: 10%;
                 height: 1px;
-                background: linear-gradient(90deg, transparent, #eee, transparent);
+                background: linear-gradient(90deg, transparent, #5a4a30, transparent);
             }
 
             .section:last-child::after {
@@ -90,68 +105,69 @@
             }
 
         .section-title {
-            font-size: 1.5rem;
-            color: #222;
-            margin-bottom: 20px;
+            font-size: 1.6rem;
+            color: #b89f72;
+            margin-bottom: 22px;
+            padding-bottom: 8px;
             font-weight: 600;
             position: relative;
             display: inline-block;
+            letter-spacing: 1px;
         }
 
             .section-title::after {
                 content: "";
                 position: absolute;
-                bottom: -5px;
+                bottom: -2px;
                 left: 0;
-                width: 50%;
+                width: 70%;
                 height: 2px;
-                background: #222;
-                border-radius: 2px;
+                background: linear-gradient(90deg, #b89f72, transparent);
+                border-radius: 1px;
             }
 
         /* 操作指南 */
         .instructions-list {
             list-style: none;
-            margin-left: 5px;
+            margin-left: 10px;
         }
 
             .instructions-list li {
                 position: relative;
-                padding-left: 32px;
-                margin-bottom: 18px;
+                padding-left: 38px;
+                margin-bottom: 20px;
                 line-height: 1.7;
-                font-size: 1rem;
-                color: #444;
+                font-size: 1.05rem;
             }
 
                 .instructions-list li:before {
                     content: "";
                     position: absolute;
                     left: 0;
-                    top: 6px;
-                    width: 20px;
-                    height: 20px;
-                    background: #f5f5f5;
+                    top: 4px;
+                    width: 26px;
+                    height: 26px;
+                    background: rgba(90, 74, 50, 0.3);
                     border-radius: 50%;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    color: #555;
+                    color: #b89f72;
                     font-weight: bold;
-                    font-size: 0.9rem;
-                    border: 1px solid #ddd;
+                    font-size: 1rem;
+                    border: 1px solid #b89f72;
                 }
 
                 .instructions-list li:first-child:before {
-                    content: "1";
+                    content: "一";
                 }
 
                 .instructions-list li:nth-child(2):before {
-                    content: "2";
+                    content: "二";
                 }
 
                 .instructions-list li:nth-child(3):before {
-                    content: "3";
+                    content: "三";
                 }
 
         /* 快捷键区域 */
@@ -163,8 +179,9 @@
             margin-top: 20px;
             border-radius: 8px;
             overflow: hidden;
-            background: white;
-            border: 1px solid #eee;
+            background: rgba(30, 25, 18, 0.5);
+            border: 1px solid rgba(110, 80, 40, 0.3);
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
         }
 
         .shortcut-row {
@@ -172,80 +189,81 @@
         }
 
             .shortcut-row:nth-child(even) {
-                background-color: #fafafa;
+                background-color: rgba(40, 33, 24, 0.3);
             }
 
         .shortcut-key, .shortcut-desc {
             display: table-cell;
-            padding: 12px 16px;
-            border-bottom: 1px solid #eee;
+            padding: 14px 18px;
+            border-bottom: 1px solid rgba(90, 70, 40, 0.3);
         }
 
         .shortcut-key {
             font-weight: 600;
-            width: 200px;
-            color: #444;
-            letter-spacing: 0.3px;
+            width: 220px;
+            color: #b89f72;
+            letter-spacing: 0.5px;
         }
 
         .shortcut-key_item {
-            background: #f5f5f5;
-            border-radius: 4px;
-            padding: 5px 10px;
-            color: #333;
-            font-weight: 500;
+            background: linear-gradient(145deg, #5a4a30, #3a2e20);
+            border-radius: 6px;
+            padding: 6px 12px;
+            color: #d8c8a8;
+            font-weight: 600;
             text-align: center;
             display: inline-block;
             margin: 3px 2px;
-            border: 1px solid #ddd;
-            min-width: 32px;
+            border: 1px solid #6a5a40;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            min-width: 38px;
         }
 
         .shortcut-desc {
-            color: #444;
-            font-size: 1rem;
+            color: #d4d0c8;
+            font-size: 1.05rem;
         }
 
         /* 页脚装饰 */
         .footer-decoration {
             text-align: center;
             padding: 20px 0;
-            background: white;
-            color: #999;
-            font-size: 0.85rem;
-            border-top: 1px solid #eee;
+            background: rgba(15, 13, 10, 0.9);
+            color: #6a5a40;
+            font-size: 0.9rem;
+            border-top: 1px solid rgba(90, 70, 40, 0.3);
         }
 
             .footer-decoration::before {
-                content: "···";
+                content: "❦";
                 display: block;
-                font-size: 1.5rem;
+                font-size: 1.8rem;
                 margin-bottom: 8px;
-                color: #ddd;
-                letter-spacing: 5px;
+                color: #b89f72;
+                opacity: 0.5;
             }
 
         /* 响应式设计 */
         @media (max-width: 600px) {
             .content {
-                padding: 25px 20px;
+                padding: 25px 20px 20px;
             }
 
             .shortcut-key, .shortcut-desc {
-                padding: 10px 12px;
+                padding: 12px 10px;
                 font-size: 0.95rem;
             }
 
             .shortcut-key {
-                width: 140px;
+                width: 150px;
             }
 
             .logo {
-                font-size: 2.2rem;
+                font-size: 2.4rem;
             }
 
             .section-title {
-                font-size: 1.3rem;
+                font-size: 1.4rem;
             }
         }
     </style>
