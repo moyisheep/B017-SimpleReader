@@ -122,14 +122,7 @@ using namespace Gdiplus;
 #pragma comment(lib, "comctl32.lib")
 #pragma comment(lib, "winmm.lib")
 
-#include <unicode/unistr.h>
-#include <unicode/brkiter.h>
-#include <unicode/utypes.h>
-#include <unicode/uchar.h>
-#include <unicode/utf8.h>
-#include <unicode/rbbi.h>
-#include <unicode/ubrk.h>
-#include <unicode/ustring.h>
+
 
 #include "MML2SVG.h"
 #include "ReadingRecorder.h"
