@@ -1,29 +1,29 @@
 #include "EPUBBook.h"
 namespace fs = std::filesystem;
 // ---------- 工具 ----------
-static std::string w2a(const std::wstring& s)
+//static std::string w2a(const std::wstring& s)
+//{
+//    if (s.empty()) return {};
+//    int len = WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, nullptr, 0, nullptr, nullptr);
+//    std::string out(len - 1, 0);                 // 去掉末尾 '\0'
+//    WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, &out[0], len, nullptr, nullptr);
+//    return out;
+//}
+//
+//static std::wstring a2w(const std::string& s)
+//{
+//    if (s.empty()) return {};
+//    int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, nullptr, 0);
+//    std::wstring out(len - 1, 0);                // 去掉末尾 '\0'
+//    MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, &out[0], len);
+//    return out;
+//}
+bool EPUBBook::is_xhtml(const std::string& file_path)
 {
-    if (s.empty()) return {};
-    int len = WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, nullptr, 0, nullptr, nullptr);
-    std::string out(len - 1, 0);                 // 去掉末尾 '\0'
-    WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, &out[0], len, nullptr, nullptr);
-    return out;
-}
+    auto dot = file_path.rfind('.');
+    if (dot == std::string::npos) return false;
 
-static std::wstring a2w(const std::string& s)
-{
-    if (s.empty()) return {};
-    int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, nullptr, 0);
-    std::wstring out(len - 1, 0);                // 去掉末尾 '\0'
-    MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, &out[0], len);
-    return out;
-}
-bool EPUBBook::is_xhtml(const std::wstring& file_path)
-{
-    auto dot = file_path.rfind(L'.');
-    if (dot == std::wstring::npos) return false;
-
-    std::wstring ext = file_path.substr(dot + 1);
+    std::string ext = file_path.substr(dot + 1);
 
     // 1. 小写
     std::transform(ext.begin(), ext.end(), ext.begin(), ::towlower);
@@ -34,7 +34,7 @@ bool EPUBBook::is_xhtml(const std::wstring& file_path)
         ext.end());
 
     // 3. 比较
-    return ext == L"xhtml" || ext == L"html";
+    return ext == "xhtml" || ext == "html";
 }
 
 
@@ -51,7 +51,7 @@ void EPUBBook::load_all_fonts() {
 
 }
 
-std::wstring EPUBBook::blake3_hex(const std::vector<uint8_t>& data)
+std::string EPUBBook::blake3_hex(const std::vector<uint8_t>& data)
 {
     blake3_hasher hasher;
     blake3_hasher_init(&hasher);
@@ -60,42 +60,42 @@ std::wstring EPUBBook::blake3_hex(const std::vector<uint8_t>& data)
     std::array<uint8_t, BLAKE3_OUT_LEN> hash;          // 32 字节
     blake3_hasher_finalize(&hasher, hash.data(), hash.size());
 
-    std::wostringstream oss;
+    std::ostringstream oss;
     for (uint8_t b : hash)
-        oss << std::hex << std::setw(2) << std::setfill(L'0') << (b & 0xFF);
+        oss << std::hex << std::setw(2) << std::setfill('0') << (b & 0xFF);
     return oss.str();                                  // 64 个十六进制字符
 }
 
-void EPUBBook::build_epub_font_index(std::wstring tempDir)
+void EPUBBook::build_epub_font_index(std::string tempDir)
 {
 
 
     // 2. 正则
-    const std::wregex rx_face(LR"(@font-face\s*\{([^}]*)\})", std::regex::icase);
-    const std::wregex rx_fam(LR"(font-family\s*:\s*['"]?([^;'"}]+)['"]?)", std::regex::icase);
-    const std::wregex rx_url(LR"(url\s*\(\s*['"]?([^)'"]+)['"]?\s*\))", std::regex::icase);
-    const std::wregex rx_loc(LR"(local\s*\(\s*['"]?([^)'"]+)['"]?\s*\))", std::regex::icase);
-    const std::wregex rx_w(LR"(font-weight\s*:\s*(\d+|bold))", std::regex::icase);
-    const std::wregex rx_i(LR"(font-style\s*:\s*(italic|oblique))", std::regex::icase);
+    const std::regex rx_face(R"(@font-face\s*\{([^}]*)\})", std::regex::icase);
+    const std::regex rx_fam(R"(font-family\s*:\s*['"]?([^;'"}]+)['"]?)", std::regex::icase);
+    const std::regex rx_url(R"(url\s*\(\s*['"]?([^)'"]+)['"]?\s*\))", std::regex::icase);
+    const std::regex rx_loc(R"(local\s*\(\s*['"]?([^)'"]+)['"]?\s*\))", std::regex::icase);
+    const std::regex rx_w(R"(font-weight\s*:\s*(\d+|bold))", std::regex::icase);
+    const std::regex rx_i(R"(font-style\s*:\s*(italic|oblique))", std::regex::icase);
 
     // 3. 遍历所有 CSS
     for (const auto& item : ocf_pkg_.manifest)
     {
-        if (item.media_type != L"text/css") continue;
+        if (item.media_type != "text/css") continue;
 
-        MemFile cssFile = get_binary(L"", item.href);
-        std::wstring css_dir = fs::path(item.href).parent_path().generic_wstring();
+        MemFile cssFile = get_binary("", item.href);
+        std::string css_dir = fs::path(item.href).parent_path().generic_string();
         if (cssFile.data.empty()) continue;
 
-        std::wstring css = a2w({ (char*)cssFile.data.data(), cssFile.data.size() });
+        std::string css { (char*)cssFile.data.data(), cssFile.data.size() };
 
-        for (std::wsregex_iterator it(css.begin(), css.end(), rx_face), end; it != end; ++it)
+        for (std::sregex_iterator it(css.begin(), css.end(), rx_face), end; it != end; ++it)
         {
-            std::wstring block = it->str();
-            std::wsmatch m;
+            std::string block = it->str();
+            std::smatch m;
 
-            std::wstring family;
-            std::vector<std::wstring> paths;   // 可能多个 src
+            std::string family;
+            std::vector<std::string> paths;   // 可能多个 src
             int weight = 400;
             bool italic = false;
 
@@ -104,46 +104,46 @@ void EPUBBook::build_epub_font_index(std::wstring tempDir)
 
             // weight / style
             if (std::regex_search(block, m, rx_w))
-                weight = (m[1] == L"bold" || m[1] == L"700") ? 700 : std::stoi(m[1]);
+                weight = (m[1] == "bold" || m[1] == "700") ? 700 : std::stoi(m[1]);
             if (std::regex_search(block, m, rx_i)) italic = true;
 
             // 解析 src 中所有 url(...) 
-            for (std::wsregex_iterator srcIt(block.begin(), block.end(), rx_url), srcEnd; srcIt != srcEnd; ++srcIt)
+            for (std::sregex_iterator srcIt(block.begin(), block.end(), rx_url), srcEnd; srcIt != srcEnd; ++srcIt)
             {
-                std::wstring url = (*srcIt)[1];
+                std::string url = (*srcIt)[1];
 
                 // 跳过网络字体
-                if (url.starts_with(L"http://") || url.starts_with(L"https://"))
+                if (url.starts_with("http://") || url.starts_with("https://"))
                     continue;
 
                 // 去掉 query/fragment
-                if (auto pos = url.find(L'?'); pos != std::wstring::npos) url.erase(pos);
-                if (auto pos = url.find(L'#'); pos != std::wstring::npos) url.erase(pos);
+                if (auto pos = url.find('?'); pos != std::string::npos) url.erase(pos);
+                if (auto pos = url.find('#'); pos != std::string::npos) url.erase(pos);
 
                 // 保留扩展名
-                std::wstring ext = L".ttf";
-                if (auto dot = url.rfind(L'.'); dot != std::wstring::npos)
+                std::string ext = ".ttf";
+                if (auto dot = url.rfind('.'); dot != std::string::npos)
                 {
                     ext = url.substr(dot);
                     std::transform(ext.begin(), ext.end(), ext.begin(), ::towlower);
-                    static const std::unordered_set<std::wstring> ok{ L".ttf", L".otf", L".woff", L".woff2", L".ttc" };
-                    if (!ok.contains(ext)) ext = L".ttf";
+                    static const std::unordered_set<std::string> ok{ ".ttf", ".otf", ".woff", ".woff2", ".ttc" };
+                    if (!ok.contains(ext)) ext = ".ttf";
                 }
 
                 // 解压
                 MemFile fontFile = get_binary(css_dir, url);
                 if (fontFile.data.empty()) continue;
 
-                std::wstring hashHex = blake3_hex(fontFile.data);   // 32 字节 → 64 字符
-                std::wstring tempFont = tempDir + hashHex + ext;    // 例如：a1b2c3...ff.woff2
+                std::string hashHex = blake3_hex(fontFile.data);   // 32 字节 → 64 字符
+                std::string tempFont = tempDir + hashHex + ext;    // 例如：a1b2c3...ff.woff2
                 // 2. 如果文件已存在，直接记录路径，不再写盘
-                if (GetFileAttributesW(tempFont.c_str()) != INVALID_FILE_ATTRIBUTES)
+                if (GetFileAttributesA(tempFont.c_str()) != INVALID_FILE_ATTRIBUTES)
                 {
                     paths.push_back(tempFont);   // 已缓存
                     continue;
                 }
 
-                HANDLE h = CreateFileW(tempFont.c_str(), GENERIC_WRITE, 0, nullptr,
+                HANDLE h = CreateFileA(tempFont.c_str(), GENERIC_WRITE, 0, nullptr,
                     CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
                 DWORD written = 0;
                 WriteFile(h, fontFile.data.data(), (DWORD)fontFile.data.size(), &written, nullptr);
@@ -153,7 +153,7 @@ void EPUBBook::build_epub_font_index(std::wstring tempDir)
             }
 
             // local(...)
-            for (std::wsregex_iterator locIt(block.begin(), block.end(), rx_loc), locEnd; locEnd != locIt; ++locIt)
+            for (std::sregex_iterator locIt(block.begin(), block.end(), rx_loc), locEnd; locEnd != locIt; ++locIt)
             {
                 paths.push_back((*locIt)[1]);
             }
@@ -180,10 +180,10 @@ void EPUBBook::parse_ncx_points(tinyxml2::XMLElement* navPoint, int level,
 
         OCFNavPoint np;
 
-        np.label = txt ? extract_text(txt) : L"";
-        np.href = a2w(con && con->Attribute("src") ? con->Attribute("src") : "");
+        np.label = txt ? extract_text(txt) : "";
+        np.href = con && con->Attribute("src") ? con->Attribute("src") : "";
         if (!np.href.empty())
-            np.href = resolve_path(fs::path(ocf_pkg_.toc_path).parent_path(), np.href);
+            np.href = resolve_path(fs::path(ocf_pkg_.toc_path).parent_path().generic_string(), np.href);
         np.order = level;               // 层级深度
         out.emplace_back(std::move(np));
 
@@ -204,9 +204,9 @@ void EPUBBook::parse_nav_list(tinyxml2::XMLElement* ol, int level,
 
         OCFNavPoint np;
         np.label = extract_text(a);
-        np.href = a2w(a->Attribute("href") ? a->Attribute("href") : "");
+        np.href = a->Attribute("href") ? a->Attribute("href") : "";
         if (!np.href.empty())
-            np.href = resolve_path(fs::path(ocf_pkg_.toc_path).parent_path(), np.href);
+            np.href = resolve_path(fs::path(ocf_pkg_.toc_path).parent_path().generic_string(), np.href);
         np.order = level;               // 层级深度
         out.emplace_back(std::move(np));
 
@@ -216,9 +216,9 @@ void EPUBBook::parse_nav_list(tinyxml2::XMLElement* ol, int level,
     }
 }
 
-std::wstring EPUBBook::extract_text(const tinyxml2::XMLElement* a)
+std::string EPUBBook::extract_text(const tinyxml2::XMLElement* a)
 {
-    if (!a) return L"";
+    if (!a) return "";
 
     // 1. 拿到 <a> 的完整 XML 字符串
     tinyxml2::XMLPrinter printer;
@@ -229,7 +229,7 @@ std::wstring EPUBBook::extract_text(const tinyxml2::XMLElement* a)
     size_t start = xml.find('>') + 1;
     size_t end = xml.rfind('<');
     if (start == std::string::npos || end == std::string::npos || end <= start)
-        return L"";
+        return "";
 
     std::string inner = xml.substr(start, end - start);   // "<span ...>I</span>: The Meadow"
 
@@ -237,7 +237,7 @@ std::wstring EPUBBook::extract_text(const tinyxml2::XMLElement* a)
     std::regex tag_re("<[^>]*>");
     std::string plain = std::regex_replace(inner, tag_re, "");
 
-    return a2w(plain);   // "I: The Meadow"
+    return plain;   // "I: The Meadow"
 }
 
 
@@ -263,12 +263,12 @@ void EPUBBook::clear()
 
     ocf_pkg_ = {};
     m_fontBin.clear();
-    m_current_book_path = L"";
-    m_current_html_path = L"";
+    m_current_book_path = "";
+    m_current_html_path = "";
 
 }
 
-std::wstring EPUBBook::get_chapter_name_by_id(int spine_id)
+std::string EPUBBook::get_chapter_name_by_id(int spine_id)
 {
     // 从给定 spine_id 开始，依次递减查找
     for (int id = spine_id; id >= 0; --id)
@@ -277,23 +277,23 @@ std::wstring EPUBBook::get_chapter_name_by_id(int spine_id)
         if (id >= static_cast<int>(ocf_pkg_.spine.size()))
             continue;
 
-        std::wstring href = ocf_pkg_.spine[id].href;
+        std::string href = ocf_pkg_.spine[id].href;
 
 
         if (href.empty())
             continue;
 
         // 3. 去掉锚点
-        size_t pos = href.find(L'#');
-        if (pos != std::wstring::npos)
+        size_t pos = href.find('#');
+        if (pos != std::string::npos)
             href = href.substr(0, pos);
 
         // 4. 与 toc 中的 href比对（同样去掉锚点）
         for (const auto& nav : ocf_pkg_.toc)
         {
-            std::wstring nav_href = nav.href;
-            pos = nav_href.find(L'#');
-            if (pos != std::wstring::npos)
+            std::string nav_href = nav.href;
+            pos = nav_href.find('#');
+            if (pos != std::string::npos)
                 nav_href = nav_href.substr(0, pos);
 
             if (nav_href == href)
@@ -302,25 +302,25 @@ std::wstring EPUBBook::get_chapter_name_by_id(int spine_id)
     }
 
     // 遍历到 id=0 仍未找到
-    return L"";
+    return "";
 }
 
 std::string EPUBBook::get_title()
 {
-    auto titIt = ocf_pkg_.meta.find(L"dc:title");
-    return titIt != ocf_pkg_.meta.end() ? w2a(titIt->second) : "";
+    auto titIt = ocf_pkg_.meta.find("dc:title");
+    return titIt != ocf_pkg_.meta.end() ? titIt->second : "";
 }
 
 std::string EPUBBook::get_author()
 {
-    auto titIt = ocf_pkg_.meta.find(L"dc:creator");
-    return titIt != ocf_pkg_.meta.end() ? w2a(titIt->second) : "";
+    auto titIt = ocf_pkg_.meta.find("dc:creator");
+    return titIt != ocf_pkg_.meta.end() ? titIt->second : "";
 }
 
 
 
 
-MemFile EPUBBook::get_binary(std::wstring base_url, std::wstring url)
+MemFile EPUBBook::get_binary(std::string base_url, std::string url)
 {
     auto path = resolve_path(base_url, url);
     std::error_code ec;  // 存储错误码
@@ -358,18 +358,18 @@ bool EPUBBook::is_toc_item(int spine_id)
 }
 
 
-MemFile EPUBBook::read_zip(std::wstring file_name) {
+MemFile EPUBBook::read_zip(std::string file_name) {
     MemFile mf{};
     if (file_name.empty()) { return mf; }
 
     auto it = m_cache.find(file_name);
     if (it != m_cache.end()) { return it->second; }
-    // 2.1 先按给定宽路径找
-    std::string narrow_name = w2a(file_name);
+  
+
     size_t uncomp_size = 0;
     void* p = mz_zip_reader_extract_file_to_heap(
         const_cast<mz_zip_archive*>(&zip),
-        narrow_name.c_str(),
+        file_name.c_str(),
         &uncomp_size, 0);
 
 
@@ -382,7 +382,7 @@ MemFile EPUBBook::read_zip(std::wstring file_name) {
     return mf;
 }
 
-std::string EPUBBook::load_html(const std::wstring& path)
+std::string EPUBBook::load_html(const std::string& path)
 {
     MemFile mf = read_zip(path);
     if (mf.data.empty()) return {};
@@ -390,23 +390,56 @@ std::string EPUBBook::load_html(const std::wstring& path)
     return std::string(mf.begin(), mf.size());
 }
 
-bool EPUBBook::load(const std::wstring& epub_path) {
+bool EPUBBook::load(const std::string& epub_path) 
+{
 
-    if (!fs::exists(epub_path))
-    {
-        std::wstring txt = L"[EPUBBook] 文件不存在: " + epub_path + L"\n";
 
-        OutputDebugStringW(txt.c_str());
-        return false;
-    }
     mz_zip_reader_end(&zip);           // 1. 先关闭旧 zip
     memset(&zip, 0, sizeof(zip));
+    if (!mz_zip_reader_init_file(&zip, epub_path.c_str(), 0)) {
+        mz_zip_error err = mz_zip_get_last_error(&zip);
+        std::string err_msg;
 
-    if (!mz_zip_reader_init_file(&zip, w2a(epub_path).c_str(), 0))
-    {
-        std::wstring txt = L"[EPUBBook] zip 打开失败: " + std::to_wstring(mz_zip_get_last_error(&zip)) + L"\n";
+        switch (err) {
+        case MZ_ZIP_NO_ERROR: err_msg = "无错误"; break;
+        case MZ_ZIP_UNDEFINED_ERROR: err_msg = "未定义错误"; break;
+        case MZ_ZIP_TOO_MANY_FILES: err_msg = "文件太多"; break;
+        case MZ_ZIP_FILE_TOO_LARGE: err_msg = "文件太大"; break;
+        case MZ_ZIP_UNSUPPORTED_METHOD: err_msg = "不支持的压缩方法"; break;
+        case MZ_ZIP_UNSUPPORTED_ENCRYPTION: err_msg = "不支持的加密"; break;
+        case MZ_ZIP_UNSUPPORTED_FEATURE: err_msg = "不支持的功能"; break;
+        case MZ_ZIP_FAILED_FINDING_CENTRAL_DIR: err_msg = "找不到中央目录"; break;
+        case MZ_ZIP_NOT_AN_ARCHIVE: err_msg = "不是ZIP文件"; break;
+        case MZ_ZIP_INVALID_HEADER_OR_CORRUPTED: err_msg = "无效头或文件损坏"; break;
+        case MZ_ZIP_UNSUPPORTED_MULTIDISK: err_msg = "不支持多磁盘归档"; break;
+        case MZ_ZIP_DECOMPRESSION_FAILED: err_msg = "解压失败"; break;
+        case MZ_ZIP_COMPRESSION_FAILED: err_msg = "压缩失败"; break;
+        case MZ_ZIP_UNEXPECTED_DECOMPRESSED_SIZE: err_msg = "解压大小不符"; break;
+        case MZ_ZIP_CRC_CHECK_FAILED: err_msg = "CRC校验失败"; break;
+        case MZ_ZIP_UNSUPPORTED_CDIR_SIZE: err_msg = "不支持的中央目录大小"; break;
+        case MZ_ZIP_ALLOC_FAILED: err_msg = "内存分配失败"; break;
+        case MZ_ZIP_FILE_OPEN_FAILED: err_msg = "文件打开失败"; break;
+        case MZ_ZIP_FILE_CREATE_FAILED: err_msg = "文件创建失败"; break;
+        case MZ_ZIP_FILE_WRITE_FAILED: err_msg = "文件写入失败"; break;
+        case MZ_ZIP_FILE_READ_FAILED: err_msg = "文件读取失败"; break;
+        case MZ_ZIP_FILE_CLOSE_FAILED: err_msg = "文件关闭失败"; break;
+        case MZ_ZIP_FILE_SEEK_FAILED: err_msg = "文件寻址失败"; break;
+        case MZ_ZIP_FILE_STAT_FAILED: err_msg = "文件状态获取失败"; break;
+        case MZ_ZIP_INVALID_PARAMETER: err_msg = "无效参数"; break;
+        case MZ_ZIP_INVALID_FILENAME: err_msg = "无效文件名"; break;
+        case MZ_ZIP_BUF_TOO_SMALL: err_msg = "缓冲区太小"; break;
+        case MZ_ZIP_INTERNAL_ERROR: err_msg = "内部错误"; break;
+        case MZ_ZIP_FILE_NOT_FOUND: err_msg = "文件未找到"; break;
+        case MZ_ZIP_ARCHIVE_TOO_LARGE: err_msg = "归档文件太大"; break;
+        case MZ_ZIP_VALIDATION_FAILED: err_msg = "验证失败"; break;
+        case MZ_ZIP_WRITE_CALLBACK_FAILED: err_msg = "写入回调失败"; break;
+        default: err_msg = "未知错误";
+        }
 
-        OutputDebugStringW(txt.c_str());
+        std::string txt = "[EPUBBook] zip 打开失败: 错误码 " + std::to_string(err) +
+            " (" + err_msg + "), 文件: " + epub_path + "\n";
+        OutputDebugStringA(txt.c_str());
+
         return false;
     }
 
@@ -418,15 +451,15 @@ bool EPUBBook::load(const std::wstring& epub_path) {
 
     return true;
 }
-std::wstring EPUBBook::get_current_dir()
+std::string EPUBBook::get_current_dir()
 {
-    return fs::path(m_current_html_path).parent_path();
+    return fs::path(m_current_html_path).parent_path().generic_string();
 }
 
 // -------------- 实现（直接粘到 EPUBBook 末尾即可） --------------
 void EPUBBook::parse_ocf_() {
     ocf_pkg_ = {};  // 清空
-    auto container = read_zip(L"META-INF/container.xml");
+    auto container = read_zip("META-INF/container.xml");
     if (container.data.empty()) return;
 
     tinyxml2::XMLDocument doc;
@@ -438,26 +471,26 @@ void EPUBBook::parse_ocf_() {
     rootfile = rootfile ? rootfile->FirstChildElement("rootfile") : nullptr;
     if (!rootfile || !rootfile->Attribute("full-path")) return;
 
-    ocf_pkg_.rootfile = a2w(rootfile->Attribute("full-path"));
-    ocf_pkg_.opf_dir = ocf_pkg_.rootfile.substr(0, ocf_pkg_.rootfile.find_last_of(L'/') + 1);
+    ocf_pkg_.rootfile = rootfile->Attribute("full-path");
+    ocf_pkg_.opf_dir = ocf_pkg_.rootfile.substr(0, ocf_pkg_.rootfile.find_last_of('/') + 1);
 
 }
-std::wstring EPUBBook::url_decode(const std::wstring& in)
+std::string EPUBBook::url_decode(const std::string& in)
 {
-    wchar_t out[2048];
+    char out[2048];
     DWORD len = 2048;
-    if (SUCCEEDED(UrlCanonicalizeW(in.c_str(), out, &len, URL_UNESCAPE)))
-        return std::wstring(out, len);
+    if (SUCCEEDED(UrlCanonicalizeA(in.c_str(), out, &len, URL_UNESCAPE)))
+        return std::string(out, len);
     return in;
 }
 
 
-std::wstring EPUBBook::resolve_path(std::wstring base_url, std::wstring href)
+std::string EPUBBook::resolve_path(std::string base_url, std::string href)
 {
     fs::path p = fs::path(base_url) / url_decode(href);
-    return p.lexically_normal().generic_wstring();
+    return p.lexically_normal().generic_string();
 }
-std::wstring EPUBBook::get_book_path()
+std::string EPUBBook::get_book_path()
 {
     return m_current_book_path;
 }
@@ -476,10 +509,10 @@ void EPUBBook::parse_opf_() {
         it; it = it->NextSiblingElement("item"))
     {
         OCFItem item;
-        item.id = a2w(it->Attribute("id") ? it->Attribute("id") : "");
-        item.href = a2w(it->Attribute("href") ? it->Attribute("href") : "");
-        item.media_type = a2w(it->Attribute("media-type") ? it->Attribute("media-type") : "");
-        item.properties = a2w(it->Attribute("properties") ? it->Attribute("properties") : "");
+        item.id = it->Attribute("id") ? it->Attribute("id") : "";
+        item.href = it->Attribute("href") ? it->Attribute("href") : "";
+        item.media_type = it->Attribute("media-type") ? it->Attribute("media-type") : "";
+        item.properties = it->Attribute("properties") ? it->Attribute("properties") : "";
 
 
         // 只在 href 非空时拼绝对路径
@@ -494,7 +527,7 @@ void EPUBBook::parse_opf_() {
         ? doc.RootElement()->FirstChildElement("spine")
         : nullptr;
     // 先把 manifest 做成 id -> href 的映射
-    std::unordered_map<std::wstring, std::wstring> id2href;
+    std::unordered_map<std::string, std::string> id2href;
     for (const auto& m : ocf_pkg_.manifest)
         id2href[m.id] = m.href;
 
@@ -503,9 +536,9 @@ void EPUBBook::parse_opf_() {
         it; it = it->NextSiblingElement("itemref")) {
 
         OCFRef ref;
-        ref.idref = a2w(it->Attribute("idref") ? it->Attribute("idref") : "");
+        ref.idref = it->Attribute("idref") ? it->Attribute("idref") : "";
         ref.href = id2href[ref.idref];   // 直接填进去
-        ref.linear = a2w(it->Attribute("linear") ? it->Attribute("linear") : "yes");
+        ref.linear = it->Attribute("linear") ? it->Attribute("linear") : "yes";
         ocf_pkg_.spine.emplace_back(std::move(ref));
     }
     // meta
@@ -514,18 +547,18 @@ void EPUBBook::parse_opf_() {
         : nullptr;
     for (auto* it = meta ? meta->FirstChildElement() : nullptr;
         it; it = it->NextSiblingElement()) {
-        ocf_pkg_.meta[a2w(it->Name())] = a2w(it->GetText() ? it->GetText() : "");
+        ocf_pkg_.meta[it->Name()] = it->GetText() ? it->GetText() : "";
     }
 }
 
 
 void EPUBBook::parse_toc_()
 {
-    std::wstring toc_path;
+    std::string toc_path;
     for (const auto& it : ocf_pkg_.manifest)
     {
-        if (it.properties.find(L"nav") != std::wstring::npos ||
-            it.id.find(L"ncx") != std::wstring::npos)
+        if (it.properties.find("nav") != std::string::npos ||
+            it.id.find("ncx") != std::string::npos)
         {
             toc_path = it.href;
             break;
@@ -535,7 +568,7 @@ void EPUBBook::parse_toc_()
     {
         for (const auto& it : ocf_pkg_.manifest)
         {
-            if (it.id.find(L"toc") != std::wstring::npos)
+            if (it.id.find("toc") != std::string::npos)
             {
                 toc_path = it.href;
                 break;
@@ -552,7 +585,7 @@ void EPUBBook::parse_toc_()
     if (doc.Parse(toc.begin(), toc.size()) != tinyxml2::XML_SUCCESS) return;
 
     bool is_nav = is_xhtml(toc_path);
-    std::string opf_dir = w2a(ocf_pkg_.opf_dir);
+    std::string opf_dir = ocf_pkg_.opf_dir;
 
     ocf_pkg_.toc.clear();
 

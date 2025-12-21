@@ -165,7 +165,7 @@ using LineBoxes = std::vector<CharBox>;
 struct FontPair {
     ComPtr<IDWriteTextFormat> format;
     litehtml::font_description descr;
-    std::wstring familyName;
+    std::string familyName;
 };
 
 // -------------- 运行时策略 -----------------
@@ -212,6 +212,8 @@ public:
 
 
     std::vector<script_info> m_pending_scripts;
+
+    void copy_to_clipboard(HWND hwnd, std::wstring txt);
 
     //std::unique_ptr<js_runtime> m_jsrt;   // 替换裸 duk_context*
 };
@@ -299,7 +301,7 @@ private:
 
 struct FontCachePair 
 {
-    std::wstring familyName;
+    std::string familyName;
     ComPtr<IDWriteTextFormat> fmt;
     ComPtr<IDWriteFont> font;
 };
@@ -309,7 +311,7 @@ public:
     ~FontCache() = default;
     // 主入口：根据 litehtml 描述 + 可选私有集合，返回 TextFormat
     FontCachePair*
-        get(std::wstring& familyName, const litehtml::font_description& descr, IDWriteFontCollection* sysColl = nullptr);
+        get(std::string& familyName, const litehtml::font_description& descr, IDWriteFontCollection* sysColl = nullptr);
     ComPtr<IDWriteFontCollection> CreatePrivateCollectionFromFile(IDWriteFactory* dw, const wchar_t* path);
 
     void clear();
@@ -318,18 +320,18 @@ private:
 
     // 内部：真正创建
     FontCachePair*
-        create(std::wstring& familyName, const litehtml::font_description& descr, IDWriteFontCollection* sysColl);
+        create(std::string& familyName, const litehtml::font_description& descr, IDWriteFontCollection* sysColl);
 
     // 工具：在指定集合里找家族
     bool findFamily(IDWriteFontCollection* coll,
-        const std::wstring& name,
+        const std::string& name,
         Microsoft::WRL::ComPtr<IDWriteFontFamily>& family,
         UINT32& index);
 
-    std::unordered_map<std::wstring, FontCachePair*> m_map;
+    std::unordered_map<std::string, FontCachePair*> m_map;
     mutable std::shared_mutex              m_mtx;
     Microsoft::WRL::ComPtr<IDWriteFactory>   m_dw;
-    std::unordered_map<std::wstring, ComPtr<IDWriteFontCollection>> collCache;
+    std::unordered_map<std::string, ComPtr<IDWriteFontCollection>> collCache;
     FileCollectionLoader* m_loader;
 
 };
@@ -373,19 +375,19 @@ struct AppSettings {
     int default_font_size = 16;
     float default_line_height = 1.5;
     int default_document_width = 800;
-    std::wstring font_name = L"Georgia";
+    std::string font_name = "Georgia";
     float zoom_factor = 1.0f;
     Renderer fontRenderer = Renderer::D2D;
-    std::wstring default_font_name = L"Microsoft YaHei";
+    std::string default_font_name = "Microsoft YaHei";
 
     std::wstring temp_dir = L"epub_book";
 
     int tooltip_width = 500;
     std::string appName = "Simple Reader";
     int split_space_height = 300; // 单位:px
-    std::wstring default_serif = L"Georgia";
-    std::wstring default_sans_serif = L"Verdana";
-    std::wstring default_monospace = L"Consolas";
+    std::string default_serif = "Georgia";
+    std::string default_sans_serif = "Verdana";
+    std::string default_monospace = "Consolas";
 
 
 
@@ -432,8 +434,8 @@ struct AppStates {
 
 // ------------------------------------------------------------------
 struct LayoutKey {
-    std::wstring txt;
-    std::wstring  fontKey;
+    std::string txt;
+    std::string  fontKey;
     float        maxW;
 
     bool operator==(const LayoutKey& o) const noexcept {
@@ -446,9 +448,9 @@ namespace std {
     template<>
     struct hash<LayoutKey> {
         size_t operator()(const LayoutKey& k) const noexcept {
-            std::wstring txt = k.txt + k.fontKey + std::to_wstring(k.maxW);
+            std::string txt = k.txt + k.fontKey + std::to_string(k.maxW);
 
-            return std::hash<std::wstring>{}(txt);
+            return std::hash<std::string>{}(txt);
         }
     };
 }
@@ -584,12 +586,13 @@ public:
     void clear_font_cache() { m_layoutCache.clear(); m_fontCache.clear();  }
     ComPtr<ID2D1Bitmap1> m_offscreenBmp;   // 离屏位图
     bool                 m_offscreenDirty = true; // 是否需要重绘
+    std::string m_sel_text = "";
 private:
 
     float m_px_per_pt{ 96.0f / 72.0f };   // 默认 96 DPI
 
     std::vector<RECT> get_selection_rows() const;
-    std::wstring get_selection_text() const;
+    std::string get_selection_text() const;
 
 
 
@@ -610,12 +613,12 @@ private:
     int64_t m_selStart = -1;   // 字符级偏移
     int64_t m_selEnd = -1;   // 同上
     std::vector<LineBoxes> m_lines;
-    std::wstring           m_plainText;       // 整篇纯文本
+    std::string           m_plainText;       // 整篇纯文本
 
     ComPtr<ID2D1SolidColorBrush> m_selBrush;
-    void record_char_boxes(ID2D1DeviceContext* rt, IDWriteTextLayout* layout, const std::wstring& wtxt, const litehtml::position& pos);
+    void record_char_boxes(ID2D1DeviceContext* rt, IDWriteTextLayout* layout, const std::string& wtxt, const litehtml::position& pos);
 
-    std::vector<std::wstring> split_font_list(const std::string& src);
+    std::vector<std::string> split_font_list(const std::string& src);
 
     bool is_all_zero(const litehtml::border_radiuses& r);
 
@@ -631,10 +634,10 @@ private:
     float m_baselineY = 0;
     std::vector<ComPtr<ID2D1Layer>>  m_clipStack;  // 新增
     ComPtr<IDWriteFontCollection> m_sysFontColl;
-    static std::wstring normalize_quotes(const std::wstring& src);
+    static std::string normalize_quotes(const std::string& src);
     ComPtr<ID2D1SolidColorBrush> getBrush(litehtml::uint_ptr hdc, const litehtml::web_color& c);
 
-    ComPtr<IDWriteTextLayout> getLayout(const std::wstring& txt,  litehtml::uint_ptr hFont, float maxW);
+    ComPtr<IDWriteTextLayout> getLayout(const std::string& txt,  litehtml::uint_ptr hFont, float maxW);
     ComPtr<ID2D1Bitmap> getBitmap(litehtml::uint_ptr hdc, std::string url);
     void draw_decoration(litehtml::uint_ptr hdc, const FontPair* fp, litehtml::web_color color, const litehtml::position& pos, IDWriteTextLayout* layout);
 
@@ -657,7 +660,7 @@ private:
 
     float m_sel_delta = 0;
     std::vector<D2D1_RECT_F> m_sel_rects = {};
-    std::wstring m_sel_text = L"";
+
 
 };
 
@@ -694,9 +697,9 @@ public:
     VirtualDoc();
     ~VirtualDoc();
     void load_book();
-    void OnTreeSelChanged(std::wstring href);
+    void OnTreeSelChanged(std::string href);
     void update_doc(int client_h);
-    void load_html(std::wstring& href);
+    void load_html(std::string& href);
     void clear();
     ScrollPosition get_scroll_position();
     void set_scroll_position(ScrollPosition sp);
@@ -715,8 +718,8 @@ public:
 private:
     HtmlBlock get_html_block(std::string html, int spine_id);
     void merge_block(HtmlBlock& dst, HtmlBlock& src, bool isAddToBottom = true);
-    int get_id_by_href(std::wstring& href);
-    std::wstring get_href_by_id(int spine_id);
+    int get_id_by_href(std::string& href);
+    std::string get_href_by_id(int spine_id);
     std::string get_head(std::string& html);
     std::vector<BodyBlock> get_body_blocks(std::string& html, int spine_id = 0, size_t max_chunk_bytes = 4*1024);
     void serialize_node(const GumboNode* node, std::ostream& out);
@@ -769,7 +772,7 @@ private:
 class TocPanel
 {
 public:
-    using OnNavigate = std::function<void(const std::wstring& href)>;
+    using OnNavigate = std::function<void(const std::string& href)>;
     struct TreeNode {
         const OCFNavPoint* nav = nullptr;
         std::vector<size_t> childIdx;
@@ -791,6 +794,7 @@ public:
     size_t getTargetNode(const ScrollPosition& sp);
     void SetHighlight(ScrollPosition sp);
     void copy_to_clipboard();
+    std::string m_sel_text = "";
 private:
     struct Node : TreeNode{};
 
@@ -810,7 +814,7 @@ private:
     void OnMouseWheel(int delta);
     void OnLButtonDown(int x, int y);
 
-    float getAnchorOffsetY(const std::wstring& href);
+    float getAnchorOffsetY(const std::string& href);
     void OnMouseMove(int x, int y);
     void OnMouseLeave(int x, int y);
     // 数据
@@ -833,7 +837,7 @@ private:
     HBRUSH   m_hoverBrush;
     int m_curTarget = 0;
     int m_curHover = -1;
-    std::wstring m_sel_text = L"";
+
 };
 
 //  file system

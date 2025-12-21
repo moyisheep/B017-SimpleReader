@@ -21,28 +21,28 @@
 
 // -------------- 新增数据结构 --------------
 struct OCFItem {
-    std::wstring id, href, media_type, properties;
+    std::string id, href, media_type, properties;
 };
 struct OCFRef {
-    std::wstring idref, href, linear = L"yes";
+    std::string idref, href, linear = "yes";
 };
 struct OCFNavPoint {
-    std::wstring label, href;
+    std::string label, href;
     int order = 0;
 };
 struct OCFPackage {
-    std::wstring rootfile;                // OPF 绝对路径
-    std::wstring opf_dir;                 // 目录，带 '/'
+    std::string rootfile;                // OPF 绝对路径
+    std::string opf_dir;                 // 目录，带 '/'
     std::vector<OCFItem>   manifest;
     std::vector<OCFRef>    spine;
     std::vector<OCFNavPoint> toc;
-    std::map<std::wstring, std::wstring> meta;
-    std::wstring toc_path;
+    std::map<std::string, std::string> meta;
+    std::string toc_path;
 };
 
 
 struct FontKey {
-    std::wstring family;
+    std::string family;
     int          weight;
     bool         italic;
     int          size;          // px
@@ -52,12 +52,12 @@ namespace std {
     template<>
     struct hash<FontKey> {
         size_t operator()(const FontKey& k) const noexcept {
-            std::wstring txt;
+            std::string txt;
             txt += k.family;
-            txt += std::to_wstring(k.weight);
-            txt += std::to_wstring(k.italic);
-            txt += std::to_wstring(k.size);
-            return std::hash<std::wstring>{}(txt);
+            txt += std::to_string(k.weight);
+            txt += std::to_string(k.italic);
+            txt += std::to_string(k.size);
+            return std::hash<std::string>{}(txt);
         }
     };
 }
@@ -71,7 +71,7 @@ struct MemFile {
 class EPUBBook {
 public:
     mz_zip_archive zip = {};
-    std::map<std::wstring, MemFile> m_cache;
+    std::map<std::string, MemFile> m_cache;
     OCFPackage ocf_pkg_;                     // 解析结果
 
     // -------------- EPUBBook 内部新增成员 --------------
@@ -82,22 +82,22 @@ public:
 
 
 
-    std::wstring get_chapter_name_by_id(int spine_id);
+    std::string get_chapter_name_by_id(int spine_id);
     //void OnTreeSelChanged(const wchar_t* href);
-    bool load(const std::wstring& epub_path);
-    std::wstring get_current_dir();
-    MemFile read_zip(std::wstring file_name);
-    std::string load_html(const std::wstring& path);
+    bool load(const std::string& epub_path);
+    std::string get_current_dir();
+    MemFile read_zip(std::string file_name);
+    std::string load_html(const std::string& path);
 
-    bool is_xhtml(const std::wstring& file_path);
+    bool is_xhtml(const std::string& file_path);
 
     void load_all_fonts(void);
 
-    static std::wstring blake3_hex(const std::vector<uint8_t>& data);
+    static std::string blake3_hex(const std::vector<uint8_t>& data);
 
 
 
-    static std::wstring extract_text(const tinyxml2::XMLElement* a);
+    static std::string extract_text(const tinyxml2::XMLElement* a);
 
     // 递归解析 EPUB3-Nav <ol>
     void parse_nav_list(tinyxml2::XMLElement* ol, int level,
@@ -116,7 +116,7 @@ public:
     std::string get_author();
 
 
-    MemFile get_binary(std::wstring base_url, std::wstring url);
+    MemFile get_binary(std::string base_url, std::string url);
     bool is_toc_item(int spine_id);
 
 
@@ -124,18 +124,18 @@ public:
 
 
 
-    void build_epub_font_index(std::wstring tempDir);
-    std::unordered_map<FontKey, std::vector<std::wstring>> m_fontBin;
-    std::wstring resolve_path(std::wstring base_url, std::wstring href);
-    std::wstring get_book_path();
+    void build_epub_font_index(std::string tempDir);
+    std::unordered_map<FontKey, std::vector<std::string>> m_fontBin;
+    std::string resolve_path(std::string base_url, std::string href);
+    std::string get_book_path();
     EPUBBook() noexcept {}
     ~EPUBBook();
 private:
 
-    static std::wstring url_decode(const std::wstring& in);
+    static std::string url_decode(const std::string& in);
 
 
-    std::wstring m_current_book_path = L"";
-    std::wstring m_current_html_path = L"";
+    std::string m_current_book_path = "";
+    std::string m_current_html_path = "";
 
 };

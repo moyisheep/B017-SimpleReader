@@ -333,13 +333,13 @@ static void gumbo_serialize(const GumboNode* node, std::string& out)
     }
 }
 // 生成临时目录，返回路径（带反斜杠）
-static std::wstring make_temp_dir()
+static std::string make_temp_dir()
 {
     wchar_t tmp[MAX_PATH]{};
     GetTempPathW(MAX_PATH, tmp);
     std::wstring dir = std::wstring(tmp) + g_cfg.temp_dir + L"\\";
     CreateDirectoryW(dir.c_str(), nullptr);
-    return dir;
+    return fs::path(dir).generic_string();
 }
 
 fs::path documents_dir()
@@ -613,7 +613,7 @@ private:
 
 
 
-static ImgFmt detect_fmt(const uint8_t* d, size_t n, const wchar_t* ext)
+static ImgFmt detect_fmt(const uint8_t* d, size_t n, const char* ext)
 {
 
     if (n >= 4 && memcmp(d, "\x89PNG", 4) == 0) return ImgFmt::PNG;
@@ -623,7 +623,7 @@ static ImgFmt detect_fmt(const uint8_t* d, size_t n, const wchar_t* ext)
     if (n >= 6 && memcmp(d, "GIF89a", 6) == 0)    return ImgFmt::GIF;
     if (n >= 4 && memcmp(d, "MM\x00*", 4) == 0)   return ImgFmt::TIFF;
     if (n >= 4 && memcmp(d, "II*\x00", 4) == 0)   return ImgFmt::TIFF;
-    if (ext && _wcsicmp(ext, L"svg") == 0)       return ImgFmt::SVG;
+    if (ext && strcmp(ext, "svg") == 0)       return ImgFmt::SVG;
 
     return ImgFmt::UNKNOWN;
 }
@@ -1082,7 +1082,7 @@ INT_PTR CALLBACK FontDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
                 if (pos != LB_ERR)
                 {
                     size_t idx = (size_t)SendMessage(hList, LB_GETITEMDATA, pos, 0);
-                    g_cfg.font_name = g_fontList[idx].familyName;   // 立即保存
+                    g_cfg.font_name = w2a(g_fontList[idx].familyName);   // 立即保存
                     if (g_vd) { g_vd->reload(); }
                 }
                 return TRUE;
@@ -1103,7 +1103,7 @@ INT_PTR CALLBACK FontDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
 
                 if (idx < g_fontList.size())
                 {
-                    g_cfg.font_name = g_fontList[idx].familyName;   // 立即保存
+                    g_cfg.font_name = w2a(g_fontList[idx].familyName);   // 立即保存
                     if (g_vd) { g_vd->reload(); }
                     EndDialog(hDlg, static_cast<INT_PTR>(idx + 1)); // 任意非 0
                     return TRUE;
@@ -1127,7 +1127,7 @@ INT_PTR CALLBACK FontDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
 }
 
 
-static ImageFrame decode_img(const MemFile& mf, const wchar_t* ext)
+static ImageFrame decode_img(const MemFile& mf, const char* ext)
 {
     ImageFrame frame;
     auto fmt = detect_fmt(mf.data.data(), mf.data.size(), ext);
@@ -1252,7 +1252,7 @@ void CALLBACK Tick(UINT, UINT, DWORD_PTR, DWORD_PTR, DWORD_PTR)
             g_recorder->m_book_record.enableCSS = g_cfg.enableCSS;
             g_recorder->m_book_record.enableGlobalCSS = g_cfg.enableGlobalCSS;
             g_recorder->m_book_record.enableCustomFont = g_cfg.enableCustomFont;
-            g_recorder->m_book_record.fontName = w2a(g_cfg.font_name);
+            g_recorder->m_book_record.fontName = g_cfg.font_name;
 
 
             g_recorder->m_book_record.fontSize = g_cfg.font_size;
@@ -1263,13 +1263,13 @@ void CALLBACK Tick(UINT, UINT, DWORD_PTR, DWORD_PTR, DWORD_PTR)
 
             if (g_recorder->m_book_record.title.empty() && g_book && !g_book->ocf_pkg_.meta.empty())
             {
-                auto titIt = g_book->ocf_pkg_.meta.find(L"dc:title");
-                g_recorder->m_book_record.title = titIt != g_book->ocf_pkg_.meta.end() ? w2a(titIt->second) : "";
+                auto titIt = g_book->ocf_pkg_.meta.find("dc:title");
+                g_recorder->m_book_record.title = titIt != g_book->ocf_pkg_.meta.end() ? titIt->second : "";
             }
             if (g_recorder->m_book_record.author.empty() && g_book && !g_book->ocf_pkg_.meta.empty())
             {
-                auto authIt = g_book->ocf_pkg_.meta.find(L"dc:creator");
-                g_recorder->m_book_record.author = authIt != g_book->ocf_pkg_.meta.end() ? w2a(authIt->second) : "";
+                auto authIt = g_book->ocf_pkg_.meta.find("dc:creator");
+                g_recorder->m_book_record.author = authIt != g_book->ocf_pkg_.meta.end() ? authIt->second : "";
             }
 
             timeFragment tf;
@@ -1284,7 +1284,7 @@ void CALLBACK Tick(UINT, UINT, DWORD_PTR, DWORD_PTR, DWORD_PTR)
                 g_recorder->m_book_record.lastOffset = p.offset;
 
                 tf.spine_id = p.spine_id;
-                tf.chapter = w2a(g_book->get_chapter_name_by_id(p.spine_id));
+                tf.chapter = g_book->get_chapter_name_by_id(p.spine_id);
             }
             g_recorder->m_time_frag.push_back(std::move(tf));
             if (!g_flushTimer)
@@ -1433,7 +1433,7 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         }
 
         wchar_t* url = reinterpret_cast<wchar_t*>(wp);
-        g_vd->OnTreeSelChanged(url);  // 现在安全地在主线程执行
+        g_vd->OnTreeSelChanged(w2a(url));  // 现在安全地在主线程执行
         free(url);
 
 
@@ -1536,7 +1536,7 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         if (g_cMain  && g_cMain->m_doc )
         {
             g_frame_count += 1;
-            OutputDebugStringA("[View] WM_PAINT\n");
+            //OutputDebugStringA("[View] WM_PAINT\n");
             RECT rc;
             GetClientRect(g_hView, &rc);
             int x = g_center_offset;
@@ -1663,7 +1663,7 @@ LRESULT CALLBACK ImageviewProc(HWND hwnd, UINT m, WPARAM w, LPARAM l)
 
 
         {
-            OutputDebugStringA("[ImageView] WM_PAINT\n");
+            //OutputDebugStringA("[ImageView] WM_PAINT\n");
             RECT rc;
             GetClientRect(g_hImageview, &rc);
             litehtml::position clip(0, 0, rc.right - rc.left, rc.bottom - rc.top);
@@ -1790,7 +1790,7 @@ LRESULT CALLBACK TooltipProc(HWND hwnd, UINT m, WPARAM w, LPARAM l)
         /* D2D 渲染 */
  
         {
-            OutputDebugStringA("[Tooltip] WM_PAINT\n");
+            //OutputDebugStringA("[Tooltip] WM_PAINT\n");
             RECT rc;
             GetClientRect(g_hTooltip, &rc);
             litehtml::position clip(0, 0, rc.right - rc.left, rc.bottom - rc.top);
@@ -1841,7 +1841,7 @@ LRESULT CALLBACK HomepageProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         PAINTSTRUCT ps; BeginPaint(hwnd, &ps);
         if (!g_states.isLoaded && g_cHome->m_doc)
         {
-            OutputDebugStringA("[Homepage] WM_PAINT\n");
+            //OutputDebugStringA("[Homepage] WM_PAINT\n");
             RECT rc;
             GetClientRect(hwnd, &rc);
             int width = rc.right - rc.left;
@@ -1999,7 +1999,7 @@ void ChooseFontWithDialog(HWND hwnd)
 {
     // 1. 准备一个 LOGFONTW 结构体
     LOGFONTW lf = { 0 };
-    wcscpy_s(lf.lfFaceName, g_cfg.font_name.c_str());   // 默认字体
+    wcscpy_s(lf.lfFaceName, a2w(g_cfg.font_name).c_str());   // 默认字体
     lf.lfHeight = -g_cfg.font_size;                      // 16 像素高
 
     // 2. 填充 CHOOSEFONT
@@ -2019,7 +2019,7 @@ void ChooseFontWithDialog(HWND hwnd)
         GetTextFace(hdc, LF_FACESIZE, fontName);
         SelectObject(hdc, oldFont);  // 恢复旧字体
         ReleaseDC(NULL, hdc);
-        g_cfg.font_name = fontName;
+        g_cfg.font_name = w2a(fontName);
 
     }
     else
@@ -2234,7 +2234,14 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         g_parse_task = std::async(std::launch::async, [file] {
             try
             {
-                g_book->load(file);
+                if (!fs::exists(file))
+                {
+                    std::string txt = "[EPUBBook] 文件不存在: " + w2a(file) + "\n";
+                    OutputDebugStringA(txt.c_str());
+
+                    return ;
+                }
+                if (!g_book->load(w2a(file))) { return ; }
                 if (g_cfg.enableEPUBFonts) { g_book->build_epub_font_index(make_temp_dir()); }
                 if (g_toc)
                 {
@@ -2273,7 +2280,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         }
         g_vd->clear();
         g_recorder->flush();
-        g_recorder->openBook(w2a(g_book->get_book_path()));
+        g_recorder->openBook(g_book->get_book_path());
    
         DumpBookRecord();
 
@@ -2300,7 +2307,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         CheckMenuItem(GetMenu(g_hWnd), IDM_TOGGLE_CUSTOM_FONT,
             MF_BYCOMMAND | (g_cfg.enableCustomFont ? MF_CHECKED : MF_UNCHECKED));
 
-        g_cfg.font_name = a2w(record.fontName);
+        g_cfg.font_name = record.fontName;
         g_vd->load_book();
         g_vd->load_html(g_book->ocf_pkg_.spine[spine_id].href);
 
@@ -2669,12 +2676,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         {
             if (IsMouseOverWindow(g_hView)) {
                 // 鼠标在主窗口上
-                g_cMain->copy_to_clipboard();
+                g_bootstrap->copy_to_clipboard(g_hWnd, a2w(g_cMain->m_sel_text));
             }
 
             if (IsMouseOverWindow(g_hToc)) {
                 // 鼠标在目录窗口上
-                g_toc->copy_to_clipboard();
+                g_bootstrap->copy_to_clipboard(g_hWnd, a2w(g_toc->m_sel_text));
             }
        
             break;
@@ -2981,7 +2988,7 @@ int WINAPI wWinMain(HINSTANCE h, HINSTANCE, LPWSTR, int n)
 
 
 // ---------- 点击目录跳转 ----------
-void VirtualDoc::OnTreeSelChanged(std::wstring href)
+void VirtualDoc::OnTreeSelChanged(std::string href)
 {
     if (href.empty()) return;
 
@@ -2990,11 +2997,11 @@ void VirtualDoc::OnTreeSelChanged(std::wstring href)
 
     /* 1. 分离文件路径与锚点 */
 
-    size_t pos = href.find(L'#');
-    std::wstring file_path = (pos == std::wstring::npos) ? href : href.substr(0, pos);
+    size_t pos = href.find('#');
+    std::string file_path = (pos == std::string::npos) ? href : href.substr(0, pos);
     int spine_id = get_id_by_href(file_path);
-    m_anchor_id = (pos == std::wstring::npos) ? "" :
-        w2a(href.substr(pos + 1));
+    m_anchor_id = (pos == std::string::npos) ? "" :
+        href.substr(pos + 1);
 
     if (spine_id != get_scroll_position().spine_id)
     {
@@ -3033,18 +3040,18 @@ void SimpleContainer::load_image(const char* src, const char* baseurl, bool redr
 
     if(g_book)
     {
-        auto wpath = a2w(src);
-        MemFile mf = g_book->get_binary( g_book->get_current_dir(), wpath);
+        std::string path{ src };
+        MemFile mf = g_book->get_binary( g_book->get_current_dir(), path);
         if (mf.data.empty())
         {
-            OutputDebugStringW((L"EPUB not found: " + wpath + L"\n").c_str());
+            OutputDebugStringA(("EPUB not found: " + path + "\n").c_str());
             return;
         }
 
 
-        if(fs::path(wpath).extension().generic_string() == ".svg")
+        if(fs::path(path).extension().generic_string() == ".svg")
         {
-            auto frame = decode_img(mf, L"svg");
+            auto frame = decode_img(mf, "svg");
             if(!frame.rgba.empty())
             {
                 frame.raw_data = std::move(mf.data);
@@ -3067,7 +3074,7 @@ void SimpleContainer::load_image(const char* src, const char* baseurl, bool redr
         }
         else
         {
-            OutputDebugStringA(("EPUB decode failed: " + std::string(src) + "\n").c_str());
+            OutputDebugStringA(("EPUB decode failed: " + path + "\n").c_str());
         }
         return;
     }
@@ -3132,12 +3139,12 @@ void SimpleContainer::import_css(litehtml::string& text,
     }
     if (baseurl.empty())
     {
-        std::wstring wdir = g_book->get_current_dir();
-        baseurl = wdir.empty() ? "" : w2a(wdir);
+        std::string wdir = g_book->get_current_dir();
+        baseurl = wdir.empty() ? "" : wdir;
     }
     if(g_book)
     {
-        auto mf = g_book->get_binary(a2w(baseurl), a2w(url));
+        auto mf = g_book->get_binary(baseurl, url);
         if (!mf.data.empty())
         {
             // 直接填到 text（litehtml 期望 UTF-8）
@@ -3152,8 +3159,8 @@ void SimpleContainer::import_css(litehtml::string& text,
     }
 
 
-    std::wstring wdir = g_book->get_current_dir();
-    std::wstring wpath = wdir.empty() ? L"" : g_book->resolve_path(wdir, a2w(url));
+    std::string wdir = g_book->get_current_dir();
+    std::string wpath = wdir.empty() ? "" : g_book->resolve_path(wdir, url);
 
     baseurl = fs::path(wpath).parent_path().generic_string();
 
@@ -3216,8 +3223,8 @@ void SimpleContainer::on_anchor_click(const char* url,
     else 
     { 
         /* 章节跳转 */
-        std::wstring href = g_book->resolve_path(g_book->get_current_dir(), a2w(url));
-        wchar_t* url_copy = _wcsdup(href.c_str());
+        std::string href = g_book->resolve_path(g_book->get_current_dir(), url);
+        wchar_t* url_copy = _wcsdup(a2w(href).c_str());
         PostMessageW(g_hView, WM_EPUB_NAVIGATE,
             reinterpret_cast<WPARAM>(url_copy), 0);
     }
@@ -3252,7 +3259,7 @@ void SimpleContainer::on_mouse_event(const litehtml::element::ptr& el,
    
         const char* href_raw = link->get_attr("href");
         if (!href_raw) { return; }
-        m_sel_text = a2w(std::string(href_raw));
+        m_sel_text = std::string(href_raw);
         std::string id = g_bootstrap->extract_anchor(href_raw);
         if (id.empty()) {  return; }
         html = g_bootstrap->html_of_anchor_paragraph(g_cMain->m_doc.get(), id);
@@ -3541,7 +3548,7 @@ void preprocess_js(std::string& html)
             // 2.1 读文件
             std::string src = m[2].str();
   
-            MemFile mf = g_book->get_binary(g_book->get_current_dir(), a2w(src));
+            MemFile mf = g_book->get_binary(g_book->get_current_dir(), src);
             std::string code;
             if (!mf.data.empty())
                 code.assign(reinterpret_cast<const char*>(mf.data.data()),
@@ -3676,9 +3683,9 @@ void replace_svg_with_img(std::string& html,
             while (std::regex_search(search, patchedSvg.cend(), m, imgRe))
             {
                 std::string imgRel = m[3].str();          // zip 内路径
-                std::wstring wRel = a2w(imgRel);
+            
 
-                MemFile mf = g_book->get_binary(g_book->get_current_dir(), wRel);
+                MemFile mf = g_book->get_binary(g_book->get_current_dir(), imgRel);
                 if (!mf.data.empty())
                 {
                     // 1. 根据扩展名决定 MIME
@@ -4102,7 +4109,7 @@ void PreprocessHTML(std::string& html)
   
      if (flags.has_svg) 
      {
-         std::wstring dir = make_temp_dir();
+         std::string dir = make_temp_dir();
          replace_svg_with_img(html, dir);
      } 
 
@@ -4113,18 +4120,18 @@ void PreprocessHTML(std::string& html)
 
 
 
- std::wstring SimpleContainer::normalize_quotes(const std::wstring& src)
+ std::string SimpleContainer::normalize_quotes(const std::string& src)
 {
-    std::wstring out;
+    std::string out;
     out.reserve(src.size());
-    for (wchar_t ch : src)
+    for (char ch : src)
     {
         switch (ch)
         {
         case 0x2018: case 0x2019: case 0x201A: case 0x201B: case 0xFF07:
-            out.push_back(L'\''); break;
+            out.push_back('\''); break;
         case 0x201C: case 0x201D: case 0x201E: case 0x201F: case 0xFF02:
-            out.push_back(L'\"'); break;
+            out.push_back('\"'); break;
         default:
             out.push_back(ch);
         }
@@ -4147,19 +4154,19 @@ ComPtr<ID2D1SolidColorBrush> SimpleContainer::getBrush(litehtml::uint_ptr hdc, c
     return brush;
 }
 
-ComPtr<IDWriteTextLayout> SimpleContainer::getLayout(const std::wstring& txt,
+ComPtr<IDWriteTextLayout> SimpleContainer::getLayout(const std::string& txt,
     litehtml::uint_ptr hFont,
     float maxW)
 {
     // 1. 先替换花引号
     auto* fp = reinterpret_cast<FontPair*>(hFont);
     if (!fp->format) { return nullptr; }
-    std::wstring clean = normalize_quotes(txt);
-    LayoutKey k{ clean, a2w(fp->descr.hash()) + fp->familyName, maxW };
+    std::string clean = normalize_quotes(txt);
+    LayoutKey k{ clean, fp->descr.hash() + fp->familyName, maxW };
     auto layout = m_layoutCache.get(k);    // 原来是 m_layoutCache.find(k)->second
     if (layout) return layout;
 
-    std::vector<std::wstring> faces;
+    std::vector<std::string> faces;
     if (!fp->descr.family.empty() && !g_cfg.enableCustomFont)
     {
         faces = split_font_list(fp->descr.family);
@@ -4186,7 +4193,8 @@ ComPtr<IDWriteTextLayout> SimpleContainer::getLayout(const std::wstring& txt,
        if (exists) { break; }
    }
    if (!fcp->fmt) { return nullptr; }
-   m_dwrite->CreateTextLayout(clean.c_str(), (UINT32)clean.size(),
+   std::wstring wclean = a2w(clean);
+   m_dwrite->CreateTextLayout(wclean.c_str(), (UINT32)wclean.size(),
         fcp->fmt.Get(), maxW, 512.f, &layout);
  
     if (!layout) return nullptr;
@@ -4206,7 +4214,7 @@ ComPtr<IDWriteTextLayout> SimpleContainer::getLayout(const std::wstring& txt,
 
 void SimpleContainer::record_char_boxes(ID2D1DeviceContext* rt,
     IDWriteTextLayout* layout,
-    const std::wstring& wtxt,
+    const std::string& wtxt,
     const litehtml::position& pos)
 {
 
@@ -4233,7 +4241,7 @@ void SimpleContainer::record_char_boxes(ID2D1DeviceContext* rt,
     m_lines.emplace_back(std::move(line));
 
     // 同时累积纯文本
-    m_plainText += wtxt + L" ";
+    m_plainText += wtxt + " ";
 }
 
 
@@ -4253,13 +4261,12 @@ void SimpleContainer::draw_text(litehtml::uint_ptr hdc,
     if (!brush) return;
 
     // 2. 文本
-    std::wstring wtxt = a2w(text);
-    if (wtxt.empty()) return;
+
     
     float maxW = 8192.0f;
-    auto layout = getLayout(wtxt,  hFont, maxW);
+    auto layout = getLayout(text,  hFont, maxW);
     if (!layout) return;
-    record_char_boxes(rt, layout.Get(), wtxt, pos);
+    record_char_boxes(rt, layout.Get(), text, pos);
     // 3. 绘制文本
     rt->DrawTextLayout(D2D1::Point2F(static_cast<float>(pos.x),
         static_cast<float>(pos.y)),
@@ -4361,14 +4368,10 @@ ComPtr<ID2D1Bitmap> SimpleContainer::getBitmap(litehtml::uint_ptr hdc, std::stri
     {
         if (!g_book) { return nullptr; }
         
-        auto wpath = a2w(url);
-        auto dot = wpath.find_last_of(L'.');
-        std::wstring ext;
-        if (dot != std::wstring::npos && dot + 1 < wpath.size())
-        {
-            ext = wpath.substr(dot + 1);
-            std::transform(ext.begin(), ext.end(), ext.begin(), ::towlower);
-        }
+      
+        auto dot = url.find_last_of('.');
+        std::string ext = fs::path(url).extension().generic_string();
+
 
         frame = decode_img(MemFile{frame.raw_data}, ext.empty() ? nullptr : ext.c_str());
         if (!frame.rgba.empty())
@@ -5048,9 +5051,10 @@ std::wstring  SimpleContainer::toLower(std::wstring s)
 
 
 
-std::vector<std::wstring>
-SimpleContainer::split_font_list(const std::string& src) {
-    std::vector<std::wstring> out;
+std::vector<std::string>
+SimpleContainer::split_font_list(const std::string& src) 
+{
+    std::vector<std::string> out;
     std::string token;
     for (size_t i = 0, n = src.size(); i < n; ++i)
     {
@@ -5058,8 +5062,7 @@ SimpleContainer::split_font_list(const std::string& src) {
         {
             token = trim_any(token);
             if (!token.empty()) {
-                std::wstring face = a2w(token);
-                out.emplace_back(face);
+                out.emplace_back(token);
                 token.clear();
             }
         }
@@ -5071,8 +5074,7 @@ SimpleContainer::split_font_list(const std::string& src) {
     token = trim_any(token);
     if (!token.empty())
     {
-        std::wstring face = a2w(token);
-        out.emplace_back(face);
+        out.emplace_back(token);
     }
     return out;
 };
@@ -5088,7 +5090,7 @@ litehtml::uint_ptr SimpleContainer::create_font(const litehtml::font_description
     /*----------------------------------------------------------
       1. 把 font-family 字符串拆成单个字体名
     ----------------------------------------------------------*/
-    std::vector<std::wstring> faces;
+    std::vector<std::string> faces;
     if (!descr.family.empty() && !g_cfg.enableCustomFont)
     {
         faces = split_font_list(descr.family);
@@ -5101,7 +5103,7 @@ litehtml::uint_ptr SimpleContainer::create_font(const litehtml::font_description
     // 默认字体兜底
     
     faces.push_back(g_cfg.default_font_name);
-    std::wstring family_name = L"";
+    std::string family_name = "";
     FontCachePair* fcp;
     for (auto f : faces)
     {
@@ -5146,13 +5148,10 @@ litehtml::pixel_t SimpleContainer::text_width(const char* text,
 {
     if (!text || !*text || !hFont) return 0;
 
-    std::wstring wtxt = a2w(text);
-    if (wtxt.empty()) return 0;
-
     // 1. 创建 TextLayout
  
     float maxW = 8192.0f;
-    auto layout = getLayout(wtxt, hFont, maxW);
+    auto layout = getLayout(text, hFont, maxW);
     if (!layout) { return 0; }
 
     
@@ -5546,7 +5545,7 @@ AppBootstrap::AppBootstrap() {
         g_toc = std::make_unique<TocPanel>(); 
         g_toc->GetWindow(g_hToc);
         // 绑定目录点击 -> 章节跳转
-        g_toc->SetOnNavigate([](const std::wstring& href) {
+        g_toc->SetOnNavigate([](const std::string& href) {
             g_vd->OnTreeSelChanged(href.c_str());
             });
     }
@@ -6168,7 +6167,7 @@ void SimpleContainer::BuildFontList()
     // 可选：按 displayName 排序
     std::sort(g_fontList.begin(), g_fontList.end(),
         [](const FontItem& a, const FontItem& b)
-        { return _wcsicmp(a.displayName.c_str(), b.displayName.c_str()) < 0; });
+        { return a.displayName <  b.displayName; });
 }
 SimpleContainer::~SimpleContainer()
 {
@@ -6199,7 +6198,7 @@ litehtml::pixel_t SimpleContainer::get_default_font_size() const
 }
 const char* SimpleContainer::get_default_font_name() const
 {
-    return w2a(g_cfg.default_font_name).c_str();
+    return g_cfg.default_font_name.c_str();
 }
 
 
@@ -6215,11 +6214,11 @@ FontCache::FontCache() {
 
 /* ---------------------------------------------------------- */
 FontCachePair*
-FontCache::get(std::wstring& familyName, const litehtml::font_description& descr,
+FontCache::get(std::string& familyName, const litehtml::font_description& descr,
      IDWriteFontCollection* sysColl) {
     // 1. 构造键
 
-    std::wstring search_key = std::wstring(familyName) + a2w(descr.hash());
+    std::string search_key = familyName + descr.hash();
     // 2. 读缓存
     {
         std::shared_lock sl(m_mtx);
@@ -6268,13 +6267,13 @@ FontCache::CreatePrivateCollectionFromFile(IDWriteFactory* dw, const wchar_t* pa
 }
 
  FontCachePair*
-     FontCache::create(std::wstring& familyName, const litehtml::font_description& descr, IDWriteFontCollection* sysColl)
+     FontCache::create(std::string& familyName, const litehtml::font_description& descr, IDWriteFontCollection* sysColl)
  {
 
 
 
      /* ---------- 1. 候选列表（路径优先） ---------- */
-     std::vector<std::wstring> tryNames{ familyName };
+     std::vector<std::string> tryNames{ familyName };
      if (g_book && g_cfg.enableEPUBFonts)
      {
          FontKey exact{ familyName, descr.weight, descr.style, 0 };
@@ -6295,13 +6294,13 @@ FontCache::CreatePrivateCollectionFromFile(IDWriteFactory* dw, const wchar_t* pa
      /* ---------- 3. 路径字体（私有集合） ---------- */
      if(g_cfg.enableEPUBFonts)
      {
-         for (std::wstring& name : tryNames)
+         for (std::string& name : tryNames)
          {
-             if (name.find(L':') == std::wstring_view::npos) continue;
+             if (name.find(L':') == std::string_view::npos) continue;
              auto& coll = collCache[name];
              if (!coll)
              {
-                 coll = CreatePrivateCollectionFromFile(m_dw.Get(), std::wstring(name).c_str());
+                 coll = CreatePrivateCollectionFromFile(m_dw.Get(), a2w(name).c_str());
                  if (coll) { collCache.emplace(name, coll); }
              }
              if (!coll) continue;
@@ -6342,7 +6341,7 @@ FontCache::CreatePrivateCollectionFromFile(IDWriteFactory* dw, const wchar_t* pa
                 descr.style ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL,
                 DWRITE_FONT_STRETCH_NORMAL,
                 static_cast<float>(descr.size), L"en-us", &fmt)))
-            return new FontCachePair{ familyName,  fmt, font };
+            return new FontCachePair{ w2a(familyName),  fmt, font };
 
          }
      }
@@ -6351,11 +6350,11 @@ FontCache::CreatePrivateCollectionFromFile(IDWriteFactory* dw, const wchar_t* pa
      /* ---------- 4. 系统字体 ---------- */
      if (sysColl)
      {
-         for (std::wstring& name : tryNames)
+         for (std::string& name : tryNames)
          {
              UINT32 index = 0;
              BOOL exists = FALSE;
-             sysColl->FindFamilyName(std::wstring(name).c_str(), &index, &exists);
+             sysColl->FindFamilyName(a2w(name).c_str(), &index, &exists);
              if (!exists) continue;
 
              ComPtr<IDWriteFontFamily> family;
@@ -6369,7 +6368,7 @@ FontCache::CreatePrivateCollectionFromFile(IDWriteFactory* dw, const wchar_t* pa
                  &font))) continue;
              ComPtr<IDWriteTextFormat> fmt;
              if (FAILED(m_dw->CreateTextFormat(
-                 std::wstring(name).c_str(), sysColl,
+                 a2w(name).c_str(), sysColl,
                  static_cast<DWRITE_FONT_WEIGHT>(descr.weight),
                  descr.style ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL,
                  DWRITE_FONT_STRETCH_NORMAL,
@@ -6377,7 +6376,7 @@ FontCache::CreatePrivateCollectionFromFile(IDWriteFactory* dw, const wchar_t* pa
                  continue;
              }
  
-            return new FontCachePair{ std::wstring(name), fmt , font};
+            return new FontCachePair{ name, fmt , font};
 
          }
      }
@@ -6444,7 +6443,7 @@ FontCache::CreatePrivateCollectionFromFile(IDWriteFactory* dw, const wchar_t* pa
 
 /* ---------------------------------------------------------- */
 bool FontCache::findFamily(IDWriteFontCollection* coll,
-    const std::wstring& target,
+    const std::string& target,
     Microsoft::WRL::ComPtr<IDWriteFontFamily>& family, 
     UINT32& index)
 {
@@ -6469,12 +6468,12 @@ bool FontCache::findFamily(IDWriteFontCollection* coll,
         if (FAILED(names->GetStringLength(0, &len)))
             continue;
 
-        std::wstring buf(len + 1, L'\0');
+        std::wstring buf(len + 1, '\0');
         if (FAILED(names->GetString(0, buf.data(), len + 1)))
             continue;
         buf.resize(len);
 
-        if (_wcsicmp(buf.c_str(), target.c_str()) == 0)
+        if (strcmp(w2a(buf).c_str(), target.c_str()) == 0)
         {
             index = i;
             return true;
@@ -6514,17 +6513,17 @@ void VirtualDoc::load_book()
 
 
 // ---------- 分页 ----------
-std::wstring VirtualDoc::get_href_by_id(int id)
+std::string VirtualDoc::get_href_by_id(int id)
 {
 
     if (id < m_spine.size() && id >= 0)
     {
         return m_spine[id].href;
     }
-    return L"";
+    return "";
 }
 
-int VirtualDoc::get_id_by_href(std::wstring& href)
+int VirtualDoc::get_id_by_href(std::string& href)
 {
     for (int i = 0; i < m_spine.size(); i++)
     {
@@ -6746,14 +6745,14 @@ VirtualDoc::get_body_blocks(std::string& html,
 //    return blocks;
 //}
 
-void VirtualDoc::load_html(std::wstring& href)
+void VirtualDoc::load_html(std::string& href)
 {
 
     auto id = get_id_by_href(href);
     if(id < 0)
     {
-        OutputDebugStringW(href.c_str());
-        OutputDebugStringW(L" 未找到\n");
+        OutputDebugStringA(href.c_str());
+        OutputDebugStringA(" 未找到\n");
         return ;
     }
  
@@ -6805,7 +6804,7 @@ bool VirtualDoc::load_by_id(int spine_id, bool isPushBack)
     try
     {
  
-        std::wstring href = get_href_by_id(spine_id);
+        std::string href = get_href_by_id(spine_id);
         if (href.empty()) return false;
 
   
@@ -6903,7 +6902,7 @@ void VirtualDoc::update_doc(int client_h)
  
     auto time_string = seconds2string(g_recorder->getBookTotalTime());
     SetStatus(STATUSBAR_TOTAL_TIME, (L"阅读时长：" + time_string).c_str());
-    SetStatus(STATUSBAR_FONT_NAME, (L"自定义字体：" + g_cfg.font_name).c_str());
+    SetStatus(STATUSBAR_FONT_NAME, (L"自定义字体：" + a2w(g_cfg.font_name)).c_str());
     SetStatus(STATUSBAR_FONT_SIZE, (L"字体大小：" + std::to_wstring(g_cfg.font_size)).c_str());
     SetStatus(STATUSBAR_LINE_HEIGHT, (L"行间距：" + std::to_wstring(g_cfg.line_height)).c_str());
     SetStatus(STATUSBAR_DOC_WIDTH, (L"文档宽度：" + std::to_wstring(g_cfg.document_width)).c_str());
@@ -7146,9 +7145,9 @@ void TocPanel::Load(const OCFPackage& pkg)
     for (auto& n : m_nodes) 
     { 
         // 1. 分离锚点
-        std::wstring href = n.nav->href;
-        size_t pos = href.find(L'#');
-        std::wstring pure = pos == std::wstring::npos ? href : href.substr(0, pos);
+        std::string href = n.nav->href;
+        size_t pos = href.find('#');
+        std::string pure = pos == std::string::npos ? href : href.substr(0, pos);
         for (int i = 0; i < pkg.spine.size(); i++)
         {
             if (pkg.spine[i].href == pure)
@@ -7226,8 +7225,8 @@ void TocPanel::OnMouseMove(int x, int y)
 
     m_curHover = line;
     SetCursor(LoadCursor(nullptr, IDC_HAND));
-    std::wstring wtxt = m_nodes[m_visible[line]].nav->label;
-    m_sel_text = wtxt;
+    std::wstring wtxt = a2w(m_nodes[m_visible[line]].nav->label);
+    m_sel_text = w2a(wtxt);
     // 2. 判断文字是否被截断
     HDC hdc = GetDC(m_hwnd);
     HFONT old = (HFONT)SelectObject(hdc, m_hFont);   // 你的字体
@@ -7252,7 +7251,7 @@ void TocPanel::OnMouseMove(int x, int y)
         int x = (m_nodes[m_visible[line]].nav->order * 16 + 12) + m_marginLeft + rc.left;
         int y = (m_marginTop + line * m_lineH - m_scrollY) + rc.top;
 
-        SetWindowText(m_hTip, wtxt.c_str());
+        SetWindowTextW(m_hTip, wtxt.c_str());
 
         
         //SetWindowLong(m_hTip, GWL_STYLE,
@@ -7286,7 +7285,7 @@ TocPanel::TocPanel()
         CLIP_DEFAULT_PRECIS,
         DEFAULT_QUALITY,
         DEFAULT_PITCH | FF_SWISS,
-        g_cfg.default_font_name.c_str());   // 字体名
+        a2w(g_cfg.default_font_name).c_str());   // 字体名
 
     // 1. 在 WM_CREATE / 初始化时创建一次
   
@@ -7349,7 +7348,7 @@ void TocPanel::EnsureVisible(int line)
 
 void TocPanel::OnPaint(HDC hdc)
 {
-    OutputDebugStringA("[TocPanel] WM_PAINT\n");
+    //OutputDebugStringA("[TocPanel] WM_PAINT\n");
     RECT rc; GetClientRect(m_hwnd, &rc);
     /* 1. 先把整块客户区刷成背景色，解决残影 */
     FillRect(hdc, &rc, GetSysColorBrush(COLOR_WINDOW));
@@ -7393,9 +7392,10 @@ void TocPanel::OnPaint(HDC hdc)
         int textLeft = m_marginLeft + indent;
         TextOutW(hdc, textLeft, r.top + 2, sign, lstrlenW(sign));
         textLeft += 12;
+        std::wstring wlabel = a2w(n.nav->label);
         TextOutW(hdc, textLeft, r.top + 2,
-            n.nav->label.c_str(),
-            static_cast<int>(n.nav->label.size()));
+            wlabel.c_str(),
+            static_cast<int>(wlabel.size()));
     }
     SelectObject(hdc, hOld);   // 恢复
 }
@@ -7419,15 +7419,15 @@ void TocPanel::OnLButtonDown(int x, int y)
     }
 
 }
-float TocPanel::getAnchorOffsetY(const std::wstring& href)
+float TocPanel::getAnchorOffsetY(const std::string& href)
 {
     if (!g_cMain || !g_cMain->m_doc) { return 0; }
-    size_t pos = href.find(L'#');
-    std::wstring pure = pos == std::wstring::npos ? href : href.substr(0, pos);
-    std::wstring anchor = pos == std::wstring::npos ? L"" : href.substr(pos+1);
+    size_t pos = href.find('#');
+    std::string pure = pos == std::string::npos ? href : href.substr(0, pos);
+    std::string anchor = pos == std::string::npos ? "" : href.substr(pos+1);
  
     if (!anchor.empty()) {
-        std::string cssSel = "[id=\"" + w2a(anchor) + "\"]";
+        std::string cssSel = "[id=\"" + anchor + "\"]";
         if (auto el = g_cMain->m_doc->root()->select_one(cssSel.c_str())) {
             return el->get_placement().y;
         }
@@ -7449,7 +7449,7 @@ size_t TocPanel::getTargetNode(const ScrollPosition& sp)
         if (m_nodes[i].nav && m_nodes[i].spineId == m_nodes[target].spineId)
         {
 
-            std::wstring href = m_nodes[i].nav->href;
+            std::string href = m_nodes[i].nav->href;
             int offsetY = getAnchorOffsetY(href);
             //OutputDebugStringA("[offsetY] ");
             //OutputDebugStringA(std::to_string(offsetY).c_str());
@@ -7690,7 +7690,7 @@ LRESULT CALLBACK ScrollBarEx::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
 void ScrollBarEx::OnPaint()
 {
-    OutputDebugStringA("[ScrollBarEx] WM_PAINT\n");
+    //OutputDebugStringA("[ScrollBarEx] WM_PAINT\n");
     PAINTSTRUCT ps;
     HDC hdc = BeginPaint(m_hwnd, &ps);
 
@@ -7908,28 +7908,28 @@ void SimpleContainer::on_lbutton_up()
 }
 void SimpleContainer::copy_to_clipboard()
 {
-    if (m_sel_text.empty()) return;
+    //if (m_sel_text.empty()) return;
 
-    const size_t bufSize = (m_sel_text.size() + 1) * sizeof(wchar_t);
-    if (HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, bufSize)) {
-        if (wchar_t* dst = static_cast<wchar_t*>(GlobalLock(hMem))) {
-            // 直接复制整个字符串内容
-            wcscpy_s(dst, m_sel_text.size() + 1, m_sel_text.c_str());
-            GlobalUnlock(hMem);
+    //const size_t bufSize = (m_sel_text.size() + 1) * sizeof(wchar_t);
+    //if (HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, bufSize)) {
+    //    if (wchar_t* dst = static_cast<wchar_t*>(GlobalLock(hMem))) {
+    //        // 直接复制整个字符串内容
+    //        wcscpy_s(dst, m_sel_text.size() + 1, m_sel_text.c_str());
+    //        GlobalUnlock(hMem);
 
-            if (OpenClipboard(g_hWnd)) {
-                EmptyClipboard();
-                SetClipboardData(CF_UNICODETEXT, hMem);
-                CloseClipboard();
-            }
-            else {
-                GlobalFree(hMem);
-            }
-        }
-        else {
-            GlobalFree(hMem);
-        }
-    }
+    //        if (OpenClipboard(g_hWnd)) {
+    //            EmptyClipboard();
+    //            SetClipboardData(CF_UNICODETEXT, hMem);
+    //            CloseClipboard();
+    //        }
+    //        else {
+    //            GlobalFree(hMem);
+    //        }
+    //    }
+    //    else {
+    //        GlobalFree(hMem);
+    //    }
+    //}
 }
 
 std::vector<RECT> SimpleContainer::get_selection_rows() const
@@ -7994,17 +7994,17 @@ std::vector<RECT> SimpleContainer::get_selection_rows() const
     return merged;
 }
 
-std::wstring SimpleContainer::get_selection_text() const
+std::string SimpleContainer::get_selection_text() const
 {
     if (m_selStart == m_selEnd)
-        return L"";
+        return "";
 
     // 确保选区不越界
     const size_t start = std::min(m_selStart, m_selEnd);
     const size_t end = std::min(std::max(m_selStart, m_selEnd), static_cast<int64_t>(m_plainText.size()));
 
     if (start >= end)
-        return L"";
+        return "";
 
     // 直接使用substr安全地获取子字符串
     return m_plainText.substr(start, end - start);
@@ -8635,16 +8635,42 @@ void AppBootstrap::cancel_delayed_tooltip()
 
 void TocPanel::copy_to_clipboard()
 {
-    if (m_sel_text.empty()) return;
+    //if (m_sel_text.empty()) return;
 
-    const size_t bufSize = (m_sel_text.size() + 1) * sizeof(wchar_t);
+    //const size_t bufSize = (m_sel_text.size() + 1) * sizeof(wchar_t);
+    //if (HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, bufSize)) {
+    //    if (wchar_t* dst = static_cast<wchar_t*>(GlobalLock(hMem))) {
+    //        // 直接复制整个字符串内容
+    //        wcscpy_s(dst, m_sel_text.size() + 1, m_sel_text.c_str());
+    //        GlobalUnlock(hMem);
+
+    //        if (OpenClipboard(g_hWnd)) {
+    //            EmptyClipboard();
+    //            SetClipboardData(CF_UNICODETEXT, hMem);
+    //            CloseClipboard();
+    //        }
+    //        else {
+    //            GlobalFree(hMem);
+    //        }
+    //    }
+    //    else {
+    //        GlobalFree(hMem);
+    //    }
+    //}
+}
+
+void AppBootstrap::copy_to_clipboard(HWND hwnd, std::wstring txt)
+{
+    if (txt.empty()) return;
+
+    const size_t bufSize = (txt.size() + 1) * sizeof(wchar_t);
     if (HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, bufSize)) {
         if (wchar_t* dst = static_cast<wchar_t*>(GlobalLock(hMem))) {
             // 直接复制整个字符串内容
-            wcscpy_s(dst, m_sel_text.size() + 1, m_sel_text.c_str());
+            wcscpy_s(dst, txt.size() + 1, txt.c_str());
             GlobalUnlock(hMem);
 
-            if (OpenClipboard(g_hWnd)) {
+            if (OpenClipboard(hwnd)) {
                 EmptyClipboard();
                 SetClipboardData(CF_UNICODETEXT, hMem);
                 CloseClipboard();
