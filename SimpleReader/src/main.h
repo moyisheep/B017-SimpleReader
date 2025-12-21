@@ -1037,7 +1037,7 @@ public:
         m_flag.store(true, std::memory_order_relaxed);
     }
     ~BusyGuard() {
-        OutputDebugStringA("BusyGuard::~BusyGuard() - workerBusy = false\n");
+        //OutputDebugStringA("BusyGuard::~BusyGuard() - workerBusy = false\n");
         m_flag.store(false, std::memory_order_relaxed);
     }
     BusyGuard(const BusyGuard&) = delete;

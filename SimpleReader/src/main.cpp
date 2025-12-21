@@ -1261,16 +1261,12 @@ void CALLBACK Tick(UINT, UINT, DWORD_PTR, DWORD_PTR, DWORD_PTR)
             g_recorder->m_book_record.totalTime += 1;
 
 
-            if (g_recorder->m_book_record.title.empty() && g_book && !g_book->ocf_pkg_.meta.empty())
-            {
-                auto titIt = g_book->ocf_pkg_.meta.find("dc:title");
-                g_recorder->m_book_record.title = titIt != g_book->ocf_pkg_.meta.end() ? titIt->second : "";
-            }
-            if (g_recorder->m_book_record.author.empty() && g_book && !g_book->ocf_pkg_.meta.empty())
-            {
-                auto authIt = g_book->ocf_pkg_.meta.find("dc:creator");
-                g_recorder->m_book_record.author = authIt != g_book->ocf_pkg_.meta.end() ? authIt->second : "";
-            }
+    
+            g_recorder->m_book_record.title = g_book->get_title();
+
+           
+            g_recorder->m_book_record.author = g_book->get_author();
+         
 
             timeFragment tf;
             tf.path = g_recorder->m_book_record.path;
@@ -1612,10 +1608,21 @@ inline void DumpBookRecord()
     oss << L"enableGlobalCSS    = " << r.enableGlobalCSS << L'\n';
     oss << L"enableCustomFont      = " << r.enableCustomFont << L'\n';
     oss << L"customFontName        = " << a2w(r.fontName) << L'\n';
+    oss << L"\nTotal Read Time (s): " << std::to_wstring(g_recorder->getTotalTime()) << L"\n";
     oss << L"============================\n";
 
     OutputDebugStringW(oss.str().c_str());   // ← 宽字符版本
-    OutputDebugStringW((L"\nTotal Read Time (s): " + std::to_wstring(g_recorder->getTotalTime()) + L"\n").c_str());
+ 
+
+    std::string txt = "--------------------------------------\n";
+    txt += "Title: " + g_book->get_title() + "\n";
+    txt += "Author: " + g_book->get_author() + "\n";
+    txt += "EPUB Version: " + g_book->get_version() + "\n";
+    txt += "Script: " + std::string(g_book->has_script() ? "Yes" : "No") + "\n";
+    txt += "CSS: " + std::string(g_book->has_css() ? "Yes" : "No") + "\n";
+    txt += "Font: " + std::string(g_book->has_font() ? "Yes" : "No") + "\n";
+    txt += "--------------------------------------\n";
+    OutputDebugStringW(a2w(txt).c_str());
 }
 std::wstring OpenEpubWithDialog(HWND hwnd)
 {
@@ -2250,7 +2257,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                 if (g_cfg.enableEPUBFonts) { g_book->build_epub_font_index(make_temp_dir()); }
                 if (g_toc)
                 {
-                    g_toc->Load(g_book->ocf_pkg_);                 // 代替 EPUBBook::LoadToc()
+                    g_toc->Load(g_book->m_ocf_pkg);                 // 代替 EPUBBook::LoadToc()
                 }
                 PostMessage(g_hWnd, WM_EPUB_PARSED, 0, 0);
             }
@@ -2289,6 +2296,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
    
         DumpBookRecord();
 
+        
         // 更新设置
         auto& record = g_recorder->m_book_record;
         auto spine_id = record.lastSpineId;
@@ -2297,7 +2305,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         g_cfg.line_height = record.lineHeightMul > 0 ? record.lineHeightMul : g_cfg.default_line_height;
         g_cfg.document_width = record.docWidth > 0 ? record.docWidth : g_cfg.default_document_width;
     
-        int spine_size = g_book->ocf_pkg_.spine.size();
+        int spine_size = g_book->m_ocf_pkg.spine.size();
         SendMessage(g_hViewScroll, SBM_SETSPINECOUNT, spine_size, 0);
 
         g_cfg.enableCSS = record.enableCSS;
@@ -2314,7 +2322,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 
         g_cfg.font_name = record.fontName;
         g_vd->load_book();
-        g_vd->load_html(g_book->ocf_pkg_.spine[spine_id].href);
+        g_vd->load_html(g_book->m_ocf_pkg.spine[spine_id].href);
 
         UpdateCache();          // 复用前面给出的 UpdateCache()
 
@@ -6513,7 +6521,7 @@ void VirtualDoc::load_book()
     m_book = g_book;
     m_container = g_cMain;
 
-    m_spine = m_book->ocf_pkg_.spine;
+    m_spine = m_book->m_ocf_pkg.spine;
 }
 
 

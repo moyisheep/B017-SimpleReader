@@ -30,6 +30,7 @@ struct OCFNavPoint {
 struct OCFPackage {
     std::string rootfile;                // OPF 绝对路径
     std::string opf_dir;                 // 目录，带 '/'
+    std::string version;
     std::vector<OCFItem>   manifest;
     std::vector<OCFRef>    spine;
     std::vector<OCFNavPoint> toc;
@@ -67,35 +68,67 @@ struct MemFile {
 // ---------- EPUB 零解压 ----------
 class EPUBBook {
 public:
-    mz_zip_archive zip = {};
-    std::map<std::string, MemFile> m_cache;
-    OCFPackage ocf_pkg_;                     // 解析结果
+
+    OCFPackage m_ocf_pkg;                     // 解析结果
 
     // -------------- EPUBBook 内部新增成员 --------------
 
-    void parse_ocf_(void);                       // 主解析入口
-    void parse_opf_(void);   // 解析 OPF
-    void parse_toc_(void);                        // 解析 TOC
-
-
-
-    std::string get_chapter_name_by_id(int spine_id);
-    //void OnTreeSelChanged(const wchar_t* href);
     bool load(const std::string& epub_path);
-    std::string get_current_dir();
+    MemFile get_binary(std::string base_url, std::string url);
+   
+
     MemFile read_zip(std::string file_name);
+
     std::string load_html(const std::string& path);
 
-    bool is_xhtml(const std::string& file_path);
+
 
     void load_all_fonts(void);
 
+
+    std::string get_book_path();
+    std::string get_current_dir();
+    std::string get_chapter_name_by_id(int spine_id);
+
+    std::string get_title();
+    std::string get_author();
+    std::string get_version();
+ 
+    bool has_script();
+    bool has_font();
+    bool has_css();
+
+
+    bool is_toc_item(int spine_id);
+
+
+    void clear();
+
+
+
+    void build_epub_font_index(std::string tempDir);
+    std::unordered_map<FontKey, std::vector<std::string>> m_fontBin;
+    std::string resolve_path(std::string base_url, std::string href);
+
+    EPUBBook() noexcept {}
+    ~EPUBBook();
+private:
+    std::string m_current_book_path = "";
+    std::string m_current_html_path = "";
+    mz_zip_archive zip = {};
+    std::map<std::string, MemFile> m_cache;
+
+
+    static std::string url_decode(const std::string& in);
     static std::string blake3_hex(const std::vector<uint8_t>& data);
+    bool is_xhtml(const std::string& file_path);
 
 
+    void parse_ocf(void);                       // 主解析入口
+    void parse_opf(void);   // 解析 OPF
+    void parse_toc(void);                        // 解析 TOC
 
     static std::string extract_text(const tinyxml2::XMLElement* a);
-
     // 递归解析 EPUB3-Nav <ol>
     void parse_nav_list(tinyxml2::XMLElement* ol, int level,
         const std::string& opf_dir,
@@ -107,32 +140,5 @@ public:
         const std::string& opf_dir,
         std::vector<OCFNavPoint>& out);
 
-
-
-    std::string get_title();
-    std::string get_author();
-
-
-    MemFile get_binary(std::string base_url, std::string url);
-    bool is_toc_item(int spine_id);
-
-
-    void clear();
-
-
-
-    void build_epub_font_index(std::string tempDir);
-    std::unordered_map<FontKey, std::vector<std::string>> m_fontBin;
-    std::string resolve_path(std::string base_url, std::string href);
-    std::string get_book_path();
-    EPUBBook() noexcept {}
-    ~EPUBBook();
-private:
-
-    static std::string url_decode(const std::string& in);
-
-
-    std::string m_current_book_path = "";
-    std::string m_current_html_path = "";
 
 };
