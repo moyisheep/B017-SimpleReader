@@ -10,10 +10,7 @@
 #include <array>
 
 
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <Windows.h>
-#include <Shlwapi.h>
+
 
 #include <miniz/miniz.h>
 #include <tinyxml2.h>

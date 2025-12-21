@@ -2241,7 +2241,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 
                     return ;
                 }
-                if (!g_book->load(w2a(file))) { return ; }
+                if (!g_book->load(w2a(file))) 
+                { 
+                    std::string txt = "[EPUBBook] 打开失败: " + w2a(file) + "\n";
+                    OutputDebugStringA(txt.c_str());
+                    return ; 
+                }
                 if (g_cfg.enableEPUBFonts) { g_book->build_epub_font_index(make_temp_dir()); }
                 if (g_toc)
                 {

@@ -137,17 +137,18 @@ void EPUBBook::build_epub_font_index(std::string tempDir)
                 std::string hashHex = blake3_hex(fontFile.data);   // 32 字节 → 64 字符
                 std::string tempFont = tempDir + hashHex + ext;    // 例如：a1b2c3...ff.woff2
                 // 2. 如果文件已存在，直接记录路径，不再写盘
-                if (GetFileAttributesA(tempFont.c_str()) != INVALID_FILE_ATTRIBUTES)
+                if (fs::exists(tempFont.c_str()))
                 {
                     paths.push_back(tempFont);   // 已缓存
                     continue;
                 }
-
-                HANDLE h = CreateFileA(tempFont.c_str(), GENERIC_WRITE, 0, nullptr,
-                    CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
-                DWORD written = 0;
-                WriteFile(h, fontFile.data.data(), (DWORD)fontFile.data.size(), &written, nullptr);
-                CloseHandle(h);
+                std::ofstream outFile(tempFont, std::ios::binary);
+                if (!outFile) {
+                    //std::cerr << "无法打开二进制文件" << std::endl;
+                    continue;
+                }
+                outFile.write(reinterpret_cast<const char*>(fontFile.data.data()), fontFile.data.size());
+                outFile.close();
 
                 paths.push_back(tempFont);
             }
@@ -397,48 +398,48 @@ bool EPUBBook::load(const std::string& epub_path)
     mz_zip_reader_end(&zip);           // 1. 先关闭旧 zip
     memset(&zip, 0, sizeof(zip));
     if (!mz_zip_reader_init_file(&zip, epub_path.c_str(), 0)) {
-        mz_zip_error err = mz_zip_get_last_error(&zip);
-        std::string err_msg;
+        //mz_zip_error err = mz_zip_get_last_error(&zip);
+        //std::string err_msg;
 
-        switch (err) {
-        case MZ_ZIP_NO_ERROR: err_msg = "无错误"; break;
-        case MZ_ZIP_UNDEFINED_ERROR: err_msg = "未定义错误"; break;
-        case MZ_ZIP_TOO_MANY_FILES: err_msg = "文件太多"; break;
-        case MZ_ZIP_FILE_TOO_LARGE: err_msg = "文件太大"; break;
-        case MZ_ZIP_UNSUPPORTED_METHOD: err_msg = "不支持的压缩方法"; break;
-        case MZ_ZIP_UNSUPPORTED_ENCRYPTION: err_msg = "不支持的加密"; break;
-        case MZ_ZIP_UNSUPPORTED_FEATURE: err_msg = "不支持的功能"; break;
-        case MZ_ZIP_FAILED_FINDING_CENTRAL_DIR: err_msg = "找不到中央目录"; break;
-        case MZ_ZIP_NOT_AN_ARCHIVE: err_msg = "不是ZIP文件"; break;
-        case MZ_ZIP_INVALID_HEADER_OR_CORRUPTED: err_msg = "无效头或文件损坏"; break;
-        case MZ_ZIP_UNSUPPORTED_MULTIDISK: err_msg = "不支持多磁盘归档"; break;
-        case MZ_ZIP_DECOMPRESSION_FAILED: err_msg = "解压失败"; break;
-        case MZ_ZIP_COMPRESSION_FAILED: err_msg = "压缩失败"; break;
-        case MZ_ZIP_UNEXPECTED_DECOMPRESSED_SIZE: err_msg = "解压大小不符"; break;
-        case MZ_ZIP_CRC_CHECK_FAILED: err_msg = "CRC校验失败"; break;
-        case MZ_ZIP_UNSUPPORTED_CDIR_SIZE: err_msg = "不支持的中央目录大小"; break;
-        case MZ_ZIP_ALLOC_FAILED: err_msg = "内存分配失败"; break;
-        case MZ_ZIP_FILE_OPEN_FAILED: err_msg = "文件打开失败"; break;
-        case MZ_ZIP_FILE_CREATE_FAILED: err_msg = "文件创建失败"; break;
-        case MZ_ZIP_FILE_WRITE_FAILED: err_msg = "文件写入失败"; break;
-        case MZ_ZIP_FILE_READ_FAILED: err_msg = "文件读取失败"; break;
-        case MZ_ZIP_FILE_CLOSE_FAILED: err_msg = "文件关闭失败"; break;
-        case MZ_ZIP_FILE_SEEK_FAILED: err_msg = "文件寻址失败"; break;
-        case MZ_ZIP_FILE_STAT_FAILED: err_msg = "文件状态获取失败"; break;
-        case MZ_ZIP_INVALID_PARAMETER: err_msg = "无效参数"; break;
-        case MZ_ZIP_INVALID_FILENAME: err_msg = "无效文件名"; break;
-        case MZ_ZIP_BUF_TOO_SMALL: err_msg = "缓冲区太小"; break;
-        case MZ_ZIP_INTERNAL_ERROR: err_msg = "内部错误"; break;
-        case MZ_ZIP_FILE_NOT_FOUND: err_msg = "文件未找到"; break;
-        case MZ_ZIP_ARCHIVE_TOO_LARGE: err_msg = "归档文件太大"; break;
-        case MZ_ZIP_VALIDATION_FAILED: err_msg = "验证失败"; break;
-        case MZ_ZIP_WRITE_CALLBACK_FAILED: err_msg = "写入回调失败"; break;
-        default: err_msg = "未知错误";
-        }
+        //switch (err) {
+        //case MZ_ZIP_NO_ERROR: err_msg = "无错误"; break;
+        //case MZ_ZIP_UNDEFINED_ERROR: err_msg = "未定义错误"; break;
+        //case MZ_ZIP_TOO_MANY_FILES: err_msg = "文件太多"; break;
+        //case MZ_ZIP_FILE_TOO_LARGE: err_msg = "文件太大"; break;
+        //case MZ_ZIP_UNSUPPORTED_METHOD: err_msg = "不支持的压缩方法"; break;
+        //case MZ_ZIP_UNSUPPORTED_ENCRYPTION: err_msg = "不支持的加密"; break;
+        //case MZ_ZIP_UNSUPPORTED_FEATURE: err_msg = "不支持的功能"; break;
+        //case MZ_ZIP_FAILED_FINDING_CENTRAL_DIR: err_msg = "找不到中央目录"; break;
+        //case MZ_ZIP_NOT_AN_ARCHIVE: err_msg = "不是ZIP文件"; break;
+        //case MZ_ZIP_INVALID_HEADER_OR_CORRUPTED: err_msg = "无效头或文件损坏"; break;
+        //case MZ_ZIP_UNSUPPORTED_MULTIDISK: err_msg = "不支持多磁盘归档"; break;
+        //case MZ_ZIP_DECOMPRESSION_FAILED: err_msg = "解压失败"; break;
+        //case MZ_ZIP_COMPRESSION_FAILED: err_msg = "压缩失败"; break;
+        //case MZ_ZIP_UNEXPECTED_DECOMPRESSED_SIZE: err_msg = "解压大小不符"; break;
+        //case MZ_ZIP_CRC_CHECK_FAILED: err_msg = "CRC校验失败"; break;
+        //case MZ_ZIP_UNSUPPORTED_CDIR_SIZE: err_msg = "不支持的中央目录大小"; break;
+        //case MZ_ZIP_ALLOC_FAILED: err_msg = "内存分配失败"; break;
+        //case MZ_ZIP_FILE_OPEN_FAILED: err_msg = "文件打开失败"; break;
+        //case MZ_ZIP_FILE_CREATE_FAILED: err_msg = "文件创建失败"; break;
+        //case MZ_ZIP_FILE_WRITE_FAILED: err_msg = "文件写入失败"; break;
+        //case MZ_ZIP_FILE_READ_FAILED: err_msg = "文件读取失败"; break;
+        //case MZ_ZIP_FILE_CLOSE_FAILED: err_msg = "文件关闭失败"; break;
+        //case MZ_ZIP_FILE_SEEK_FAILED: err_msg = "文件寻址失败"; break;
+        //case MZ_ZIP_FILE_STAT_FAILED: err_msg = "文件状态获取失败"; break;
+        //case MZ_ZIP_INVALID_PARAMETER: err_msg = "无效参数"; break;
+        //case MZ_ZIP_INVALID_FILENAME: err_msg = "无效文件名"; break;
+        //case MZ_ZIP_BUF_TOO_SMALL: err_msg = "缓冲区太小"; break;
+        //case MZ_ZIP_INTERNAL_ERROR: err_msg = "内部错误"; break;
+        //case MZ_ZIP_FILE_NOT_FOUND: err_msg = "文件未找到"; break;
+        //case MZ_ZIP_ARCHIVE_TOO_LARGE: err_msg = "归档文件太大"; break;
+        //case MZ_ZIP_VALIDATION_FAILED: err_msg = "验证失败"; break;
+        //case MZ_ZIP_WRITE_CALLBACK_FAILED: err_msg = "写入回调失败"; break;
+        //default: err_msg = "未知错误";
+        //}
 
-        std::string txt = "[EPUBBook] zip 打开失败: 错误码 " + std::to_string(err) +
-            " (" + err_msg + "), 文件: " + epub_path + "\n";
-        OutputDebugStringA(txt.c_str());
+        //std::string txt = "[EPUBBook] zip 打开失败: 错误码 " + std::to_string(err) +
+        //    " (" + err_msg + "), 文件: " + epub_path + "\n";
+        //OutputDebugStringA(txt.c_str());
 
         return false;
     }
@@ -475,16 +476,48 @@ void EPUBBook::parse_ocf_() {
     ocf_pkg_.opf_dir = ocf_pkg_.rootfile.substr(0, ocf_pkg_.rootfile.find_last_of('/') + 1);
 
 }
-std::string EPUBBook::url_decode(const std::string& in)
-{
-    char out[2048];
-    DWORD len = 2048;
-    if (SUCCEEDED(UrlCanonicalizeA(in.c_str(), out, &len, URL_UNESCAPE)))
-        return std::string(out, len);
-    return in;
+//std::string EPUBBook::url_decode(const std::string& in)
+//{
+//    char out[2048];
+//    DWORD len = 2048;
+//    if (SUCCEEDED(UrlCanonicalizeA(in.c_str(), out, &len, URL_UNESCAPE)))
+//        return std::string(out, len);
+//    return in;
+//}
+
+std::string EPUBBook::url_decode(const std::string& in) {
+    std::string result;
+    result.reserve(in.size());
+
+    for (size_t i = 0; i < in.size(); ++i) {
+        if (in[i] == '%' && i + 2 < in.size()) {
+            // 快速十六进制转换
+            auto hexToChar = [](char c) -> int {
+                if (c >= '0' && c <= '9') return c - '0';
+                if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+                if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+                return -1; // 无效字符
+            };
+
+            int high = hexToChar(in[i + 1]);
+            int low = hexToChar(in[i + 2]);
+
+            if (high != -1 && low != -1) {
+                result += static_cast<char>((high << 4) | low);
+                i += 2;
+                continue;
+            }
+        }
+        else if (in[i] == '+') {
+            result += ' ';
+            continue;
+        }
+
+        result += in[i];
+    }
+
+    return result;
 }
-
-
 std::string EPUBBook::resolve_path(std::string base_url, std::string href)
 {
     fs::path p = fs::path(base_url) / url_decode(href);

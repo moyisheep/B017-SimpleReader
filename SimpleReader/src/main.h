@@ -373,7 +373,7 @@ struct AppSettings {
     Renderer fontRenderer = Renderer::D2D;
     std::string default_font_name = "Microsoft YaHei";
 
-    std::wstring temp_dir = L"epub_book";
+    std::wstring temp_dir = L"SimpleReaderTemp";
 
     int tooltip_width = 500;
     std::string appName = "Simple Reader";
