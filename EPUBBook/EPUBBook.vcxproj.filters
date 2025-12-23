@@ -18,9 +18,15 @@
     <ClCompile Include="EPUBBook.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="MOBIBook.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EPUBBook.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MOBIBook.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

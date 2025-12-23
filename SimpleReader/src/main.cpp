@@ -1,5 +1,9 @@
 ﻿#include "main.h"
 
+
+std::unique_ptr<TimerOutput> g_timerOutput = std::make_unique<TimerOutput>();
+
+
 HWND  g_hToc = nullptr;    // 侧边栏 TreeView
 HIMAGELIST g_hImg = nullptr;   // 图标(可选)
 HWND      g_hWnd = nullptr;
@@ -3047,6 +3051,7 @@ void VirtualDoc::OnTreeSelChanged(std::string href)
 
 void SimpleContainer::load_image(const char* src, const char* baseurl, bool redraw_on_ready)
 {
+    Timer t("  load_image");
     if (!src) { return; }
     std::lock_guard<std::mutex> lock(m_imgCacheMutex);
     if (m_img_cache.contains(src)) return;
@@ -3098,7 +3103,9 @@ void SimpleContainer::load_image(const char* src, const char* baseurl, bool redr
 
 
 
-void SimpleContainer::get_image_size(const char* src, const char* baseurl, litehtml::size& sz) {
+void SimpleContainer::get_image_size(const char* src, const char* baseurl, litehtml::size& sz) 
+{
+    Timer t("  get_image_size");
     std::lock_guard<std::mutex> lock(m_imgCacheMutex);
     if (!m_img_cache.contains(src)) { sz.width = sz.height = 0; return;}
     auto img = m_img_cache[src];
@@ -3110,6 +3117,7 @@ void SimpleContainer::get_image_size(const char* src, const char* baseurl, liteh
 // get_client_rect -> get_viewport
 void SimpleContainer::get_viewport(litehtml::position& client) const
 {
+    Timer t("  get_viewport");
     // 1. 取客户区物理像素
     RECT rc{};
     GetClientRect(m_hwnd, &rc);
@@ -3129,7 +3137,7 @@ SimpleContainer::create_element(const char* tag,
     const litehtml::string_map& attrs,
     const std::shared_ptr<litehtml::document>& doc)
 {
-
+    Timer t("  create_element");
         return nullptr;   // 让 litehtml 自己建别的节点
 
 }
@@ -3140,6 +3148,7 @@ void SimpleContainer::import_css(litehtml::string& text,
     const litehtml::string& url,
     litehtml::string& baseurl)
 {
+    Timer t("  import_css");
 
     if (!g_cfg.enableCSS) {
         //text.clear();           // 禁用所有外部/内部 CSS
@@ -3187,6 +3196,7 @@ void SimpleContainer::import_css(litehtml::string& text,
 // ---------- 2. 标题 ----------------------------------------------------
 void SimpleContainer::set_caption(const char* cap)
 {
+    Timer t("  set_caption");
     if (cap && g_hWnd) {
         std::string title;
         auto t = g_book->get_title();
@@ -3202,6 +3212,7 @@ void SimpleContainer::set_caption(const char* cap)
 // ---------- 3. base url -------------------------------------------------
 void SimpleContainer::set_base_url(const char* base)
 {
+    Timer t("  set_base_url");
     return;
 }
 
@@ -3209,6 +3220,7 @@ void SimpleContainer::set_base_url(const char* base)
 void SimpleContainer::link(const std::shared_ptr<litehtml::document>& doc,
     const litehtml::element::ptr& el)
 {
+    Timer t("  link");
     OutputDebugStringA(el->get_tagName());
     OutputDebugStringA("\n");
     // 简单做法：把锚点 id -> 元素 存起来，点击时滚动
@@ -3429,6 +3441,7 @@ static const std::unordered_map<std::string, LPCWSTR> kSysCursors = {
 };
 void SimpleContainer::set_cursor(const char* cursor)
 {
+    Timer t("  set_cursor");
     //m_currentCursor = IDC_ARROW;           // 默认箭头
 
     if (!cursor) return;
@@ -3451,6 +3464,7 @@ void SimpleContainer::set_cursor(const char* cursor)
 void SimpleContainer::transform_text(litehtml::string& text,
     litehtml::text_transform tt)
 {
+    Timer t("  transform_text");
     if (text.empty()) return;
     std::wstring w = a2w(text.c_str());
     switch (tt)
@@ -3478,6 +3492,7 @@ void SimpleContainer::transform_text(litehtml::string& text,
 // ---------- 9. 媒体查询 -----------------------------------------------
 void SimpleContainer::get_media_features(litehtml::media_features& mf) const
 {
+    Timer t("  get_media_features");
     // 1. 窗口客户区（物理像素）
     RECT rc;
     GetClientRect(m_hwnd, &rc);
@@ -3508,6 +3523,7 @@ void SimpleContainer::get_media_features(litehtml::media_features& mf) const
 void SimpleContainer::get_language(litehtml::string& language,
     litehtml::string& culture) const
 {
+    Timer t("  get_language");
     language = "en";
     culture = "US";
     // 真正 EPUB 可从 OPF <dc:language> 读
@@ -3523,6 +3539,7 @@ void SimpleContainer::init_dpi() {
 // 保持 pt_to_px 不变
 litehtml::pixel_t SimpleContainer::pt_to_px(float pt) const {
     // 乘法 + 位移，比 MulDiv 更快
+    Timer t("  pt_to_px");
     return pt * m_px_per_pt;
 }
 
@@ -4155,6 +4172,7 @@ void PreprocessHTML(std::string& html)
 // ---------- 实现 ----------
 ComPtr<ID2D1SolidColorBrush> SimpleContainer::getBrush(litehtml::uint_ptr hdc, const litehtml::web_color& c)
 {
+    Timer t("  getBrush");
     uint32_t key = (c.alpha << 24) | (c.red << 16) | (c.green << 8) | c.blue;
     auto it = m_brushPool.find(key);
     if (it != m_brushPool.end()) return it->second;
@@ -4171,6 +4189,7 @@ ComPtr<IDWriteTextLayout> SimpleContainer::getLayout(const std::string& txt,
     litehtml::uint_ptr hFont,
     float maxW)
 {
+    Timer t("  getLayout");
     // 1. 先替换花引号
     auto* fp = reinterpret_cast<FontPair*>(hFont);
     if (!fp->format) { return nullptr; }
@@ -4211,7 +4230,7 @@ ComPtr<IDWriteTextLayout> SimpleContainer::getLayout(const std::string& txt,
         fcp->fmt.Get(), maxW, 512.f, &layout);
  
     if (!layout) return nullptr;
-
+  
     // 换行/截断
     bool nowrap = false;
     //layout->SetWordWrapping(nowrap ? DWRITE_WORD_WRAPPING_NO_WRAP
@@ -4230,7 +4249,7 @@ void SimpleContainer::record_char_boxes(ID2D1DeviceContext* rt,
     const std::string& wtxt,
     const litehtml::position& pos)
 {
-
+    Timer t("  record_char_boxes");
     LineBoxes line;
     float originX = static_cast<float>(pos.x);
     float originY = static_cast<float>(pos.y);
@@ -4264,6 +4283,7 @@ void SimpleContainer::draw_text(litehtml::uint_ptr hdc,
     litehtml::web_color color,
     const litehtml::position& pos)
 {
+    Timer t("  draw_text");
     if (!text || !*text || !hFont) return;
     auto* rt = reinterpret_cast<ID2D1DeviceContext*>(hdc);
     FontPair* fp = reinterpret_cast<FontPair*>(hFont);
@@ -4431,6 +4451,7 @@ void SimpleContainer::draw_image(litehtml::uint_ptr hdc,
     const std::string& url,
     const std::string& base_url)
 {
+    Timer t("  draw_image");
     if (url.empty()) return;
     ID2D1DeviceContext* rt = reinterpret_cast<ID2D1DeviceContext*>(hdc);
 
@@ -4506,6 +4527,7 @@ void SimpleContainer::draw_solid_fill(litehtml::uint_ptr hdc,
     const litehtml::background_layer& layer,
     const litehtml::web_color& color)
 {
+    Timer t("  draw_solid_fill");
     // 1. 取出 D2D 渲染目标
     ID2D1DeviceContext* rt = reinterpret_cast<ID2D1DeviceContext*>(hdc);
     if (!rt) return;
@@ -4544,6 +4566,7 @@ void SimpleContainer::draw_linear_gradient(
     const litehtml::background_layer& layer,
     const litehtml::background_layer::linear_gradient& g)
 {
+    Timer t("  draw_linear_gradient");
     ID2D1DeviceContext* rt = reinterpret_cast<ID2D1DeviceContext*>(hdc);
     if (!rt) return;
 
@@ -4615,6 +4638,7 @@ void SimpleContainer::draw_radial_gradient(
     const litehtml::background_layer& layer,
     const litehtml::background_layer::radial_gradient& g)
 {
+    Timer t("  draw_radial_gradient");
     ID2D1DeviceContext* rt = reinterpret_cast<ID2D1DeviceContext*>(hdc);
     if (!rt) return;
 
@@ -4733,6 +4757,7 @@ void SimpleContainer::draw_conic_gradient(
     const litehtml::background_layer& layer,
     const litehtml::background_layer::conic_gradient& g)
 {
+    Timer t("  draw_conic_gradient");
     ID2D1DeviceContext* rt = reinterpret_cast<ID2D1DeviceContext*>(hdc);
     if (!rt) return;
 
@@ -4827,6 +4852,7 @@ void SimpleContainer::draw_list_marker(
     litehtml::uint_ptr hdc,
     const litehtml::list_marker& marker)
 {
+    Timer t("  draw_list_marker");
     ID2D1DeviceContext* rt = reinterpret_cast<ID2D1DeviceContext*>(hdc);
     if (!rt) return;
 
@@ -4903,6 +4929,7 @@ void SimpleContainer::draw_borders(litehtml::uint_ptr hdc,
     const litehtml::position& draw_pos,
     bool root)
 {
+    Timer ti("  draw_borders");
     if (!hdc) return;
     auto* rt = reinterpret_cast<ID2D1DeviceContext*>(hdc);
     // 1. 收集四边
@@ -5097,7 +5124,7 @@ litehtml::uint_ptr SimpleContainer::create_font(const litehtml::font_description
     const litehtml::document* doc,
     litehtml::font_metrics* fm)
 {
-
+    Timer t("  create_font");
     if (!m_dwrite || !fm) return 0;
 
     /*----------------------------------------------------------
@@ -5151,6 +5178,7 @@ litehtml::uint_ptr SimpleContainer::create_font(const litehtml::font_description
 
 void SimpleContainer::delete_font(litehtml::uint_ptr h)
 {
+    Timer t("  delete_font");
     if (!h) return;
     //auto* fp = reinterpret_cast<FontPair*>(h);
     //delete fp;              // 4. 真正释放
@@ -5159,6 +5187,7 @@ void SimpleContainer::delete_font(litehtml::uint_ptr h)
 litehtml::pixel_t SimpleContainer::text_width(const char* text,
     litehtml::uint_ptr hFont)
 {
+    Timer t("  text_width");
     if (!text || !*text || !hFont) return 0;
 
     // 1. 创建 TextLayout
@@ -5227,6 +5256,7 @@ void SimpleContainer::build_rounded_rect_path(
 void SimpleContainer::set_clip(const litehtml::position& pos,
     const litehtml::border_radiuses& bdr)
 {
+    Timer t("  set_clip");
     if (!m_dc) return;
 
     // 无圆角 → 矩形裁剪
@@ -5263,6 +5293,7 @@ void SimpleContainer::set_clip(const litehtml::position& pos,
 
 void SimpleContainer::del_clip()
 {
+    Timer t("  del_clip");
     if (m_clipStack.empty()) return;
     if (m_clipStack.back())
         m_dc->PopLayer();           // 圆角
@@ -6207,10 +6238,12 @@ void SimpleContainer::clear()
 
 litehtml::pixel_t SimpleContainer::get_default_font_size() const
 {
+    Timer t("  get_default_font_size");
     return g_cfg.font_size;
 }
 const char* SimpleContainer::get_default_font_name() const
 {
+    Timer t("  get_default_font_name");
     return g_cfg.default_font_name.c_str();
 }
 
@@ -6936,7 +6969,79 @@ float VirtualDoc::get_height()
     }
     return height;
 }
-bool VirtualDoc::insert_chapter(int spine_id)
+//bool VirtualDoc::insert_chapter(int spine_id, bool isPushBack)
+//{
+//    int id = spine_id;
+//    if (id < 0 || id >= static_cast<int>(m_spine.size()) || exists(id)) return false;
+//    auto start_load_time = nowUs();
+//
+//    if (!load_by_id(id, isPushBack))
+//    {
+//        return false;
+//    }
+//
+//
+//    // 2. 组装 HTML
+//    float height = 0.0f;
+//    HtmlBlock& target = isPushBack ? m_blocks.front() : m_blocks.back();
+//
+//
+//    std::string html = "";
+//    for (auto& hb : m_blocks)
+//    {
+//        html += "<html>" + hb.head + "<body>";
+//        for (auto& b : hb.body_blocks) html += b.html;
+//        html += "</body></html>";
+//    }
+//
+//    /* ---------- 4. render ---------- */
+//
+//    std::string css = g_globalCSS;
+//    css += ":root,body,p,li,div,h1,h2,h3,h4,h5,h6,span, ul{line-height:" + std::to_string(g_cfg.line_height) + ";}\n";
+//
+//
+//    auto end_load_time = nowUs();
+//    auto start_create_time = nowUs();
+//
+//    m_doc = litehtml::document::createFromString(
+//        { html.c_str(), litehtml::encoding::utf_8 }, m_container.get(), litehtml::master_css, css);
+//
+//    auto end_create_time = nowUs();
+//    auto start_render_time = nowUs();
+//
+//    m_doc->render(g_cfg.document_width);
+//
+//    auto end_render_time = nowUs();
+//
+//    /* ---------- 5. 计算高度 ---------- */
+//
+//
+//    height = m_doc->height() - m_height;
+//
+//    target.height = height;
+//    m_height = m_doc->height();
+//    float delta = isPushBack ? height : 0.0f;
+//
+//    std::string txt = "=========" + g_book->get_title() + "==========\n";
+//    txt += "加载耗时（s）：" + std::to_string((end_load_time - start_load_time) / 1000000.0f) + "\n";
+//    txt += "创建耗时（s）：" + std::to_string((end_create_time - start_create_time) / 1000000.0f) + "\n";
+//    txt += "渲染耗时（s）：" + std::to_string((end_render_time - start_render_time) / 1000000.0f) + "\n";
+//    OutputDebugStringA(txt.c_str());
+//
+//    PostMessage(g_hWnd, WM_EPUB_CACHE_UPDATED, 0, static_cast<LPARAM>(delta));
+//    return true;
+//}
+//bool VirtualDoc::insert_prev_chapter() 
+//{
+//      int id = m_blocks.empty()? 0:m_blocks.front().spine_id - 1;
+//      return insert_chapter(id, false);
+//}
+//bool VirtualDoc::insert_next_chapter() 
+//{
+//     int id = m_blocks.empty() ? 0 : m_blocks.back().spine_id + 1;
+//     return insert_chapter(id, true);
+//}
+bool VirtualDoc::insert_chapter(int spine_id, bool isPushBack)
 {
     if (m_workerBusy.load(std::memory_order_relaxed)) return false;
     int id = spine_id;
@@ -7002,7 +7107,7 @@ void VirtualDoc::workerLoop()
         }
         BusyGuard bg(m_workerBusy);   // 从这里开始置忙，析构时自动清 0
 
-        OutputDebugStringA("[VirtualDod thread] 开始更新\n");
+        //OutputDebugStringA("[VirtualDod thread] 开始更新\n");
         // 1. 耗时 IO
                 /* ---------- 2. 耗时 IO ---------- */
 
@@ -7047,13 +7152,17 @@ void VirtualDoc::workerLoop()
         //LogToFile(total_time);
         //LogToFile(" ");
         //// ********************测试结束**********************
-         
-        
+
+        std::string txt = "=========" + g_book->get_title() + "==========\n";
+        OutputDebugStringA(txt.c_str());
+        auto start_load_time = nowUs();
+
         if (!load_by_id(task.chapterId, !task.insertAtFront))
         {
             continue;
         }
 
+  
         // 2. 组装 HTML
         float height = 0.0f;
         HtmlBlock& target = task.insertAtFront ? m_blocks.front() : m_blocks.back();
@@ -7071,11 +7180,28 @@ void VirtualDoc::workerLoop()
 
         std::string css =  g_globalCSS;
         css += ":root,body,p,li,div,h1,h2,h3,h4,h5,h6,span, ul{line-height:" + std::to_string(g_cfg.line_height) + ";}\n";
+        
+
+        auto end_load_time = nowUs();
+ 
+        txt = "加载耗时（s）：" + std::to_string((end_load_time - start_load_time) / 1000000.0f) + "\n\n";
+        OutputDebugStringA(txt.c_str());
+        auto start_create_time = nowUs();
 
         m_doc = litehtml::document::createFromString(
             { html.c_str(), litehtml::encoding::utf_8 }, m_container.get(), litehtml::master_css, css);
+        
+        auto end_create_time = nowUs();
+        g_timerOutput->print();
+        txt = "创建耗时（s）：" + std::to_string((end_create_time - start_create_time) / 1000000.0f) + "\n\n";
+        OutputDebugStringA(txt.c_str());
+
+        auto start_render_time = nowUs();
+
         m_doc->render(g_cfg.document_width);
 
+
+        
         /* ---------- 5. 计算高度 ---------- */
 
 
@@ -7086,8 +7212,13 @@ void VirtualDoc::workerLoop()
         float delta = task.insertAtFront ? height : 0.0f;
  
 
+        auto end_render_time = nowUs();
+        g_timerOutput->print();
+        txt = "渲染耗时（s）：" + std::to_string((end_render_time - start_render_time) / 1000000.0f) + "\n\n";
+        OutputDebugStringA(txt.c_str());
+
         PostMessage(g_hWnd, WM_EPUB_CACHE_UPDATED, 0, static_cast<LPARAM>(delta));
-        OutputDebugStringA("[VirtualDod thread] 更新结束\n");
+        //OutputDebugStringA("[VirtualDod thread] 更新结束\n");
     }
 }
 
@@ -7559,81 +7690,6 @@ void TocPanel::OnMouseWheel(int delta)
 
 
 
-ZipFileProvider::ZipFileProvider() {}
-ZipFileProvider::~ZipFileProvider()
-{
-    mz_zip_reader_end(&m_zip);           // 1. 先关闭旧 zip
-}
-bool ZipFileProvider::load(const std::wstring& file_path)
-{
-    namespace fs = std::filesystem;
-    if (!fs::exists(file_path))
-    {
-        OutputDebugStringW(L"[ZipProvider] 文件不存在\n");
-        return false;
-    }
-
-
-    mz_zip_reader_end(&m_zip);           // 1. 先关闭旧 zip
-    memset(&m_zip, 0, sizeof(m_zip));
-
-    if (!mz_zip_reader_init_file(&m_zip, w2a(file_path).c_str(), 0))
-    {
-        OutputDebugStringW((L"[ZipProvider] zip 打开失败：" +
-            std::to_wstring(mz_zip_get_last_error(&m_zip)) + L"\n").c_str());
-        return false;
-    }
-
-    return true;
-}
-MemFile ZipFileProvider::get( std::wstring path)  
-{
-    MemFile mf;
-    std::string narrow_name = w2a(path);
-    size_t uncomp_size = 0;
-    void* p = mz_zip_reader_extract_file_to_heap(
-        const_cast<mz_zip_archive*>(&m_zip),
-        narrow_name.c_str(),
-        &uncomp_size, 0);
-
-    if (p) {
-        mf.data.assign(static_cast<uint8_t*>(p),
-            static_cast<uint8_t*>(p) + uncomp_size);
-        mz_free(p);
-    }
-    return mf;
-}
-
-MemFile LocalFileProvider::get( std::wstring path) 
-{
-    namespace fs = std::filesystem;
-    std::error_code ec;
-
-    // 文件不存在或非普通文件
-    if (!fs::is_regular_file(path, ec) || ec)
-        return {};
-
-    std::ifstream file(path, std::ios::binary);
-    if (!file)
-        return {};
-
-    file.seekg(0, std::ios::end);
-    const auto len = static_cast<size_t>(file.tellg());
-    file.seekg(0);
-
-    MemFile mf;
-    mf.data.resize(len);
-    file.read(reinterpret_cast<char*>(mf.data.data()), len);
-
-    if (!file)        // 读取失败
-        return {};
-
-    return mf;        // NRVO / move
-}
-
-
-
-
 // ---------- 静态 ----------
 
 
@@ -8025,6 +8081,8 @@ std::string SimpleContainer::get_selection_text() const
 
 void SimpleContainer::present(float x, float y, litehtml::position* clip)
 {
+    auto start_draw_time = nowUs();
+
     m_lines.clear();
     m_plainText.clear();
 
@@ -8043,6 +8101,7 @@ void SimpleContainer::present(float x, float y, litehtml::position* clip)
 
     // 绘制 html
     m_dc->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_CLEARTYPE);
+ 
     m_doc->draw(getContext(), x, y, clip);
 
     // 高亮选中行
@@ -8073,6 +8132,11 @@ void SimpleContainer::present(float x, float y, litehtml::position* clip)
 
     // 呈现
     m_swapChain->Present(1, 0);
+
+    auto end_draw_time = nowUs();
+    g_timerOutput->print();
+    std::string txt = "绘制耗时（s）：" + std::to_string((end_draw_time - start_draw_time) / 1000000.0f) + "\n\n";
+    OutputDebugStringA(txt.c_str());
 }
 
 
@@ -8696,4 +8760,57 @@ void AppBootstrap::copy_to_clipboard(HWND hwnd, std::wstring txt)
             GlobalFree(hMem);
         }
     }
+}
+
+
+Timer::Timer(const std::string& name):
+    name_(name), start_(std::chrono::high_resolution_clock::now()) 
+{
+    //std::cout << name_ << " started...\n";
+}
+Timer::~Timer() {
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start_);
+    g_timerOutput->add(name_, duration.count());
+    //std::string txt = name_ + ":" + std::to_string(duration.count() / 1000000.0f) + " s\n";
+    //OutputDebugStringA(txt.c_str());
+    //std::cout << name_ << " ended. Duration: " << duration.count() << " us\n";
+}
+
+void TimerOutput::add(std::string name, uint64_t duration)
+{
+    for(auto&m: m_map)
+    {
+        if (m.name == name) 
+        { 
+            m.duration += duration; 
+            m.times += 1;
+            return;
+        }
+ 
+    }
+
+    m_map.push_back(data{name, duration, 1});
+}
+
+void TimerOutput::print()
+{
+    for (auto& m :m_map)
+    {
+        // 对齐和填充格式化
+        std::string txt = std::format("{:<30}: {:>8.9f} 秒, {:>6} 次",
+            m.name,
+            m.duration / 1000000000.0,  // 纳秒转秒
+            m.times);
+
+        // 如果需要添加换行符
+        txt += "\n";
+        OutputDebugStringA(txt.c_str());
+    }
+    clear();
+}
+
+void TimerOutput::clear()
+{
+    m_map = {};
 }

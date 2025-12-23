@@ -728,7 +728,8 @@ private:
 
 
     float get_height();
-    bool insert_chapter(int spine_id);
+    bool insert_chapter(int spine_id, bool isPushBack=true);
+    //bool insert_chapter(int spine_id);
     bool insert_prev_chapter();
 
 
@@ -831,35 +832,6 @@ private:
     int m_curTarget = 0;
     int m_curHover = -1;
 
-};
-
-//  file system
-class IFileProvider {
-public:
-    virtual ~IFileProvider() = default;
-    virtual bool load(const std::wstring& file_path) = 0;
-    // 按路径返回原始二进制
-    virtual MemFile get(std::wstring path)  = 0;
-    virtual std::wstring find(const std::wstring& path) = 0;
-};
-
-class ZipFileProvider : public IFileProvider 
-{
-public:
-    ZipFileProvider();
-    ~ZipFileProvider();
-    bool load(const std::wstring& file_path) override;
-    MemFile get( std::wstring path)  override;
-private:
-    mz_zip_archive m_zip = {};
-};
-
-class LocalFileProvider : public IFileProvider
-{
-public:
-    bool load(const std::wstring& file_path) override { return true; };
-    // 按路径返回原始二进制
-    MemFile get(std::wstring path)  override;
 };
 
 
@@ -1050,6 +1022,48 @@ struct FontItem
 {
     std::wstring familyName;   // 字体原名（en-us）
     std::wstring displayName;  // 中文名（zh-cn），没有就用 familyName
+};
+
+
+
+class Timer {
+public:
+    // 构造函数开始计时
+    Timer(const std::string& name = "Timer");
+
+
+    // 析构函数结束计时并输出结果
+    ~Timer();
+
+    // 禁止拷贝和赋值
+    Timer(const Timer&) = delete;
+    Timer& operator=(const Timer&) = delete;
+
+    // 可以移动构造
+    Timer(Timer&&) = default;
+    Timer& operator=(Timer&&) = default;
+
+private:
+    std::string name_;
+    std::chrono::time_point<std::chrono::high_resolution_clock> start_;
+};
+
+class TimerOutput
+{
+public:
+    TimerOutput() { m_map = {}; }
+    ~TimerOutput(){}
+    void add(std::string name, uint64_t duration);
+    void print();
+    void clear();
+private:
+    struct data
+    {
+        std::string name = "";
+        uint64_t duration = 0;
+        uint64_t times = 0;
+    };
+    std::vector<data> m_map;
 };
 
 bool IsMouseOverWindow(HWND hWnd);
