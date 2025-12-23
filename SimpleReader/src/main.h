@@ -582,7 +582,9 @@ public:
     std::string m_sel_text = "";
 private:
 
-    float m_px_per_pt{ 96.0f / 72.0f };   // 默认 96 DPI
+    float m_dpi_x = 96.0f;
+    float m_dpi_y = 96.0f;
+
 
     std::vector<RECT> get_selection_rows() const;
     std::string get_selection_text() const;

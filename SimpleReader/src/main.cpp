@@ -3531,16 +3531,15 @@ void SimpleContainer::get_language(litehtml::string& language,
 
 
 void SimpleContainer::init_dpi() {
-    float dpiX, dpiY;
-    m_d2dFactory->GetDesktopDpi(&dpiX, &dpiY);  // 使用D2D的DPI
-    m_px_per_pt = dpiY / 72.0f;  // 使用Y轴DPI（通常与LOGPIXELSY一致）
+
+    m_d2dFactory->GetDesktopDpi(&m_dpi_x, &m_dpi_y);  // 使用D2D的DPI
 }
 
 // 保持 pt_to_px 不变
 litehtml::pixel_t SimpleContainer::pt_to_px(float pt) const {
     // 乘法 + 位移，比 MulDiv 更快
     Timer t("  pt_to_px");
-    return pt * m_px_per_pt;
+    return pt * m_dpi_x / 72.0f;
 }
 
 
@@ -4172,7 +4171,7 @@ void PreprocessHTML(std::string& html)
 // ---------- 实现 ----------
 ComPtr<ID2D1SolidColorBrush> SimpleContainer::getBrush(litehtml::uint_ptr hdc, const litehtml::web_color& c)
 {
-    Timer t("  getBrush");
+ 
     uint32_t key = (c.alpha << 24) | (c.red << 16) | (c.green << 8) | c.blue;
     auto it = m_brushPool.find(key);
     if (it != m_brushPool.end()) return it->second;
@@ -4189,7 +4188,7 @@ ComPtr<IDWriteTextLayout> SimpleContainer::getLayout(const std::string& txt,
     litehtml::uint_ptr hFont,
     float maxW)
 {
-    Timer t("  getLayout");
+ 
     // 1. 先替换花引号
     auto* fp = reinterpret_cast<FontPair*>(hFont);
     if (!fp->format) { return nullptr; }
@@ -4249,7 +4248,7 @@ void SimpleContainer::record_char_boxes(ID2D1DeviceContext* rt,
     const std::string& wtxt,
     const litehtml::position& pos)
 {
-    Timer t("  record_char_boxes");
+    
     LineBoxes line;
     float originX = static_cast<float>(pos.x);
     float originY = static_cast<float>(pos.y);
@@ -5196,16 +5195,16 @@ litehtml::pixel_t SimpleContainer::text_width(const char* text,
     auto layout = getLayout(text, hFont, maxW);
     if (!layout) { return 0; }
 
-    
+
     // 3. 取逻辑宽度（已含空白、连字、kerning）
     DWRITE_TEXT_METRICS tm{};
     HRESULT hr = layout->GetMetrics(&tm);
     if (FAILED(hr)) { return 0; }
 
+ 
     // 4. DPI → 物理像素（Win7 也支持）
-    float dpiX, dpiY;dpiX=dpiY = 96.0f;
-    m_d2dFactory->GetDesktopDpi(&dpiX, &dpiY);             
-    float physical = tm.widthIncludingTrailingWhitespace * dpiX / 96.0f;
+         
+    float physical = tm.widthIncludingTrailingWhitespace * m_dpi_x / 96.0f;
 
     return physical;
 }
@@ -5689,9 +5688,8 @@ void SimpleContainer::resize(int w, int h)
     m_dc->SetTarget(m_targetBmp.Get());
 
     // 4) 更新 DPI（可选）
-    float dpiX =96.0f, dpiY = 96.0f;
-    m_d2dFactory->GetDesktopDpi(&dpiX, &dpiY);
-    m_dc->SetDpi(dpiX, dpiY);
+
+    m_dc->SetDpi(m_dpi_x, m_dpi_y);
 }
 
 
@@ -6071,7 +6069,7 @@ std::string AppBootstrap::get_anchor_html(litehtml::document* doc,
 SimpleContainer::SimpleContainer(int w, int h, HWND hwnd):
     m_w(w), m_h(h), m_hwnd(hwnd)
 {
-
+   
     /* 1) D2D 工厂（1.1 ） */
     HRESULT hr = D2D1CreateFactory(
         D2D1_FACTORY_TYPE_SINGLE_THREADED,
@@ -6084,9 +6082,8 @@ SimpleContainer::SimpleContainer(int w, int h, HWND hwnd):
     }
 
     /* 2) 计算窗口 DPI 缩放 */
-    float dpiX = 96.0f, dpiY = 96.0f;
-    m_d2dFactory->GetDesktopDpi(&dpiX, &dpiY);
-    const float scale = dpiX / 96.0f;
+    init_dpi();
+    const float scale = m_dpi_x / 96.0f;
 
 
     // 2) 创建 D3D11 设备（flag 选 D3D11_CREATE_DEVICE_BGRA_SUPPORT）
@@ -6141,7 +6138,8 @@ SimpleContainer::SimpleContainer(int w, int h, HWND hwnd):
 
     m_dc->CreateBitmapFromDxgiSurface(backBuffer.Get(), bmpProps, &m_targetBmp);
     m_dc->SetTarget(m_targetBmp.Get());
-    m_dc->SetDpi(dpiX, dpiY);
+ 
+    m_dc->SetDpi(m_dpi_x, m_dpi_y);
     
 
     /* 4) DirectWrite 工厂 */
@@ -6162,7 +6160,7 @@ SimpleContainer::SimpleContainer(int w, int h, HWND hwnd):
         OutputDebugStringA("GetSystemFontCollection failed\n");
     }
     BuildFontList();
-    init_dpi();
+
 }
 
 void SimpleContainer::BuildFontList()
