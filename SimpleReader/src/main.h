@@ -580,7 +580,7 @@ public:
     void clear_font_cache() { m_layoutCache.clear(); m_fontCache.clear();  }
     ComPtr<ID2D1Bitmap1> m_offscreenBmp;   // 离屏位图
     bool                 m_offscreenDirty = true; // 是否需要重绘
-    std::string m_sel_text = "";
+    std::wstring m_sel_text = L"";
 private:
 
     float m_dpi_x = 96.0f;
@@ -588,7 +588,7 @@ private:
 
 
     std::vector<RECT> get_selection_rows() const;
-    std::string get_selection_text() const;
+    std::wstring get_selection_text() const;
 
 
 
@@ -609,7 +609,7 @@ private:
     int64_t m_selStart = -1;   // 字符级偏移
     int64_t m_selEnd = -1;   // 同上
     std::vector<LineBoxes> m_lines;
-    std::string           m_plainText;       // 整篇纯文本
+    std::wstring           m_plainText;       // 整篇纯文本
 
     ComPtr<ID2D1SolidColorBrush> m_selBrush;
     void record_char_boxes(ID2D1DeviceContext* rt,
@@ -795,7 +795,7 @@ public:
     size_t getTargetNode(const ScrollPosition& sp);
     void SetHighlight(ScrollPosition sp);
     void copy_to_clipboard();
-    std::string m_sel_text = "";
+    std::wstring m_sel_text = L"";
 private:
     struct Node : TreeNode{};
 

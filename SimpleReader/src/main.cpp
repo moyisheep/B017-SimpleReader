@@ -2696,12 +2696,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         {
             if (IsMouseOverWindow(g_hView)) {
                 // 鼠标在主窗口上
-                g_bootstrap->copy_to_clipboard(g_hWnd, a2w(g_cMain->m_sel_text));
+                g_bootstrap->copy_to_clipboard(g_hWnd, g_cMain->m_sel_text);
             }
 
             if (IsMouseOverWindow(g_hToc)) {
                 // 鼠标在目录窗口上
-                g_bootstrap->copy_to_clipboard(g_hWnd, a2w(g_toc->m_sel_text));
+                g_bootstrap->copy_to_clipboard(g_hWnd, g_toc->m_sel_text);
             }
        
             break;
@@ -3287,7 +3287,7 @@ void SimpleContainer::on_mouse_event(const litehtml::element::ptr& el,
    
         const char* href_raw = link->get_attr("href");
         if (!href_raw) { return; }
-        m_sel_text = std::string(href_raw);
+        m_sel_text = a2w(href_raw);
         std::string id = g_bootstrap->extract_anchor(href_raw);
         if (id.empty()) {  return; }
         html = g_bootstrap->html_of_anchor_paragraph(g_cMain->m_doc.get(), id);
@@ -4278,7 +4278,39 @@ void SimpleContainer::record_char_boxes(ID2D1DeviceContext* rt,
     m_lines.emplace_back(std::move(line));
 
     // 同时累积纯文本
-    m_plainText += txt + " ";
+    m_plainText += wtxt ;
+}
+
+std::string GetMainFontNameFromTextLayout(
+    ComPtr<IDWriteTextLayout> pTextLayout
+
+) {
+    std::string fontName = "";
+    if (pTextLayout == nullptr) {
+        return fontName;
+    }
+
+    HRESULT hr = S_OK;
+    WCHAR fontFamilyName[100];
+    UINT32 fontFamilyNameLength = 0;
+
+    // 获取第一个字符的字体名称
+    hr = pTextLayout->GetFontFamilyNameLength(0, &fontFamilyNameLength);
+    if (FAILED(hr) || fontFamilyNameLength == 0) {
+        return fontName;
+    }
+
+    hr = pTextLayout->GetFontFamilyName(
+        0,
+        fontFamilyName,
+        fontFamilyNameLength + 1
+    );
+
+    if (SUCCEEDED(hr)) {
+        fontName = w2a(fontFamilyName);
+    }
+
+    return fontName;
 }
 
 std::string GetFontNameFromTextFormat(ComPtr<IDWriteTextFormat> textFormat) {
@@ -4323,7 +4355,7 @@ void SimpleContainer::draw_text(litehtml::uint_ptr hdc,
     float maxW = 8192.0f;
     auto layout = getLayout(text,  hFont, maxW);
     if (!layout) return;
-    record_char_boxes(rt, layout.Get(), text, GetFontNameFromTextFormat(fp->format), pos);
+    record_char_boxes(rt, layout.Get(), text, GetMainFontNameFromTextLayout(layout), pos);
     // 3. 绘制文本
     rt->DrawTextLayout(D2D1::Point2F(static_cast<float>(pos.x),
         static_cast<float>(pos.y)),
@@ -7396,7 +7428,7 @@ void TocPanel::OnMouseMove(int x, int y)
     m_curHover = line;
     SetCursor(LoadCursor(nullptr, IDC_HAND));
     std::wstring wtxt = a2w(m_nodes[m_visible[line]].nav->label);
-    m_sel_text = w2a(wtxt);
+    m_sel_text = wtxt;
     // 2. 判断文字是否被截断
     HDC hdc = GetDC(m_hwnd);
     HFONT old = (HFONT)SelectObject(hdc, m_hFont);   // 你的字体
@@ -7983,7 +8015,8 @@ void SimpleContainer::on_mouse_move(int x, int y)
                 y >= cb.rect.top && y <= cb.rect.bottom)
             {
                 
-                std::wstring txt = L"当前指向的文字：" + std::wstring(1, cb.ch) + L", 对应字体：" + cb.familyName;
+                std::wstring txt = L"当前指向的文字：" + std::wstring(1, cb.ch) + 
+                    L", 对应字体：" + cb.familyName;
                 SetStatus(STATUSBAR_HOVER_TEXT, txt.c_str());
                 return;
             }
@@ -8101,17 +8134,17 @@ std::vector<RECT> SimpleContainer::get_selection_rows() const
     return merged;
 }
 
-std::string SimpleContainer::get_selection_text() const
+std::wstring SimpleContainer::get_selection_text() const
 {
     if (m_selStart == m_selEnd)
-        return "";
+        return L"";
 
     // 确保选区不越界
     const size_t start = std::min(m_selStart, m_selEnd);
     const size_t end = std::min(std::max(m_selStart, m_selEnd), static_cast<int64_t>(m_plainText.size()));
 
     if (start >= end)
-        return "";
+        return L"";
 
     // 直接使用substr安全地获取子字符串
     return m_plainText.substr(start, end - start);
