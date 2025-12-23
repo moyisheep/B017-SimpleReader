@@ -2,6 +2,7 @@
 
 
 std::unique_ptr<TimerOutput> g_timerOutput = std::make_unique<TimerOutput>();
+std::unique_ptr<Timer> g_timer = nullptr;
 
 
 HWND  g_hToc = nullptr;    // 侧边栏 TreeView
@@ -56,6 +57,8 @@ constexpr UINT STATUSBAR_LINE_HEIGHT = 7;
 constexpr UINT STATUSBAR_DOC_WIDTH = 8;
 constexpr UINT STATUSBAR_DOC_ZOOM = 9;
 constexpr UINT STATUSBAR_FRAME_RATE = 10;
+constexpr UINT STATUSBAR_HOVER_TEXT = 11;
+constexpr UINT STATUSBAR_HOVER_FONT = 12;
 
 // 可随时改
 static UINT g_frame_count = 0;
@@ -4243,12 +4246,14 @@ ComPtr<IDWriteTextLayout> SimpleContainer::getLayout(const std::string& txt,
     return layout;
 }
 
+
 void SimpleContainer::record_char_boxes(ID2D1DeviceContext* rt,
     IDWriteTextLayout* layout,
-    const std::string& wtxt,
+    const std::string& txt,
+    const std::string& familyName,
     const litehtml::position& pos)
 {
-    
+    std::wstring wtxt = a2w(txt);
     LineBoxes line;
     float originX = static_cast<float>(pos.x);
     float originY = static_cast<float>(pos.y);
@@ -4267,15 +4272,35 @@ void SimpleContainer::record_char_boxes(ID2D1DeviceContext* rt,
             originX + left + htm.width,
             originY + top + htm.height);
         cb.offset = m_plainText.size() + i;
+        cb.familyName = a2w(familyName);
         line.push_back(cb);
     }
     m_lines.emplace_back(std::move(line));
 
     // 同时累积纯文本
-    m_plainText += wtxt + " ";
+    m_plainText += txt + " ";
 }
 
+std::string GetFontNameFromTextFormat(ComPtr<IDWriteTextFormat> textFormat) {
+    if (!textFormat) return "";
 
+    // 使用足够大的缓冲区
+    wchar_t buffer[128];
+    HRESULT hr = textFormat->GetFontFamilyName(buffer, ARRAYSIZE(buffer));
+
+    if (SUCCEEDED(hr)) {
+        // 找到第一个 null 字符
+        size_t len = 0;
+        while (len < ARRAYSIZE(buffer) && buffer[len] != L'\0') {
+            len++;
+        }
+
+        std::wstring fontName(buffer, len);
+        return w2a(fontName);
+    }
+
+    return "";
+}
 void SimpleContainer::draw_text(litehtml::uint_ptr hdc,
     const char* text,
     litehtml::uint_ptr hFont,
@@ -4298,7 +4323,7 @@ void SimpleContainer::draw_text(litehtml::uint_ptr hdc,
     float maxW = 8192.0f;
     auto layout = getLayout(text,  hFont, maxW);
     if (!layout) return;
-    record_char_boxes(rt, layout.Get(), text, pos);
+    record_char_boxes(rt, layout.Get(), text, GetFontNameFromTextFormat(fp->format), pos);
     // 3. 绘制文本
     rt->DrawTextLayout(D2D1::Point2F(static_cast<float>(pos.x),
         static_cast<float>(pos.y)),
@@ -6340,7 +6365,7 @@ FontCache::CreatePrivateCollectionFromFile(IDWriteFactory* dw, const wchar_t* pa
      {
          for (std::string& name : tryNames)
          {
-             if (name.find(L':') == std::string_view::npos) continue;
+             if (name.find(':') == std::string_view::npos) continue;
              auto& coll = collCache[name];
              if (!coll)
              {
@@ -6362,7 +6387,7 @@ FontCache::CreatePrivateCollectionFromFile(IDWriteFactory* dw, const wchar_t* pa
                  descr.style ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL,
                  &font))) continue;
 
-             wchar_t familyName[LF_FACESIZE]{};
+             wchar_t realName[LF_FACESIZE]{};
              {
                  ComPtr<IDWriteLocalizedStrings> names;
                  if (SUCCEEDED(family->GetFamilyNames(&names)))
@@ -6373,19 +6398,19 @@ FontCache::CreatePrivateCollectionFromFile(IDWriteFactory* dw, const wchar_t* pa
                      if (!exists) idx = 0;
                      names->GetStringLength(idx, &len);
                      if (len < LF_FACESIZE)
-                         names->GetString(idx, familyName, len + 1);
+                         names->GetString(idx, realName, len + 1);
                  }
              }
-            if (!familyName[0]) { continue; }
+            if (!realName[0]) { continue; }
             ComPtr<IDWriteTextFormat> fmt;
             if (SUCCEEDED(m_dw->CreateTextFormat(
-                familyName,
+                realName,
                 coll.Get(),
                 static_cast<DWRITE_FONT_WEIGHT>(descr.weight),
                 descr.style ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL,
                 DWRITE_FONT_STRETCH_NORMAL,
                 static_cast<float>(descr.size), L"en-us", &fmt)))
-            return new FontCachePair{ w2a(familyName),  fmt, font };
+            return new FontCachePair{ familyName,  fmt, font };
 
          }
      }
@@ -6420,7 +6445,7 @@ FontCache::CreatePrivateCollectionFromFile(IDWriteFactory* dw, const wchar_t* pa
                  continue;
              }
  
-            return new FontCachePair{ name, fmt , font};
+            return new FontCachePair{ familyName, fmt , font};
 
          }
      }
@@ -7110,7 +7135,7 @@ void VirtualDoc::workerLoop()
                 /* ---------- 2. 耗时 IO ---------- */
 
 
-
+        g_timer = std::make_unique<Timer>("总耗时（s）");
         //// ********************测试开始**********************
         //LogToFile(m_book->get_title());
         //auto start = nowUs();
@@ -7182,7 +7207,8 @@ void VirtualDoc::workerLoop()
 
         auto end_load_time = nowUs();
  
-        txt = "加载耗时（s）：" + std::to_string((end_load_time - start_load_time) / 1000000.0f) + "\n\n";
+        txt = "加载耗时（s）：" + std::to_string((end_load_time - start_load_time) / 1000000.0f) + "\n";
+        txt += "---------------------------------\n";
         OutputDebugStringA(txt.c_str());
         auto start_create_time = nowUs();
 
@@ -7191,7 +7217,8 @@ void VirtualDoc::workerLoop()
         
         auto end_create_time = nowUs();
         g_timerOutput->print();
-        txt = "创建耗时（s）：" + std::to_string((end_create_time - start_create_time) / 1000000.0f) + "\n\n";
+        txt = "创建耗时（s）：" + std::to_string((end_create_time - start_create_time) / 1000000.0f) + "\n";
+        txt += "---------------------------------\n";
         OutputDebugStringA(txt.c_str());
 
         auto start_render_time = nowUs();
@@ -7212,7 +7239,8 @@ void VirtualDoc::workerLoop()
 
         auto end_render_time = nowUs();
         g_timerOutput->print();
-        txt = "渲染耗时（s）：" + std::to_string((end_render_time - start_render_time) / 1000000.0f) + "\n\n";
+        txt = "渲染耗时（s）：" + std::to_string((end_render_time - start_render_time) / 1000000.0f) + "\n";
+        txt += "---------------------------------\n";
         OutputDebugStringA(txt.c_str());
 
         PostMessage(g_hWnd, WM_EPUB_CACHE_UPDATED, 0, static_cast<LPARAM>(delta));
@@ -7925,6 +7953,8 @@ void SimpleContainer::on_lbutton_down(int x, int y)
 
 void SimpleContainer::on_mouse_move(int x, int y)
 {
+
+
     if (m_selecting)
     {
         m_currentCursor = IDC_IBEAM;
@@ -7947,6 +7977,16 @@ void SimpleContainer::on_mouse_move(int x, int y)
         }
 
     }
+    for (const auto& line : m_lines)
+        for (const auto& cb : line)
+            if (x >= cb.rect.left && x <= cb.rect.right &&
+                y >= cb.rect.top && y <= cb.rect.bottom)
+            {
+                
+                std::wstring txt = L"当前指向的文字：" + std::wstring(1, cb.ch) + L", 对应字体：" + cb.familyName;
+                SetStatus(STATUSBAR_HOVER_TEXT, txt.c_str());
+                return;
+            }
 }
 
 void SimpleContainer::on_mouse_wheel(float delta)
@@ -8133,7 +8173,14 @@ void SimpleContainer::present(float x, float y, litehtml::position* clip)
 
     auto end_draw_time = nowUs();
     g_timerOutput->print();
-    std::string txt = "绘制耗时（s）：" + std::to_string((end_draw_time - start_draw_time) / 1000000.0f) + "\n\n";
+    std::string txt = "绘制耗时（s）：" + std::to_string((end_draw_time - start_draw_time) / 1000000.0f) + "\n";
+    txt += "---------------------------------\n";
+    OutputDebugStringA(txt.c_str());
+    
+    g_timer.reset();
+    
+    g_timerOutput->print();
+    txt = "==================================\n";
     OutputDebugStringA(txt.c_str());
 }
 

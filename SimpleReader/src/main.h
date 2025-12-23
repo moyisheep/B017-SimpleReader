@@ -148,6 +148,7 @@ struct CharBox
 {
     wchar_t  ch;
     D2D1_RECT_F rect;   // 左上角 (x,y) 右下角 (x+width,y+height)
+    std::wstring familyName;
     size_t   offset; // 在整篇纯文本中的偏移
 };
 
@@ -611,7 +612,11 @@ private:
     std::string           m_plainText;       // 整篇纯文本
 
     ComPtr<ID2D1SolidColorBrush> m_selBrush;
-    void record_char_boxes(ID2D1DeviceContext* rt, IDWriteTextLayout* layout, const std::string& wtxt, const litehtml::position& pos);
+    void record_char_boxes(ID2D1DeviceContext* rt,
+        IDWriteTextLayout* layout,
+        const std::string& wtxt,
+        const std::string& familyName,
+        const litehtml::position& pos);
 
     std::vector<std::string> split_font_list(const std::string& src);
 
