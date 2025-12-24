@@ -64,6 +64,9 @@
     <ProjectReference Include="..\EPUBBook\EPUBBook.vcxproj">
       <Project>{72281c37-f044-49a3-85b9-a7667ebb76d9}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\litehtml\litehtml.vcxproj">
+      <Project>{5eee68e7-3cb0-4adb-af72-4c0bb01f0b18}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\MML2SVG\MML2SVG.vcxproj">
       <Project>{f6b0a70c-ff06-4c45-9b92-56d1e46bf5b7}</Project>
     </ProjectReference>
@@ -215,7 +218,7 @@
       <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>Default</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)EPUBBook;$(SolutionDir)ReadingRecorder;$(SolutionDir)MML2SVG;C:\3rdParty\litehtml-master\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)litehtml\include;$(SolutionDir)EPUBBook;$(SolutionDir)ReadingRecorder;$(SolutionDir)MML2SVG;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -223,8 +226,8 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\3rdParty\litehtml-master\build\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>litehtml.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalManifestDependencies>
       </AdditionalManifestDependencies>
       <ManifestFile>$(OutDir)$(TargetName)$(TargetExt).manifest</ManifestFile>

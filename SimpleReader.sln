@@ -11,6 +11,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ReadingRecorder", "ReadingR
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EPUBBook", "EPUBBook\EPUBBook.vcxproj", "{72281C37-F044-49A3-85B9-A7667EBB76D9}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "litehtml", "litehtml\litehtml.vcxproj", "{5EEE68E7-3CB0-4ADB-AF72-4C0BB01F0B18}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -69,6 +71,18 @@ Global
 		{72281C37-F044-49A3-85B9-A7667EBB76D9}.RelWithDgb|x64.Build.0 = Release|x64
 		{72281C37-F044-49A3-85B9-A7667EBB76D9}.RelWithDgb|x86.ActiveCfg = Release|Win32
 		{72281C37-F044-49A3-85B9-A7667EBB76D9}.RelWithDgb|x86.Build.0 = Release|Win32
+		{5EEE68E7-3CB0-4ADB-AF72-4C0BB01F0B18}.Debug|x64.ActiveCfg = Debug|x64
+		{5EEE68E7-3CB0-4ADB-AF72-4C0BB01F0B18}.Debug|x64.Build.0 = Debug|x64
+		{5EEE68E7-3CB0-4ADB-AF72-4C0BB01F0B18}.Debug|x86.ActiveCfg = Debug|Win32
+		{5EEE68E7-3CB0-4ADB-AF72-4C0BB01F0B18}.Debug|x86.Build.0 = Debug|Win32
+		{5EEE68E7-3CB0-4ADB-AF72-4C0BB01F0B18}.Release|x64.ActiveCfg = Release|x64
+		{5EEE68E7-3CB0-4ADB-AF72-4C0BB01F0B18}.Release|x64.Build.0 = Release|x64
+		{5EEE68E7-3CB0-4ADB-AF72-4C0BB01F0B18}.Release|x86.ActiveCfg = Release|Win32
+		{5EEE68E7-3CB0-4ADB-AF72-4C0BB01F0B18}.Release|x86.Build.0 = Release|Win32
+		{5EEE68E7-3CB0-4ADB-AF72-4C0BB01F0B18}.RelWithDgb|x64.ActiveCfg = Release|x64
+		{5EEE68E7-3CB0-4ADB-AF72-4C0BB01F0B18}.RelWithDgb|x64.Build.0 = Release|x64
+		{5EEE68E7-3CB0-4ADB-AF72-4C0BB01F0B18}.RelWithDgb|x86.ActiveCfg = Release|Win32
+		{5EEE68E7-3CB0-4ADB-AF72-4C0BB01F0B18}.RelWithDgb|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1534,9 +1534,10 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     }
 
     case WM_PAINT:
+    {
         PAINTSTRUCT ps; BeginPaint(hwnd, &ps);
-    
-        if (g_cMain  && g_cMain->m_doc )
+        std::unique_ptr<Timer> timer = std::make_unique<Timer>("WM_PAINT");
+        if (g_cMain && g_cMain->m_doc)
         {
             g_frame_count += 1;
             //OutputDebugStringA("[View] WM_PAINT\n");
@@ -1546,13 +1547,21 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             int y = -g_offsetY.load(std::memory_order_relaxed);
             float w = g_cfg.document_width;
             float h = rc.bottom - rc.top;
-            litehtml::position clip(x, 0, w, h/g_cMain->m_zoom_factor);
+            litehtml::position clip(x, 0, w, h / g_cMain->m_zoom_factor);
             g_cMain->present(x, y, &clip);
 
         }
+        timer.reset();
+        g_timerOutput->print();
+
+        g_timer.reset();
+
+        g_timerOutput->print();
+        std::string txt = "==================================\n";
+        OutputDebugStringA(txt.c_str());
         EndPaint(hwnd, &ps);
         return 0;
-
+    }
     case WM_ERASEBKGND:
         return 1;
     }
@@ -4174,7 +4183,7 @@ void PreprocessHTML(std::string& html)
 // ---------- 实现 ----------
 ComPtr<ID2D1SolidColorBrush> SimpleContainer::getBrush(litehtml::uint_ptr hdc, const litehtml::web_color& c)
 {
- 
+    Timer timer("    getBrush");
     uint32_t key = (c.alpha << 24) | (c.red << 16) | (c.green << 8) | c.blue;
     auto it = m_brushPool.find(key);
     if (it != m_brushPool.end()) return it->second;
@@ -4191,7 +4200,7 @@ ComPtr<IDWriteTextLayout> SimpleContainer::getLayout(const std::string& txt,
     litehtml::uint_ptr hFont,
     float maxW)
 {
- 
+    Timer timer("    getLayout");
     // 1. 先替换花引号
     auto* fp = reinterpret_cast<FontPair*>(hFont);
     if (!fp->format) { return nullptr; }
@@ -4253,6 +4262,7 @@ void SimpleContainer::record_char_boxes(ID2D1DeviceContext* rt,
     const std::string& familyName,
     const litehtml::position& pos)
 {
+    Timer timer("    record_char_boxes");
     std::wstring wtxt = a2w(txt);
     LineBoxes line;
     float originX = static_cast<float>(pos.x);
@@ -4369,6 +4379,7 @@ void SimpleContainer::draw_decoration(litehtml::uint_ptr hdc, const FontPair* fp
     const litehtml::position& pos,
     IDWriteTextLayout* layout)
 {
+    Timer timer("    draw_decoration");
     if (fp->descr.decoration_line == litehtml::text_decoration_line_none)
         return;
     auto* rt = reinterpret_cast<ID2D1DeviceContext*>(hdc);
@@ -8152,7 +8163,8 @@ std::wstring SimpleContainer::get_selection_text() const
 
 void SimpleContainer::present(float x, float y, litehtml::position* clip)
 {
-    auto start_draw_time = nowUs();
+    Timer timer("绘制耗时");
+
 
     m_lines.clear();
     m_plainText.clear();
@@ -8172,7 +8184,10 @@ void SimpleContainer::present(float x, float y, litehtml::position* clip)
 
     // 绘制 html
     m_dc->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_CLEARTYPE);
+    
  
+
+
     m_doc->draw(getContext(), x, y, clip);
 
     // 高亮选中行
@@ -8204,17 +8219,7 @@ void SimpleContainer::present(float x, float y, litehtml::position* clip)
     // 呈现
     m_swapChain->Present(1, 0);
 
-    auto end_draw_time = nowUs();
-    g_timerOutput->print();
-    std::string txt = "绘制耗时（s）：" + std::to_string((end_draw_time - start_draw_time) / 1000000.0f) + "\n";
-    txt += "---------------------------------\n";
-    OutputDebugStringA(txt.c_str());
-    
-    g_timer.reset();
-    
-    g_timerOutput->print();
-    txt = "==================================\n";
-    OutputDebugStringA(txt.c_str());
+
 }
 
 
