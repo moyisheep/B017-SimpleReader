@@ -5,9 +5,7 @@
 #include <chrono>
 #include <filesystem>
 
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <Windows.h>
+
 
 #include <sqlite3.h>
 

@@ -4255,7 +4255,7 @@ ComPtr<IDWriteTextLayout> SimpleContainer::getLayout(const std::string& txt,
         layout->SetTrimming(&trim, nullptr);
     }
     m_layoutCache.emplace(key, layout);
-    //m_layoutCache.set(k, layout);          // 原来是 m_layoutCache[k] = layout;
+
     return layout;
 }
 
