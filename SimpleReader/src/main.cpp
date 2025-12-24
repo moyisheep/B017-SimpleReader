@@ -4162,19 +4162,19 @@ void PreprocessHTML(std::string& html)
 
 
 
- std::string SimpleContainer::normalize_quotes(const std::string& src)
+ std::wstring SimpleContainer::normalize_quotes(const std::wstring& src)
 {
      Timer timer("      normalize_quotes");
-    std::string out;
+    std::wstring out;
     out.reserve(src.size());
-    for (char ch : src)
+    for (wchar_t ch : src)
     {
         switch (ch)
         {
         case 0x2018: case 0x2019: case 0x201A: case 0x201B: case 0xFF07:
-            out.push_back('\''); break;
+            out.push_back(L'\''); break;
         case 0x201C: case 0x201D: case 0x201E: case 0x201F: case 0xFF02:
-            out.push_back('\"'); break;
+            out.push_back(L'\"'); break;
         default:
             out.push_back(ch);
         }
@@ -4206,10 +4206,12 @@ ComPtr<IDWriteTextLayout> SimpleContainer::getLayout(const std::string& txt,
     // 1. 先替换花引号
     auto* fp = reinterpret_cast<FontPair*>(hFont);
     if (!fp->format) { return nullptr; }
-    std::string clean = normalize_quotes(txt);
-    LayoutKey k{ clean, fp->descr.hash() + fp->familyName, maxW };
-    auto layout = m_layoutCache.get(k);    // 原来是 m_layoutCache.find(k)->second
-    if (layout) return layout;
+    std::wstring clean = normalize_quotes(a2w(txt));
+    std::string key = txt + fp->descr.hash() + fp->familyName + std::to_string(maxW);
+    auto it = m_layoutCache.find(key);
+    if (it != m_layoutCache.end()) { return it->second; }
+ 
+    
 
    // std::vector<std::string> faces;
    // if (!fp->descr.family.empty() && !g_cfg.enableCustomFont)
@@ -4238,8 +4240,8 @@ ComPtr<IDWriteTextLayout> SimpleContainer::getLayout(const std::string& txt,
    //    if (exists) { break; }
    //}
    //if (!fcp->fmt) { return nullptr; }
-   std::wstring wclean = a2w(clean);
-   m_dwrite->CreateTextLayout(wclean.c_str(), (UINT32)wclean.size(),
+    ComPtr<IDWriteTextLayout> layout;
+   m_dwrite->CreateTextLayout(clean.c_str(), (UINT32)clean.size(),
         fp->format.Get(), maxW, 512.f, &layout);
  
     if (!layout) return nullptr;
@@ -4252,8 +4254,8 @@ ComPtr<IDWriteTextLayout> SimpleContainer::getLayout(const std::string& txt,
         DWRITE_TRIMMING trim{ DWRITE_TRIMMING_GRANULARITY_CHARACTER, 0, 0 };
         layout->SetTrimming(&trim, nullptr);
     }
-
-    m_layoutCache.set(k, layout);          // 原来是 m_layoutCache[k] = layout;
+    m_layoutCache.emplace(key, layout);
+    //m_layoutCache.set(k, layout);          // 原来是 m_layoutCache[k] = layout;
     return layout;
 }
 
@@ -4297,6 +4299,7 @@ std::string GetMainFontNameFromTextLayout(
     ComPtr<IDWriteTextLayout> pTextLayout
 
 ) {
+    Timer timer("    GetMainFontNameFromTextLayout");
     std::string fontName = "";
     if (pTextLayout == nullptr) {
         return fontName;

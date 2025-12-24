@@ -610,7 +610,7 @@ private:
     float m_dpi_x = 96.0f;
     float m_dpi_y = 96.0f;
 
-    std::map<std::string, float> m_textWidthCache;
+
     std::vector<RECT> get_selection_rows() const;
     std::wstring get_selection_text() const;
 
@@ -658,7 +658,7 @@ private:
     float m_baselineY = 0;
     std::vector<ComPtr<ID2D1Layer>>  m_clipStack;  // 新增
     ComPtr<IDWriteFontCollection> m_sysFontColl;
-    static std::string normalize_quotes(const std::string& src);
+    static std::wstring normalize_quotes(const std::wstring& src);
     ComPtr<ID2D1SolidColorBrush> getBrush(litehtml::uint_ptr hdc, const litehtml::web_color& c);
 
     ComPtr<IDWriteTextLayout> getLayout(const std::string& txt,  litehtml::uint_ptr hFont, float maxW);
@@ -668,8 +668,9 @@ private:
 
     std::unordered_map<uint32_t, ComPtr<ID2D1SolidColorBrush>> m_brushPool;
     FontCache m_fontCache;
-    LayoutCache m_layoutCache;
-
+    //LayoutCache m_layoutCache;
+    std::map<std::string, Microsoft::WRL::ComPtr<IDWriteTextLayout>> m_layoutCache;
+    std::map<std::string, float> m_textWidthCache;
     ComPtr<IDWriteFactory>    m_dwrite;
 
     ComPtr<IDWriteTextAnalyzer> m_analyzer;
