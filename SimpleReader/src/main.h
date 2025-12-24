@@ -129,6 +129,29 @@ using namespace Gdiplus;
 #include "EPUBBook.h"
 
 
+
+class Timer {
+public:
+    // 构造函数开始计时
+    Timer(const std::string& name = "Timer");
+
+
+    // 析构函数结束计时并输出结果
+    ~Timer();
+
+    // 禁止拷贝和赋值
+    Timer(const Timer&) = delete;
+    Timer& operator=(const Timer&) = delete;
+
+    // 可以移动构造
+    Timer(Timer&&) = default;
+    Timer& operator=(Timer&&) = default;
+
+private:
+    std::string name_;
+    std::chrono::time_point<std::chrono::high_resolution_clock> start_;
+};
+
 using Microsoft::WRL::ComPtr;
 
 namespace fs = std::filesystem;
@@ -464,6 +487,7 @@ public:
     }
 
     Microsoft::WRL::ComPtr<IDWriteTextLayout> get(const LayoutKey& k) const {
+        Timer timer("    LayoutCache::get");
         std::lock_guard<std::mutex> lk(mtx_);
         auto it = map_.find(k);
         return it != map_.end() ? it->second : nullptr;
@@ -586,7 +610,7 @@ private:
     float m_dpi_x = 96.0f;
     float m_dpi_y = 96.0f;
 
-
+    std::map<std::string, float> m_textWidthCache;
     std::vector<RECT> get_selection_rows() const;
     std::wstring get_selection_text() const;
 
@@ -1033,27 +1057,7 @@ struct FontItem
 
 
 
-class Timer {
-public:
-    // 构造函数开始计时
-    Timer(const std::string& name = "Timer");
 
-
-    // 析构函数结束计时并输出结果
-    ~Timer();
-
-    // 禁止拷贝和赋值
-    Timer(const Timer&) = delete;
-    Timer& operator=(const Timer&) = delete;
-
-    // 可以移动构造
-    Timer(Timer&&) = default;
-    Timer& operator=(Timer&&) = default;
-
-private:
-    std::string name_;
-    std::chrono::time_point<std::chrono::high_resolution_clock> start_;
-};
 
 class TimerOutput
 {
@@ -1073,4 +1077,34 @@ private:
     std::vector<data> m_map;
 };
 
+class SimpleTimer {
+public:
+    SimpleTimer(const std::string& name) :
+        name_(name), start_(std::chrono::high_resolution_clock::now())
+    {
+        //std::cout << name_ << " started...\n";
+    }
+    ~SimpleTimer() {
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start_);
+  
+        std::string txt = std::format("{:<30}: {:>8.9f} 秒\n",
+            name_,
+            duration.count() / 1000000000.0);
+  
+        OutputDebugStringA(txt.c_str());
+    }
+
+    // 禁止拷贝和赋值
+    SimpleTimer(const Timer&) = delete;
+    SimpleTimer& operator=(const Timer&) = delete;
+
+    // 可以移动构造
+    SimpleTimer(SimpleTimer&&) = default;
+    SimpleTimer& operator=(SimpleTimer&&) = default;
+
+private:
+    std::string name_;
+    std::chrono::time_point<std::chrono::high_resolution_clock> start_;
+};
 bool IsMouseOverWindow(HWND hWnd);

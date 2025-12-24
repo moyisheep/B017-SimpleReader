@@ -852,6 +852,7 @@ void DumpAllFontNames()
 // ---------- 工具 ----------
 static std::string w2a(const std::wstring& s)
 {
+    Timer timer("    w2a");
     if (s.empty()) return {};
     int len = WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, nullptr, 0, nullptr, nullptr);
     std::string out(len - 1, 0);                 // 去掉末尾 '\0'
@@ -861,6 +862,7 @@ static std::string w2a(const std::wstring& s)
 
 static std::wstring a2w(const std::string& s)
 {
+    Timer timer("    a2w");
     if (s.empty()) return {};
     int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, nullptr, 0);
     std::wstring out(len - 1, 0);                // 去掉末尾 '\0'
@@ -1536,7 +1538,7 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     case WM_PAINT:
     {
         PAINTSTRUCT ps; BeginPaint(hwnd, &ps);
-        std::unique_ptr<Timer> timer = std::make_unique<Timer>("WM_PAINT");
+  
         if (g_cMain && g_cMain->m_doc)
         {
             g_frame_count += 1;
@@ -1550,15 +1552,14 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             litehtml::position clip(x, 0, w, h / g_cMain->m_zoom_factor);
             g_cMain->present(x, y, &clip);
 
+            g_timer.reset();
+            g_timerOutput->print();
+            std::string txt = "==================================\n";
+            OutputDebugStringA(txt.c_str());
+
         }
-        timer.reset();
-        g_timerOutput->print();
 
-        g_timer.reset();
 
-        g_timerOutput->print();
-        std::string txt = "==================================\n";
-        OutputDebugStringA(txt.c_str());
         EndPaint(hwnd, &ps);
         return 0;
     }
@@ -4163,6 +4164,7 @@ void PreprocessHTML(std::string& html)
 
  std::string SimpleContainer::normalize_quotes(const std::string& src)
 {
+     Timer timer("      normalize_quotes");
     std::string out;
     out.reserve(src.size());
     for (char ch : src)
@@ -4209,36 +4211,36 @@ ComPtr<IDWriteTextLayout> SimpleContainer::getLayout(const std::string& txt,
     auto layout = m_layoutCache.get(k);    // 原来是 m_layoutCache.find(k)->second
     if (layout) return layout;
 
-    std::vector<std::string> faces;
-    if (!fp->descr.family.empty() && !g_cfg.enableCustomFont)
-    {
-        faces = split_font_list(fp->descr.family);
-    }
-    else
-    {
-        faces.push_back(g_cfg.font_name);
-    }
+   // std::vector<std::string> faces;
+   // if (!fp->descr.family.empty() && !g_cfg.enableCustomFont)
+   // {
+   //     faces = split_font_list(fp->descr.family);
+   // }
+   // else
+   // {
+   //     faces.push_back(g_cfg.font_name);
+   // }
 
-    // 默认字体兜底
+   // // 默认字体兜底
 
-    faces.push_back(g_cfg.default_font_name);
-    FontCachePair* fcp;
-   for(auto& name: faces)
-   {
-       fcp = m_fontCache.get(name, fp->descr, m_sysFontColl.Get());
-       if (!fcp->font || !fcp->fmt) { continue; }
-       BOOL exists = false;
-       for (auto& w: clean)
-       {
-           fcp->font->HasCharacter(w, &exists);
-           if (!exists) { continue; }
-       }
-       if (exists) { break; }
-   }
-   if (!fcp->fmt) { return nullptr; }
+   // faces.push_back(g_cfg.default_font_name);
+   // FontCachePair* fcp;
+   //for(auto& name: faces)
+   //{
+   //    fcp = m_fontCache.get(name, fp->descr, m_sysFontColl.Get());
+   //    if (!fcp->font || !fcp->fmt) { continue; }
+   //    BOOL exists = false;
+   //    for (auto& w: clean)
+   //    {
+   //        fcp->font->HasCharacter(w, &exists);
+   //        if (!exists) { continue; }
+   //    }
+   //    if (exists) { break; }
+   //}
+   //if (!fcp->fmt) { return nullptr; }
    std::wstring wclean = a2w(clean);
    m_dwrite->CreateTextLayout(wclean.c_str(), (UINT32)wclean.size(),
-        fcp->fmt.Get(), maxW, 512.f, &layout);
+        fp->format.Get(), maxW, 512.f, &layout);
  
     if (!layout) return nullptr;
   
@@ -5161,6 +5163,7 @@ std::wstring  SimpleContainer::toLower(std::wstring s)
 std::vector<std::string>
 SimpleContainer::split_font_list(const std::string& src) 
 {
+    Timer timer("      split_font_list");
     std::vector<std::string> out;
     std::string token;
     for (size_t i = 0, n = src.size(); i < n; ++i)
@@ -5256,7 +5259,10 @@ litehtml::pixel_t SimpleContainer::text_width(const char* text,
 {
     Timer t("  text_width");
     if (!text || !*text || !hFont) return 0;
-
+    auto* fp = reinterpret_cast<FontPair*>(hFont);
+    std::string key = std::string(text) + fp->familyName + fp->descr.hash();
+    auto it  = m_textWidthCache.find(key);
+    if (it != m_textWidthCache.end()) { return it->second; }
     // 1. 创建 TextLayout
  
     float maxW = 8192.0f;
@@ -5273,7 +5279,7 @@ litehtml::pixel_t SimpleContainer::text_width(const char* text,
     // 4. DPI → 物理像素（Win7 也支持）
          
     float physical = tm.widthIncludingTrailingWhitespace * m_dpi_x / 96.0f;
-
+    m_textWidthCache.emplace( key , physical);
     return physical;
 }
 
@@ -5720,7 +5726,6 @@ litehtml::uint_ptr SimpleContainer::getContext() { return reinterpret_cast<liteh
 void SimpleContainer::resize(int w, int h)
 {
     if (w <= 0 || h <= 0) return;
-
     m_w = w;
     m_h = h;
 
@@ -6299,6 +6304,7 @@ void SimpleContainer::clear()
     m_fontCache.clear();
     m_layoutCache.clear();
     m_brushPool.clear();
+    m_textWidthCache.clear();
 
 }
 
@@ -8163,7 +8169,7 @@ std::wstring SimpleContainer::get_selection_text() const
 
 void SimpleContainer::present(float x, float y, litehtml::position* clip)
 {
-    Timer timer("绘制耗时");
+    SimpleTimer timer("绘制耗时");
 
 
     m_lines.clear();
@@ -8189,6 +8195,7 @@ void SimpleContainer::present(float x, float y, litehtml::position* clip)
 
 
     m_doc->draw(getContext(), x, y, clip);
+ 
 
     // 高亮选中行
     if (!m_selBrush)
@@ -8219,7 +8226,7 @@ void SimpleContainer::present(float x, float y, litehtml::position* clip)
     // 呈现
     m_swapChain->Present(1, 0);
 
-
+    g_timerOutput->print();
 }
 
 
@@ -8878,6 +8885,10 @@ void TimerOutput::add(std::string name, uint64_t duration)
 
 void TimerOutput::print()
 {
+    std::sort(m_map.begin(), m_map.end(), [](const data& a, const data& b)
+        {
+            return a.duration < b.duration;
+        });
     for (auto& m :m_map)
     {
         // 对齐和填充格式化
