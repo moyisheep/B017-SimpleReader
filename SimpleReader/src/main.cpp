@@ -4260,14 +4260,14 @@ ComPtr<IDWriteTextLayout> SimpleContainer::getLayout(const std::string& txt,
 }
 
 
-void SimpleContainer::record_char_boxes(ID2D1DeviceContext* rt,
-    IDWriteTextLayout* layout,
-    const std::string& txt,
-    const std::string& familyName,
+void SimpleContainer::record_char_boxes(
+    ComPtr<IDWriteTextLayout> layout,
+    const std::wstring& wtxt,
+    const std::wstring& familyName,
     const litehtml::position& pos)
 {
     Timer timer("    record_char_boxes");
-    std::wstring wtxt = a2w(txt);
+
     LineBoxes line;
     float originX = static_cast<float>(pos.x);
     float originY = static_cast<float>(pos.y);
@@ -4286,7 +4286,7 @@ void SimpleContainer::record_char_boxes(ID2D1DeviceContext* rt,
             originX + left + htm.width,
             originY + top + htm.height);
         cb.offset = m_plainText.size() + i;
-        cb.familyName = a2w(familyName);
+        cb.familyName = familyName;
         line.push_back(cb);
     }
     m_lines.emplace_back(std::move(line));
@@ -4295,12 +4295,12 @@ void SimpleContainer::record_char_boxes(ID2D1DeviceContext* rt,
     m_plainText += wtxt ;
 }
 
-std::string GetMainFontNameFromTextLayout(
+std::wstring GetMainFontNameFromTextLayout(
     ComPtr<IDWriteTextLayout> pTextLayout
 
 ) {
     Timer timer("    GetMainFontNameFromTextLayout");
-    std::string fontName = "";
+    std::wstring fontName = L"";
     if (pTextLayout == nullptr) {
         return fontName;
     }
@@ -4322,7 +4322,7 @@ std::string GetMainFontNameFromTextLayout(
     );
 
     if (SUCCEEDED(hr)) {
-        fontName = w2a(fontFamilyName);
+        fontName = fontFamilyName;
     }
 
     return fontName;
@@ -4370,7 +4370,7 @@ void SimpleContainer::draw_text(litehtml::uint_ptr hdc,
     float maxW = 8192.0f;
     auto layout = getLayout(text,  hFont, maxW);
     if (!layout) return;
-    record_char_boxes(rt, layout.Get(), text, GetMainFontNameFromTextLayout(layout), pos);
+    record_char_boxes( layout, a2w(text), GetMainFontNameFromTextLayout(layout), pos);
     // 3. 绘制文本
     rt->DrawTextLayout(D2D1::Point2F(static_cast<float>(pos.x),
         static_cast<float>(pos.y)),
@@ -5238,7 +5238,8 @@ litehtml::uint_ptr SimpleContainer::create_font(const litehtml::font_description
     fm->descent = m.descent * dip;
     fm->height = (m.ascent + m.descent + m.lineGap) * dip;
     fm->x_height = m.xHeight * dip;
-    fm->draw_spaces = descr.style == litehtml::font_style_italic || descr.decoration_line != litehtml::text_decoration_line_none;
+    fm->draw_spaces = true;
+    //fm->draw_spaces = descr.style == litehtml::font_style_italic || descr.decoration_line != litehtml::text_decoration_line_none;
     fm->ch_width = fm->font_size * 3 / 5;
     fm->sub_shift = descr.size / 5;
     fm->super_shift = descr.size / 3;
@@ -6236,8 +6237,9 @@ SimpleContainer::SimpleContainer(int w, int h, HWND hwnd):
         OutputDebugStringA("GetSystemFontCollection failed\n");
     }
     BuildFontList();
-
+  
 }
+
 
 void SimpleContainer::BuildFontList()
 {
@@ -8166,6 +8168,8 @@ std::wstring SimpleContainer::get_selection_text() const
     if (start >= end)
         return L"";
 
+    OutputDebugStringW(m_plainText.c_str());
+  
     // 直接使用substr安全地获取子字符串
     return m_plainText.substr(start, end - start);
 }
