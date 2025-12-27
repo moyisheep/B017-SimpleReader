@@ -1070,45 +1070,21 @@ public:
     ~TimerOutput(){}
     void add(std::string name, uint64_t duration);
     void print();
+
     void clear();
+    void start(std::string info="timer") { timer = std::make_unique<Timer>(info); }
+    void end() { if (timer) { timer.reset(); print(); } }
 private:
+    std::string format_duration(double seconds);
     struct data
     {
         std::string name = "";
         uint64_t duration = 0;
         uint64_t times = 0;
     };
+    std::unique_ptr<Timer> timer;
     std::vector<data> m_map;
 };
 
-class SimpleTimer {
-public:
-    SimpleTimer(const std::string& name) :
-        name_(name), start_(std::chrono::high_resolution_clock::now())
-    {
-        //std::cout << name_ << " started...\n";
-    }
-    ~SimpleTimer() {
-        auto end = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start_);
-  
-        std::string txt = std::format("{:<30}: {:>8.9f} 秒\n",
-            name_,
-            duration.count() / 1000000000.0);
-  
-        OutputDebugStringA(txt.c_str());
-    }
 
-    // 禁止拷贝和赋值
-    SimpleTimer(const Timer&) = delete;
-    SimpleTimer& operator=(const Timer&) = delete;
-
-    // 可以移动构造
-    SimpleTimer(SimpleTimer&&) = default;
-    SimpleTimer& operator=(SimpleTimer&&) = default;
-
-private:
-    std::string name_;
-    std::chrono::time_point<std::chrono::high_resolution_clock> start_;
-};
 bool IsMouseOverWindow(HWND hWnd);

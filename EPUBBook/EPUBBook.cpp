@@ -83,11 +83,11 @@ void EPUBBook::build_epub_font_index(std::string tempDir)
     {
         if (item.media_type != "text/css") continue;
 
-        MemFile cssFile = get_binary("", item.href);
+        auto cssFile = get_binary("", item.href);
         std::string css_dir = fs::path(item.href).parent_path().generic_string();
-        if (cssFile.data.empty()) continue;
+        if (cssFile.empty()) continue;
 
-        std::string css { (char*)cssFile.data.data(), cssFile.data.size() };
+        std::string css { (char*)cssFile.data(), cssFile.size() };
 
         for (std::sregex_iterator it(css.begin(), css.end(), rx_face), end; it != end; ++it)
         {
@@ -131,10 +131,10 @@ void EPUBBook::build_epub_font_index(std::string tempDir)
                 }
 
                 // 解压
-                MemFile fontFile = get_binary(css_dir, url);
-                if (fontFile.data.empty()) continue;
+                auto fontFile = get_binary(css_dir, url);
+                if (fontFile.empty()) continue;
 
-                std::string hashHex = blake3_hex(fontFile.data);   // 32 字节 → 64 字符
+                std::string hashHex = blake3_hex(fontFile);   // 32 字节 → 64 字符
                 std::string tempFont = tempDir + hashHex + ext;    // 例如：a1b2c3...ff.woff2
                 // 2. 如果文件已存在，直接记录路径，不再写盘
                 if (fs::exists(tempFont.c_str()))
@@ -147,7 +147,7 @@ void EPUBBook::build_epub_font_index(std::string tempDir)
                     //std::cerr << "无法打开二进制文件" << std::endl;
                     continue;
                 }
-                outFile.write(reinterpret_cast<const char*>(fontFile.data.data()), fontFile.data.size());
+                outFile.write(reinterpret_cast<const char*>(fontFile.data()), fontFile.size());
                 outFile.close();
 
                 paths.push_back(tempFont);
@@ -356,28 +356,11 @@ bool EPUBBook::has_css()
 
 
 
-MemFile EPUBBook::get_binary(std::string base_url, std::string url)
+std::vector<uint8_t> EPUBBook::get_binary(std::string base_url, std::string url)
 {
     auto path = resolve_path(base_url, url);
-    std::error_code ec;  // 存储错误码
-    MemFile mf{};
-    if (fs::exists(path, ec))
-    {
-        size_t sz = fs::file_size(path, ec);
-        if (ec) return mf;                       // 文件不存在
-        std::ifstream ifs(path, std::ios::binary);
-        if (!ifs) return mf;
 
-        std::vector<uint8_t> buf(sz);
-        ifs.read(reinterpret_cast<char*>(buf.data()), sz);
-
-        mf.data = std::move(buf);
-    }
-    else
-    {
-        mf = read_zip(path);
-    }
-    return mf;
+    return read_zip(path);
 }
 
 bool EPUBBook::is_toc_item(int spine_id)
@@ -394,8 +377,8 @@ bool EPUBBook::is_toc_item(int spine_id)
 }
 
 
-MemFile EPUBBook::read_zip(std::string file_name) {
-    MemFile mf{};
+std::vector<uint8_t> EPUBBook::read_zip(std::string file_name) {
+    std::vector<uint8_t> mf{};
     if (file_name.empty()) { return mf; }
 
     auto it = m_cache.find(file_name);
@@ -410,7 +393,7 @@ MemFile EPUBBook::read_zip(std::string file_name) {
 
 
     if (p) {
-        mf.data.assign(static_cast<uint8_t*>(p),
+        mf.assign(static_cast<uint8_t*>(p),
             static_cast<uint8_t*>(p) + uncomp_size);
         mz_free(p);
         m_cache.emplace(file_name, mf);
@@ -420,10 +403,10 @@ MemFile EPUBBook::read_zip(std::string file_name) {
 
 std::string EPUBBook::load_html(const std::string& path)
 {
-    MemFile mf = read_zip(path);
-    if (mf.data.empty()) return {};
+    auto mf = read_zip(path);
+    if (mf.empty()) return {};
     m_current_html_path = path;
-    return std::string(mf.begin(), mf.size());
+    return std::string(reinterpret_cast<const char*>(mf.data()), mf.size());
 }
 
 bool EPUBBook::load(const std::string& epub_path) 
@@ -549,10 +532,10 @@ std::string EPUBBook::get_book_path()
 void EPUBBook::parse_ocf() {
     m_ocf_pkg = {};  // 清空
     auto container = read_zip("META-INF/container.xml");
-    if (container.data.empty()) return;
+    if (container.empty()) return;
 
     tinyxml2::XMLDocument doc;
-    if (doc.Parse(container.begin(), container.size()) != tinyxml2::XML_SUCCESS) return;
+    if (doc.Parse((char*)container.data(), container.size()) != tinyxml2::XML_SUCCESS) return;
 
     auto* rootfile = doc.FirstChildElement("container")
         ? doc.FirstChildElement("container")->FirstChildElement("rootfiles")
@@ -569,7 +552,7 @@ void EPUBBook::parse_ocf() {
 void EPUBBook::parse_opf() {
     auto opf = read_zip(m_ocf_pkg.rootfile.c_str());
     std::string xml(opf.begin(), opf.begin() + opf.size());
-    if (opf.data.empty()) return;
+    if (opf.empty()) return;
 
     tinyxml2::XMLDocument doc;
     if (doc.Parse(xml.c_str(), xml.size()) != tinyxml2::XML_SUCCESS) return;
@@ -658,10 +641,10 @@ void EPUBBook::parse_toc()
 
     m_ocf_pkg.toc_path = toc_path;
     auto toc = read_zip(toc_path.c_str());
-    if (toc.data.empty()) return;
+    if (toc.empty()) return;
 
     tinyxml2::XMLDocument doc;
-    if (doc.Parse(toc.begin(), toc.size()) != tinyxml2::XML_SUCCESS) return;
+    if (doc.Parse((char*)toc.data(), toc.size()) != tinyxml2::XML_SUCCESS) return;
 
     bool is_nav = is_xhtml(toc_path);
     std::string opf_dir = m_ocf_pkg.opf_dir;

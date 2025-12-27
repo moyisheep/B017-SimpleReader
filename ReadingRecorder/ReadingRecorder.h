@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <chrono>
 #include <filesystem>
-
+#include <iostream>
 
 
 #include <sqlite3.h>
@@ -74,7 +74,7 @@ private:
 
     bool loadSettings();
 
-
+    void LogPrint(std::string txt) { std::cout << "[ReadingRecord]"<< txt; }
 
     sqlite3* m_dbBook = nullptr;
     sqlite3* m_dbTime = nullptr;

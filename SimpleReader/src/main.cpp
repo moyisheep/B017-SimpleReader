@@ -1,8 +1,9 @@
 ﻿#include "main.h"
 
 
+
 std::unique_ptr<TimerOutput> g_timerOutput = std::make_unique<TimerOutput>();
-std::unique_ptr<Timer> g_timer = nullptr;
+
 
 
 HWND  g_hToc = nullptr;    // 侧边栏 TreeView
@@ -106,6 +107,12 @@ std::unique_ptr<ScrollBarEx> g_scrollbar;
 //std::vector<std::wstring> g_fontNames;       // 保存字体名
 // 1. 在全局或合适位置声明
     // 整篇文档的所有行
+
+
+void LogPtrint(std::string txt)
+{
+    std::cout << txt;
+}
 
 void CheckAllMenuItem()
 {
@@ -1136,17 +1143,17 @@ INT_PTR CALLBACK FontDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
 }
 
 
-static ImageFrame decode_img(const MemFile& mf, const char* ext)
+static ImageFrame decode_img(const std::vector<uint8_t>& mf, const char* ext)
 {
     ImageFrame frame;
-    auto fmt = detect_fmt(mf.data.data(), mf.data.size(), ext);
+    auto fmt = detect_fmt(mf.data(), mf.size(), ext);
 
     switch (fmt)
     {
     case ImgFmt::SVG:
     {
         auto doc = lunasvg::Document::loadFromData(
-            reinterpret_cast<const char*>(mf.data.data()), mf.data.size());
+            reinterpret_cast<const char*>(mf.data()), mf.size());
         if (!doc) return {};
 
         lunasvg::Bitmap svgBmp = doc->renderToBitmap(g_cfg.document_width*2);
@@ -1166,7 +1173,7 @@ static ImageFrame decode_img(const MemFile& mf, const char* ext)
         /* ---------- PNG/JPEG/BMP/... ---------- */
         int w, h, comp;
         stbi_uc* pixels = stbi_load_from_memory(
-            mf.data.data(), static_cast<int>(mf.data.size()),
+            mf.data(), static_cast<int>(mf.size()),
             &w, &h, &comp, 4);                 // 强制 4 通道 RGBA
         if (!pixels) return {};
 
@@ -1552,8 +1559,10 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             litehtml::position clip(x, 0, w, h / g_cMain->m_zoom_factor);
             g_cMain->present(x, y, &clip);
 
-            g_timer.reset();
-            g_timerOutput->print();
+            
+            
+         
+            g_timerOutput->end();
             std::string txt = "==================================\n";
             OutputDebugStringA(txt.c_str());
 
@@ -2859,7 +2868,19 @@ void LogToFile(const std::string& message)
 // ---------- 入口 ----------
 int WINAPI wWinMain(HINSTANCE h, HINSTANCE, LPWSTR, int n)
 {
+    // 1. 分配控制台
+    //AllocConsole();
 
+    //// 2. 重定向标准输出到控制台
+    //freopen("CONOUT$", "w", stdout);
+    //freopen("CONOUT$", "w", stderr);
+    //freopen("CONIN$", "r", stdin);
+    //// 3. 现在可以使用 printf
+
+ 
+    freopen("stdout.txt", "w", stdout);
+    freopen("stdout.txt", "w", stderr);
+    printf("Hello from Win32 Window!\n");
     // ---------- 1. 解析命令行 ----------
     int argc = 0;
     std::wstring cmd = GetCommandLineW();
@@ -3072,8 +3093,8 @@ void SimpleContainer::load_image(const char* src, const char* baseurl, bool redr
     if(g_book)
     {
         std::string path{ src };
-        MemFile mf = g_book->get_binary( g_book->get_current_dir(), path);
-        if (mf.data.empty())
+        auto mf = g_book->get_binary( g_book->get_current_dir(), path);
+        if (mf.empty())
         {
             OutputDebugStringA(("EPUB not found: " + path + "\n").c_str());
             return;
@@ -3085,7 +3106,7 @@ void SimpleContainer::load_image(const char* src, const char* baseurl, bool redr
             auto frame = decode_img(mf, "svg");
             if(!frame.rgba.empty())
             {
-                frame.raw_data = std::move(mf.data);
+                frame.raw_data = std::move(mf);
                 m_img_cache.emplace(src, std::move(frame));
             }
             return;
@@ -3093,11 +3114,11 @@ void SimpleContainer::load_image(const char* src, const char* baseurl, bool redr
         ImageFrame frame{};
  
         int w, h, comp;
-        if (stbi_info_from_memory(mf.data.data(), static_cast<int>(mf.data.size()),
+        if (stbi_info_from_memory(mf.data(), static_cast<int>(mf.size()),
             &w, &h, &comp)) {
             frame.width = w;
             frame.height = h;
-            frame.raw_data = std::move(mf.data);
+            frame.raw_data = std::move(mf);
         }
         if (!frame.raw_data.empty())
         {
@@ -3180,10 +3201,10 @@ void SimpleContainer::import_css(litehtml::string& text,
     if(g_book)
     {
         auto mf = g_book->get_binary(baseurl, url);
-        if (!mf.data.empty())
+        if (!mf.empty())
         {
             // 直接填到 text（litehtml 期望 UTF-8）
-            auto css = std::string(mf.data.begin(), mf.data.end());
+            auto css = std::string(mf.begin(), mf.end());
             m_css_cache.emplace(url, css);
             text = css;
         }
@@ -3590,11 +3611,11 @@ void preprocess_js(std::string& html)
             // 2.1 读文件
             std::string src = m[2].str();
   
-            MemFile mf = g_book->get_binary(g_book->get_current_dir(), src);
+            auto mf = g_book->get_binary(g_book->get_current_dir(), src);
             std::string code;
-            if (!mf.data.empty())
-                code.assign(reinterpret_cast<const char*>(mf.data.data()),
-                    mf.data.size());
+            if (!mf.empty())
+                code.assign(reinterpret_cast<const char*>(mf.data()),
+                    mf.size());
 
             // 2.2 去掉 src 属性
             std::string attrs = m[1].str() + m[3].str();
@@ -3727,8 +3748,8 @@ void replace_svg_with_img(std::string& html,
                 std::string imgRel = m[3].str();          // zip 内路径
             
 
-                MemFile mf = g_book->get_binary(g_book->get_current_dir(), imgRel);
-                if (!mf.data.empty())
+                auto mf = g_book->get_binary(g_book->get_current_dir(), imgRel);
+                if (!mf.empty())
                 {
                     // 1. 根据扩展名决定 MIME
                     fs::path p(imgRel);
@@ -3737,7 +3758,7 @@ void replace_svg_with_img(std::string& html,
                         mime = "image/jpeg";
 
                     // 2. 编码 base64
-                    std::string b64 = base64_encode(mf.data);
+                    std::string b64 = base64_encode(mf);
 
                     // 3. 生成 data URI
                     std::string dataUri = "data:" + mime + ";base64," + b64;
@@ -4164,7 +4185,7 @@ void PreprocessHTML(std::string& html)
 
  std::wstring SimpleContainer::normalize_quotes(const std::wstring& src)
 {
-     Timer timer("      normalize_quotes");
+     //Timer timer("      normalize_quotes");
     std::wstring out;
     out.reserve(src.size());
     for (wchar_t ch : src)
@@ -4276,8 +4297,9 @@ void SimpleContainer::record_char_boxes(
     {
         DWRITE_HIT_TEST_METRICS htm;
         float left, top;
+        std::unique_ptr<Timer> timer = std::make_unique<Timer>("  [HitTestTextPosition]");
         layout->HitTestTextPosition(i, FALSE, &left, &top, &htm);
-
+        timer.reset();
         CharBox cb;
         cb.ch = wtxt[i];
         cb.rect = D2D1::RectF(
@@ -4299,7 +4321,7 @@ std::wstring GetMainFontNameFromTextLayout(
     ComPtr<IDWriteTextLayout> pTextLayout
 
 ) {
-    Timer timer("    GetMainFontNameFromTextLayout");
+    //Timer timer("    GetMainFontNameFromTextLayout");
     std::wstring fontName = L"";
     if (pTextLayout == nullptr) {
         return fontName;
@@ -4361,23 +4383,33 @@ void SimpleContainer::draw_text(litehtml::uint_ptr hdc,
     if (!fp) return;
 
     // 1. 画刷
+    //std::unique_ptr<Timer> timer = std::make_unique<Timer> ("    [getBrush]");
     auto brush = getBrush(hdc, color);
     if (!brush) return;
-
+    //timer.reset();
     // 2. 文本
 
     
     float maxW = 8192.0f;
+    //timer = std::make_unique<Timer>("    [getLayout]");
     auto layout = getLayout(text,  hFont, maxW);
+    //timer.reset();
+   
     if (!layout) return;
+    //timer = std::make_unique<Timer>("    [record_char_boxes]");
     record_char_boxes( layout, a2w(text), GetMainFontNameFromTextLayout(layout), pos);
+    //timer.reset();
     // 3. 绘制文本
+    //timer = std::make_unique<Timer>("    [DrawTextLayout]");
     rt->DrawTextLayout(D2D1::Point2F(static_cast<float>(pos.x),
         static_cast<float>(pos.y)),
         layout.Get(), brush.Get(), D2D1_DRAW_TEXT_OPTIONS_NO_SNAP);
+   //timer.reset();
 
     // 4. 绘制装饰线（下划线 / 删除线 / 上划线）
+    //timer = std::make_unique<Timer>("    [draw_decoration]");
     draw_decoration(hdc, fp, color, pos, layout.Get());
+    //timer.reset();
 }
 void SimpleContainer::draw_decoration(litehtml::uint_ptr hdc, const FontPair* fp,
     litehtml::web_color color,
@@ -4478,7 +4510,7 @@ ComPtr<ID2D1Bitmap> SimpleContainer::getBitmap(litehtml::uint_ptr hdc, std::stri
         std::string ext = fs::path(url).extension().generic_string();
 
 
-        frame = decode_img(MemFile{frame.raw_data}, ext.empty() ? nullptr : ext.c_str());
+        frame = decode_img(frame.raw_data, ext.empty() ? nullptr : ext.c_str());
         if (!frame.rgba.empty())
         {
             m_img_cache.emplace(url, frame);
@@ -7183,13 +7215,13 @@ void VirtualDoc::workerLoop()
             m_taskQueue.pop();
         }
         BusyGuard bg(m_workerBusy);   // 从这里开始置忙，析构时自动清 0
-
+        g_timerOutput->start("【总耗时】");
         //OutputDebugStringA("[VirtualDod thread] 开始更新\n");
         // 1. 耗时 IO
                 /* ---------- 2. 耗时 IO ---------- */
 
 
-        g_timer = std::make_unique<Timer>("总耗时（s）");
+
         //// ********************测试开始**********************
         //LogToFile(m_book->get_title());
         //auto start = nowUs();
@@ -7232,7 +7264,7 @@ void VirtualDoc::workerLoop()
 
         std::string txt = "=========" + g_book->get_title() + "==========\n";
         OutputDebugStringA(txt.c_str());
-        auto start_load_time = nowUs();
+        std::unique_ptr<Timer> timer = std::make_unique<Timer>("【加载耗时】");
 
         if (!load_by_id(task.chapterId, !task.insertAtFront))
         {
@@ -7259,23 +7291,18 @@ void VirtualDoc::workerLoop()
         css += ":root,body,p,li,div,h1,h2,h3,h4,h5,h6,span, ul{line-height:" + std::to_string(g_cfg.line_height) + ";}\n";
         
 
-        auto end_load_time = nowUs();
+        timer.reset();
+        g_timerOutput->print();
+        timer = std::make_unique<Timer>("【创建耗时】");
  
-        txt = "加载耗时（s）：" + std::to_string((end_load_time - start_load_time) / 1000000.0f) + "\n";
-        txt += "---------------------------------\n";
-        OutputDebugStringA(txt.c_str());
-        auto start_create_time = nowUs();
+
 
         m_doc = litehtml::document::createFromString(
             { html.c_str(), litehtml::encoding::utf_8 }, m_container.get(), litehtml::master_css, css);
         
-        auto end_create_time = nowUs();
+        timer.reset();
         g_timerOutput->print();
-        txt = "创建耗时（s）：" + std::to_string((end_create_time - start_create_time) / 1000000.0f) + "\n";
-        txt += "---------------------------------\n";
-        OutputDebugStringA(txt.c_str());
-
-        auto start_render_time = nowUs();
+        timer = std::make_unique<Timer>("【渲染耗时】");
 
         m_doc->render(g_cfg.document_width);
 
@@ -7290,12 +7317,9 @@ void VirtualDoc::workerLoop()
         m_height = m_doc->height();
         float delta = task.insertAtFront ? height : 0.0f;
  
-
-        auto end_render_time = nowUs();
+        timer.reset();
         g_timerOutput->print();
-        txt = "渲染耗时（s）：" + std::to_string((end_render_time - start_render_time) / 1000000.0f) + "\n";
-        txt += "---------------------------------\n";
-        OutputDebugStringA(txt.c_str());
+        
 
         PostMessage(g_hWnd, WM_EPUB_CACHE_UPDATED, 0, static_cast<LPARAM>(delta));
         //OutputDebugStringA("[VirtualDod thread] 更新结束\n");
@@ -8176,7 +8200,7 @@ std::wstring SimpleContainer::get_selection_text() const
 
 void SimpleContainer::present(float x, float y, litehtml::position* clip)
 {
-    SimpleTimer timer("绘制耗时");
+    std::unique_ptr<Timer> timer = std::make_unique<Timer>("【绘制耗时】");
 
 
     m_lines.clear();
@@ -8233,7 +8257,9 @@ void SimpleContainer::present(float x, float y, litehtml::position* clip)
     // 呈现
     m_swapChain->Present(1, 0);
 
+    timer.reset();
     g_timerOutput->print();
+
 }
 
 
@@ -8892,25 +8918,37 @@ void TimerOutput::add(std::string name, uint64_t duration)
 
 void TimerOutput::print()
 {
-    std::sort(m_map.begin(), m_map.end(), [](const data& a, const data& b)
-        {
-            return a.duration < b.duration;
-        });
-    for (auto& m :m_map)
-    {
-        // 对齐和填充格式化
-        std::string txt = std::format("{:<30}: {:>8.9f} 秒, {:>6} 次",
-            m.name,
-            m.duration / 1000000000.0,  // 纳秒转秒
-            m.times);
+    //std::sort(m_map.begin(), m_map.end(), [](const data& a, const data& b)
+    //    {
+    //        return a.duration < b.duration;
+    //    });
 
-        // 如果需要添加换行符
-        txt += "\n";
-        OutputDebugStringA(txt.c_str());
+    for (auto& m : m_map)
+    {
+        // 格式化为 9 位小数（纳秒精度）
+        std::ostringstream time_oss;
+        time_oss << std::fixed << std::setprecision(9) << (m.duration / 1000000000.0);
+        std::string time_str = time_oss.str();
+
+        // 在 . 后每 3 位插入一个空格
+        size_t dot_pos = time_str.find('.');
+        if (dot_pos != std::string::npos) {
+            for (size_t i = dot_pos + 4; i < time_str.length(); i += 4) {
+                time_str.insert(i, " ");
+            }
+        }
+
+        // 构建完整输出字符串
+        std::ostringstream oss;
+        oss << std::left << std::setw(30) << m.name << ": "
+            << std::right << std::setw(12) << time_str << " 秒, "
+            << std::right << std::setw(6) << m.times << " 次\n";
+
+        OutputDebugStringA(oss.str().c_str());
     }
+
     clear();
 }
-
 void TimerOutput::clear()
 {
     m_map = {};

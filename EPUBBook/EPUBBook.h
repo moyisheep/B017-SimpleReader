@@ -60,11 +60,7 @@ namespace std {
     };
 }
 
-struct MemFile {
-    std::vector<uint8_t> data;
-    const char* begin() const { return reinterpret_cast<const char*>(data.data()); }
-    size_t      size()  const { return data.size(); }
-};
+
 // ---------- EPUB 零解压 ----------
 class EPUBBook {
 public:
@@ -74,10 +70,10 @@ public:
     // -------------- EPUBBook 内部新增成员 --------------
 
     bool load(const std::string& epub_path);
-    MemFile get_binary(std::string base_url, std::string url);
-   
+    std::vector<uint8_t> get_binary(std::string base_url, std::string url);
 
-    MemFile read_zip(std::string file_name);
+
+    std::vector<uint8_t> read_zip(std::string file_name);
 
     std::string load_html(const std::string& path);
 
@@ -116,7 +112,7 @@ private:
     std::string m_current_book_path = "";
     std::string m_current_html_path = "";
     mz_zip_archive zip = {};
-    std::map<std::string, MemFile> m_cache;
+    std::map<std::string, std::vector<uint8_t>> m_cache;
 
 
     static std::string url_decode(const std::string& in);

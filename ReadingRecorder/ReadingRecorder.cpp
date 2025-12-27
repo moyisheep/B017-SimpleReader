@@ -34,7 +34,7 @@ void ReadingRecorder::initDB(std::filesystem::path dbPath) {
     /* ---------- Books.db ---------- */
     if (sqlite3_open(db_book_path.generic_string().c_str(), &m_dbBook) != SQLITE_OK) 
     { 
-        //OutputDebugStringA("Books.db sqlite open failed\n");
+        LogPrint("Books.db sqlite open failed\n");
         return; 
     }
        
@@ -67,7 +67,7 @@ void ReadingRecorder::initDB(std::filesystem::path dbPath) {
     /* ---------- Time.db ---------- */
     if (sqlite3_open(db_time_path.generic_string().c_str(), &m_dbTime) != SQLITE_OK)
     {
-        //OutputDebugStringA("Time.db sqlite open failed\n");
+        LogPrint("Time.db sqlite open failed\n");
         return;
     }
         
@@ -91,7 +91,7 @@ void ReadingRecorder::initDB(std::filesystem::path dbPath) {
     /* ---------- Settingss.db ---------- */
     if (sqlite3_open(db_setting_path.generic_string().c_str(), &m_dbSetting) != SQLITE_OK)
     {
-        //OutputDebugStringA("Settings.db sqlite open failed\n");
+        LogPrint("Settings.db sqlite open failed\n");
     }
        
 
@@ -116,7 +116,7 @@ void ReadingRecorder::initDB(std::filesystem::path dbPath) {
 
 bool ReadingRecorder::loadSettings() {
     if (!m_dbSetting) {
-        //OutputDebugStringA("Settings database not initialized\n");
+        LogPrint("Settings database not initialized\n");
         return false;
     }
 
@@ -124,7 +124,7 @@ bool ReadingRecorder::loadSettings() {
     sqlite3_stmt* stmt = nullptr;
 
     if (sqlite3_prepare_v2(m_dbSetting, sql, -1, &stmt, nullptr) != SQLITE_OK) {
-        //OutputDebugStringA("Failed to prepare SQL statement for settings\n");
+        LogPrint("Failed to prepare SQL statement for settings\n");
         return false;
     }
 
@@ -239,7 +239,7 @@ void ReadingRecorder::flush() {
 
 void ReadingRecorder::flushSettingRecord() {
     if (!m_dbSetting) {
-        //OutputDebugStringA("Settings database not initialized\n");
+        LogPrint("Settings database not initialized\n");
         return;
     }
 
@@ -290,7 +290,7 @@ void ReadingRecorder::flushSettingRecord() {
 
     sqlite3_stmt* stmt = nullptr;
     if (sqlite3_prepare_v2(m_dbSetting, sql, -1, &stmt, nullptr) != SQLITE_OK) {
-        //OutputDebugStringA("Failed to prepare SQL statement for settings update\n");
+        LogPrint("Failed to prepare SQL statement for settings update\n");
         return;
     }
 
@@ -307,7 +307,7 @@ void ReadingRecorder::flushSettingRecord() {
 
     // Execute the statement
     if (sqlite3_step(stmt) != SQLITE_DONE) {
-        //OutputDebugStringA("Failed to execute settings update\n");
+        LogPrint("Failed to execute settings update\n");
     }
 
     sqlite3_finalize(stmt);
@@ -370,7 +370,7 @@ void ReadingRecorder::flushTimeRecord()
     char* err = nullptr;
     if (sqlite3_exec(m_dbTime, "BEGIN;", nullptr, nullptr, &err) != SQLITE_OK)
     {
-        //OutputDebugStringA(("BEGIN failed: " + std::string(err) + "\n").c_str());
+        LogPrint(("BEGIN failed: " + std::string(err) + "\n").c_str());
         sqlite3_free(err);
         return;
     }
@@ -390,7 +390,7 @@ void ReadingRecorder::flushTimeRecord()
         sqlite3_stmt* sel = nullptr;
         if (sqlite3_prepare_v2(m_dbTime, sqlSel, -1, &sel, nullptr) != SQLITE_OK)
         {
-            //OutputDebugStringA(("prepare SELECT failed\n"));
+            LogPrint(("prepare SELECT failed\n"));
             continue;
         }
         sqlite3_bind_text(sel, 1, frag.path.c_str(), -1, SQLITE_STATIC);
@@ -418,14 +418,14 @@ void ReadingRecorder::flushTimeRecord()
                     sqlite3_bind_int(upd, 3, oldId);
                     if (sqlite3_step(upd) != SQLITE_DONE)
                     {
-                        //OutputDebugStringA(("UPDATE step failed\n"));
+                        LogPrint(("UPDATE step failed\n"));
                     }
                        
                     sqlite3_finalize(upd);
                 }
                 else
                 {
-                    //OutputDebugStringA(("prepare UPDATE failed\n"));
+                    LogPrint(("prepare UPDATE failed\n"));
                 }
                 merged = true;
             }
@@ -454,14 +454,14 @@ void ReadingRecorder::flushTimeRecord()
 
                 if (sqlite3_step(ins) != SQLITE_DONE)
                 {
-                    //OutputDebugStringA(("INSERT step failed\n"));
+                    LogPrint(("INSERT step failed\n"));
                 }
                     
                 sqlite3_finalize(ins);
             }
             else
             {
-                //OutputDebugStringA(("prepare INSERT failed\n"));
+                LogPrint(("prepare INSERT failed\n"));
             }
         }
     }
@@ -469,7 +469,7 @@ void ReadingRecorder::flushTimeRecord()
     /* 4. 提交事务 */
     if (sqlite3_exec(m_dbTime, "COMMIT;", nullptr, nullptr, &err) != SQLITE_OK)
     {
-        //OutputDebugStringA(("COMMIT failed: " + std::string(err) + "\n").c_str());
+        LogPrint(("COMMIT failed: " + std::string(err) + "\n").c_str());
         sqlite3_free(err);
     }
 }
