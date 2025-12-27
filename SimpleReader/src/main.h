@@ -130,6 +130,7 @@ using namespace Gdiplus;
 
 
 
+
 class Timer {
 public:
     // 构造函数开始计时
@@ -522,6 +523,7 @@ public:
     void	import_css(litehtml::string& text, const litehtml::string& url, litehtml::string& baseurl) override;
     litehtml::pixel_t	get_default_font_size() const override;
     const char* get_default_font_name() const override;
+
     litehtml::uint_ptr	create_font(const litehtml::font_description& descr, const litehtml::document* doc, litehtml::font_metrics* fm) override;
     litehtml::pixel_t	text_width(const char* text, litehtml::uint_ptr hFont) override;
     litehtml::pixel_t	pt_to_px(float pt) const override;
@@ -608,6 +610,7 @@ public:
     ComPtr<ID2D1Bitmap1> m_offscreenBmp;   // 离屏位图
     bool                 m_offscreenDirty = true; // 是否需要重绘
     std::wstring m_sel_text = L"";
+
 private:
 
     float m_dpi_x = 96.0f;
@@ -660,7 +663,7 @@ private:
     //static std::optional<std::wstring> mapStatic(const std::wstring& key);
     float m_baselineY = 0;
     std::vector<ComPtr<ID2D1Layer>>  m_clipStack;  // 新增
-    ComPtr<IDWriteFontCollection> m_sysFontColl;
+    ComPtr<IDWriteFontCollection> m_systemFonts;
     static std::wstring normalize_quotes(const std::wstring& src);
     ComPtr<ID2D1SolidColorBrush> getBrush(litehtml::uint_ptr hdc, const litehtml::web_color& c);
 
@@ -672,8 +675,8 @@ private:
     std::unordered_map<uint32_t, ComPtr<ID2D1SolidColorBrush>> m_brushPool;
     FontCache m_fontCache;
     //LayoutCache m_layoutCache;
-    std::map<std::string, Microsoft::WRL::ComPtr<IDWriteTextLayout>> m_layoutCache;
-    std::map<std::string, float> m_textWidthCache;
+    std::unordered_map<std::string, Microsoft::WRL::ComPtr<IDWriteTextLayout>> m_layoutCache;
+    std::unordered_map<std::string, float> m_textWidthCache;
     ComPtr<IDWriteFactory>    m_dwrite;
 
     ComPtr<IDWriteTextAnalyzer> m_analyzer;
@@ -688,7 +691,6 @@ private:
 
     float m_sel_delta = 0;
     std::vector<D2D1_RECT_F> m_sel_rects = {};
-
 
 };
 

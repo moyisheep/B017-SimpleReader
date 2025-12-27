@@ -859,7 +859,7 @@ void DumpAllFontNames()
 // ---------- 工具 ----------
 static std::string w2a(const std::wstring& s)
 {
-    Timer timer("    w2a");
+    //Timer timer("    w2a");
     if (s.empty()) return {};
     int len = WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, nullptr, 0, nullptr, nullptr);
     std::string out(len - 1, 0);                 // 去掉末尾 '\0'
@@ -869,7 +869,7 @@ static std::string w2a(const std::wstring& s)
 
 static std::wstring a2w(const std::string& s)
 {
-    Timer timer("    a2w");
+    //Timer timer("    a2w");
     if (s.empty()) return {};
     int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, nullptr, 0);
     std::wstring out(len - 1, 0);                // 去掉末尾 '\0'
@@ -4181,8 +4181,6 @@ void PreprocessHTML(std::string& html)
 
 
 
-
-
  std::wstring SimpleContainer::normalize_quotes(const std::wstring& src)
 {
      //Timer timer("      normalize_quotes");
@@ -4206,7 +4204,7 @@ void PreprocessHTML(std::string& html)
 // ---------- 实现 ----------
 ComPtr<ID2D1SolidColorBrush> SimpleContainer::getBrush(litehtml::uint_ptr hdc, const litehtml::web_color& c)
 {
-    Timer timer("    getBrush");
+    //Timer timer("    getBrush");
     uint32_t key = (c.alpha << 24) | (c.red << 16) | (c.green << 8) | c.blue;
     auto it = m_brushPool.find(key);
     if (it != m_brushPool.end()) return it->second;
@@ -4219,6 +4217,7 @@ ComPtr<ID2D1SolidColorBrush> SimpleContainer::getBrush(litehtml::uint_ptr hdc, c
     return brush;
 }
 
+
 ComPtr<IDWriteTextLayout> SimpleContainer::getLayout(const std::string& txt,
     litehtml::uint_ptr hFont,
     float maxW)
@@ -4227,54 +4226,50 @@ ComPtr<IDWriteTextLayout> SimpleContainer::getLayout(const std::string& txt,
     // 1. 先替换花引号
     auto* fp = reinterpret_cast<FontPair*>(hFont);
     if (!fp->format) { return nullptr; }
-    std::wstring clean = normalize_quotes(a2w(txt));
     std::string key = txt + fp->descr.hash() + fp->familyName + std::to_string(maxW);
     auto it = m_layoutCache.find(key);
     if (it != m_layoutCache.end()) { return it->second; }
- 
-    
 
-   // std::vector<std::string> faces;
-   // if (!fp->descr.family.empty() && !g_cfg.enableCustomFont)
-   // {
-   //     faces = split_font_list(fp->descr.family);
-   // }
-   // else
-   // {
-   //     faces.push_back(g_cfg.font_name);
-   // }
+    std::wstring clean = normalize_quotes(a2w(txt));
 
-   // // 默认字体兜底
 
-   // faces.push_back(g_cfg.default_font_name);
-   // FontCachePair* fcp;
-   //for(auto& name: faces)
-   //{
-   //    fcp = m_fontCache.get(name, fp->descr, m_sysFontColl.Get());
-   //    if (!fcp->font || !fcp->fmt) { continue; }
-   //    BOOL exists = false;
-   //    for (auto& w: clean)
-   //    {
-   //        fcp->font->HasCharacter(w, &exists);
-   //        if (!exists) { continue; }
-   //    }
-   //    if (exists) { break; }
-   //}
-   //if (!fcp->fmt) { return nullptr; }
-    ComPtr<IDWriteTextLayout> layout;
-   m_dwrite->CreateTextLayout(clean.c_str(), (UINT32)clean.size(),
+    std::vector<std::string> faces;
+    if (!fp->descr.family.empty() && !g_cfg.enableCustomFont)
+    {
+        faces = split_font_list(fp->descr.family);
+    }
+    else
+    {
+        faces.push_back(g_cfg.font_name);
+    }
+
+    // 默认字体兜底
+
+    faces.push_back(g_cfg.default_font_name);
+    FontCachePair* fcp;
+   for(auto& name: faces)
+   {
+       fcp = m_fontCache.get(name, fp->descr, m_systemFonts.Get());
+       if (!fcp->font || !fcp->fmt) { continue; }
+       BOOL exists = false;
+       for (auto& w: clean)
+       {
+           fcp->font->HasCharacter(w, &exists);
+           if (!exists) { break; }
+       }
+       if (exists) { break; }
+   }
+   if (!fcp->fmt) { return nullptr; }
+    ComPtr<IDWriteTextLayout> layout = nullptr;
+   HRESULT hr = m_dwrite->CreateTextLayout(clean.c_str(), (UINT32)clean.size(),
         fp->format.Get(), maxW, 512.f, &layout);
- 
+   if (FAILED(hr))
+   {
+       OutputDebugStringA("[getLayout] failed to create layout");
+   }
     if (!layout) return nullptr;
   
-    // 换行/截断
-    bool nowrap = false;
-    //layout->SetWordWrapping(nowrap ? DWRITE_WORD_WRAPPING_NO_WRAP
-    //    : DWRITE_WORD_WRAPPING_WRAP);
-    if (nowrap) {
-        DWRITE_TRIMMING trim{ DWRITE_TRIMMING_GRANULARITY_CHARACTER, 0, 0 };
-        layout->SetTrimming(&trim, nullptr);
-    }
+
     m_layoutCache.emplace(key, layout);
 
     return layout;
@@ -4297,9 +4292,9 @@ void SimpleContainer::record_char_boxes(
     {
         DWRITE_HIT_TEST_METRICS htm;
         float left, top;
-        std::unique_ptr<Timer> timer = std::make_unique<Timer>("  [HitTestTextPosition]");
+        //std::unique_ptr<Timer> timer = std::make_unique<Timer>("  [HitTestTextPosition]");
         layout->HitTestTextPosition(i, FALSE, &left, &top, &htm);
-        timer.reset();
+        //timer.reset();
         CharBox cb;
         cb.ch = wtxt[i];
         cb.rect = D2D1::RectF(
@@ -4389,7 +4384,7 @@ void SimpleContainer::draw_text(litehtml::uint_ptr hdc,
     //timer.reset();
     // 2. 文本
 
-    
+    std::wstring wtxt = a2w(text);
     float maxW = 8192.0f;
     //timer = std::make_unique<Timer>("    [getLayout]");
     auto layout = getLayout(text,  hFont, maxW);
@@ -4397,7 +4392,7 @@ void SimpleContainer::draw_text(litehtml::uint_ptr hdc,
    
     if (!layout) return;
     //timer = std::make_unique<Timer>("    [record_char_boxes]");
-    record_char_boxes( layout, a2w(text), GetMainFontNameFromTextLayout(layout), pos);
+    record_char_boxes( layout, wtxt, GetMainFontNameFromTextLayout(layout), pos);
     //timer.reset();
     // 3. 绘制文本
     //timer = std::make_unique<Timer>("    [DrawTextLayout]");
@@ -5199,7 +5194,7 @@ std::wstring  SimpleContainer::toLower(std::wstring s)
 std::vector<std::string>
 SimpleContainer::split_font_list(const std::string& src) 
 {
-    Timer timer("      split_font_list");
+    //Timer timer("      split_font_list");
     std::vector<std::string> out;
     std::string token;
     for (size_t i = 0, n = src.size(); i < n; ++i)
@@ -5226,6 +5221,7 @@ SimpleContainer::split_font_list(const std::string& src)
 };
 
 
+
 litehtml::uint_ptr SimpleContainer::create_font(const litehtml::font_description& descr,
     const litehtml::document* doc,
     litehtml::font_metrics* fm)
@@ -5250,17 +5246,21 @@ litehtml::uint_ptr SimpleContainer::create_font(const litehtml::font_description
     
     faces.push_back(g_cfg.default_font_name);
     std::string family_name = "";
+
+
     FontCachePair* fcp;
     for (auto f : faces)
     {
         family_name = f;
-        fcp = m_fontCache.get(f, descr, m_sysFontColl.Get());
+        fcp = m_fontCache.get(f, descr, m_systemFonts.Get());
         if (fcp->fmt)break;
     }
     if (!fcp->fmt) {
         OutputDebugStringW(L"[DWrite] 加载默认字体失败\n");
         return 0;
     }
+  
+
 
     DWRITE_FONT_METRICS m{};
     fcp->font->GetMetrics(&m);
@@ -5287,7 +5287,9 @@ void SimpleContainer::delete_font(litehtml::uint_ptr h)
 {
     Timer t("  delete_font");
     if (!h) return;
+
     //auto* fp = reinterpret_cast<FontPair*>(h);
+    //fp->format->Release();
     //delete fp;              // 4. 真正释放
 }
 
@@ -5297,6 +5299,7 @@ litehtml::pixel_t SimpleContainer::text_width(const char* text,
     Timer t("  text_width");
     if (!text || !*text || !hFont) return 0;
     auto* fp = reinterpret_cast<FontPair*>(hFont);
+
     std::string key = std::string(text) + fp->familyName + fp->descr.hash();
     auto it  = m_textWidthCache.find(key);
     if (it != m_textWidthCache.end()) { return it->second; }
@@ -6265,7 +6268,7 @@ SimpleContainer::SimpleContainer(int w, int h, HWND hwnd):
     }
     m_dwrite->CreateTextAnalyzer(&m_analyzer);
     /* 5) 系统字体集合 */
-    hr = m_dwrite->GetSystemFontCollection(&m_sysFontColl, FALSE);
+    hr = m_dwrite->GetSystemFontCollection(&m_systemFonts, FALSE);
     if (FAILED(hr)) {
         OutputDebugStringA("GetSystemFontCollection failed\n");
     }
@@ -6278,7 +6281,7 @@ void SimpleContainer::BuildFontList()
 {
     g_fontList.clear();
 
-    auto sysColl = m_sysFontColl;
+    auto sysColl = m_systemFonts;
     if (!sysColl)
         return;
 
@@ -6663,8 +6666,9 @@ void VirtualDoc::load_book()
 {
     m_book = g_book;
     m_container = g_cMain;
-
     m_spine = m_book->m_ocf_pkg.spine;
+
+
 }
 
 
