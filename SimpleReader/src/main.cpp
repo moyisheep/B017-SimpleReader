@@ -4495,41 +4495,42 @@ ComPtr<ID2D1Bitmap> SimpleContainer::getBitmap(litehtml::uint_ptr hdc, std::stri
 {
     /* ---------- 1. 取缓存位图 ---------- */
     std::lock_guard<std::mutex> lock(m_imgCacheMutex);
-    auto it = m_img_cache.find(url);
-  
-    if (it == m_img_cache.end()) { return nullptr; }
- 
-    ImageFrame& frame  = it->second;
 
-    if(frame.rgba.empty())
-    {
-        if (!g_book) { return nullptr; }
-        
-      
-        auto dot = url.find_last_of('.');
-        std::string ext = fs::path(url).extension().generic_string();
-
-
-        frame = decode_img(frame.raw_data, ext.empty() ? nullptr : ext.c_str());
-        if (!frame.rgba.empty())
-        {
-            m_img_cache.emplace(url, frame);
-        }
-        else
-        {
-            OutputDebugStringA(("EPUB decode failed: " + std::string(url) + "\n").c_str());
-            return nullptr;
-        }
-
-        
-    }
-  
-    if (frame.rgba.empty()) return nullptr;
 
 
     /* ---------- 2. 取/建 D2D 位图 ---------- */
     ComPtr<ID2D1Bitmap> bmp = m_d2dBmpCache[url];   // 引用现有或新建
     if (!bmp) {
+        auto it = m_img_cache.find(url);
+
+        if (it == m_img_cache.end()) { return nullptr; }
+
+        ImageFrame& frame = it->second;
+
+        if (frame.rgba.empty())
+        {
+            if (!g_book) { return nullptr; }
+
+
+            auto dot = url.find_last_of('.');
+            std::string ext = fs::path(url).extension().generic_string();
+
+
+            frame = decode_img(frame.raw_data, ext.empty() ? nullptr : ext.c_str());
+            if (!frame.rgba.empty())
+            {
+                m_img_cache.emplace(url, frame);
+            }
+            else
+            {
+                OutputDebugStringA(("EPUB decode failed: " + std::string(url) + "\n").c_str());
+                return nullptr;
+            }
+
+
+        }
+
+        if (frame.rgba.empty()) return nullptr;
         auto* rt = reinterpret_cast<ID2D1DeviceContext*>(hdc);
         D2D1_BITMAP_PROPERTIES bp =
             D2D1::BitmapProperties(
