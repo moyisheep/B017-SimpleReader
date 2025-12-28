@@ -5,109 +5,88 @@
 #define NOMINMAX
 #define _USE_MATH_DEFINES
 #include "resource.h"
-#include <windows.h>
-#include <windowsx.h>   // 加这一行
 
-#include <mmsystem.h>
-
-#include <commctrl.h>
-#include <shellapi.h>
 #include <fstream>
 #include <sstream>
 #include <vector>
-#include <map>
-
 #include <cmath>
 #include <memory>
 #include <string>
 #include <future>
 #include <unordered_map>
 #include <algorithm>
-#include <miniz/miniz.h>
-#include <tinyxml2.h>
-#include <lunasvg/lunasvg.h>   
-using tinyxml2::XMLDocument;
-using tinyxml2::XMLElement;
-#include <litehtml.h>
-
-
-
-#include <objidl.h>
 #include <filesystem>
-#include <gdiplus.h>
-
-using namespace Gdiplus;
-
-#include <shlwapi.h>
 #include <regex>
-
-#include <sqlite3.h>
-#include <wininet.h>
-
-
-#include <gumbo.h>
 #include <unordered_set>
 #include <chrono>
 #include <thread>
 #include <set>
-#include <dwrite_3.h>
-#include <d2d1.h>
-#include <wrl/client.h>
-
 #include <codecvt>
 #include <locale>
-
-#include <d2d1_3.h>        // ID2D1DeviceContext / ID2D1Bitmap1
-
-#include <dwrite_1.h>   // 需要 IDWriteTextFormat1
-#include <d2d1_1.h>       // D2D 1.1
-#include <d3d11.h>        // D3D11
-#include <dxgi1_2.h>  // DXGI 1.2
-
-#include <wincodec.h>
-
-
 #include <cctype>
-
 #include <queue>
 #include <robuffer.h>   // IBufferByteAccess
 #include <new>
+#include <iostream>
+#include <numeric>
+#include <mutex>
+
+#include <wrl/client.h>
 #include <wrl.h>
 #include <wrl/implements.h>   // 关键
-#include <iostream>
+#include <windows.h>
+#include <windowsx.h>   // 加这一行
+#include <mmsystem.h>
+#include <commctrl.h>
+#include <shellapi.h>
+#include <shlwapi.h>
+#include <commdlg.h>   // OPENFILENAMEW, GetOpenFileNameW
+#include <shobjidl.h> // 包含任务对话框头文件
+#include <objidl.h>
+#include <Shlobj.h>      // SHGetKnownFolderPath
+#include <KnownFolders.h>
+#include <gdiplus.h>
+#include <wininet.h>
+#include <wincodec.h>
+#include <atomic>
+#include <condition_variable>
+#include <array>
+#include <shared_mutex>
+#include <cstdint>
+#include <cwctype>
+#include <functional>
+#include <cstring>
+#include <stack>
+
+#include <dwrite_3.h>
+#include <d2d1_3.h>        // ID2D1DeviceContext / ID2D1Bitmap1
+#include <d2d1_1.h>       // D2D 1.1
+#include <d3d11.h>        // D3D11
+#include <dxgi1_2.h>  // DXGI 1.2
+#include <d2d1.h>
+#include <d2d1helper.h>   // 保险起见，再带一次
+
+
+#include <miniz/miniz.h>
+#include <tinyxml2.h>
+#include <lunasvg/lunasvg.h>   
+
+#include <litehtml.h>
+#include <gumbo.h>
+#include <sqlite3.h>
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+#include <blake3.h>
+#include <boost/algorithm/string.hpp>
+
+using namespace Gdiplus;
+
 
 
 #ifndef HR
 #define HR(hr)  do { HRESULT _hr_ = (hr); if(FAILED(_hr_)) return 0; } while(0)
 #endif
 
-
-#include <atomic>
-
-
-#include <condition_variable>
-#include <array>
-#include <d2d1helper.h>   // 保险起见，再带一次
-#include <shared_mutex>
-#include <cstdint>
-#include <cwctype>
-
-#include <functional>
-
-#include <cstring>
-#include <stack>
-#include <blake3.h>
-#include <boost/algorithm/string.hpp>
-
-
-#include <Shlobj.h>      // SHGetKnownFolderPath
-#include <KnownFolders.h>
-#include <numeric>
-#include <commdlg.h>   // OPENFILENAMEW, GetOpenFileNameW
-#include <shobjidl.h> // 包含任务对话框头文件
-#include <mutex>
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
 
 #pragma comment(lib, "comdlg32.lib")
 #pragma comment(lib, "windowscodecs.lib")
@@ -181,7 +160,7 @@ using LineBoxes = std::vector<CharBox>;
 
 // ---------- 字体缓存 ----------
 struct FontPair {
-    ComPtr<IDWriteTextFormat> format;
+    ComPtr<IDWriteTextFormat2> format;
     litehtml::font_description descr;
     std::string familyName;
 };
@@ -320,7 +299,7 @@ private:
 struct FontCachePair 
 {
     std::string familyName;
-    ComPtr<IDWriteTextFormat> fmt;
+    ComPtr<IDWriteTextFormat2> fmt;
     ComPtr<IDWriteFont> font;
 };
 class FontCache {
@@ -348,7 +327,7 @@ private:
 
     std::unordered_map<std::string, FontCachePair*> m_map;
     mutable std::shared_mutex              m_mtx;
-    Microsoft::WRL::ComPtr<IDWriteFactory>   m_dw;
+    Microsoft::WRL::ComPtr<IDWriteFactory3>   m_dw;
     std::unordered_map<std::string, ComPtr<IDWriteFontCollection>> collCache;
     FileCollectionLoader* m_loader;
 
@@ -524,6 +503,16 @@ public:
     litehtml::pixel_t	get_default_font_size() const override;
     const char* get_default_font_name() const override;
 
+  
+
+    std::vector<std::string> get_font_alias(std::string fontName);
+
+    void InitDefaultFont();
+
+    bool AddPrivateFont(const wchar_t* path);
+
+    bool BuildFontCollection();
+
     litehtml::uint_ptr	create_font(const litehtml::font_description& descr, const litehtml::document* doc, litehtml::font_metrics* fm) override;
     litehtml::pixel_t	text_width(const char* text, litehtml::uint_ptr hFont) override;
     litehtml::pixel_t	pt_to_px(float pt) const override;
@@ -667,9 +656,9 @@ private:
     static std::wstring normalize_quotes(const std::wstring& src);
     ComPtr<ID2D1SolidColorBrush> getBrush(litehtml::uint_ptr hdc, const litehtml::web_color& c);
 
-    ComPtr<IDWriteTextLayout> getLayout(const std::string& txt,  litehtml::uint_ptr hFont, float maxW);
+    //ComPtr<IDWriteTextLayout> getLayout(const std::string& txt,  litehtml::uint_ptr hFont);
     ComPtr<ID2D1Bitmap> getBitmap(litehtml::uint_ptr hdc, std::string url);
-    void draw_decoration(litehtml::uint_ptr hdc, const FontPair* fp, litehtml::web_color color, const litehtml::position& pos, IDWriteTextLayout* layout);
+    //void draw_decoration(litehtml::uint_ptr hdc, const FontPair* fp, litehtml::web_color color, const litehtml::position& pos, IDWriteTextLayout* layout);
 
 
     std::unordered_map<uint32_t, ComPtr<ID2D1SolidColorBrush>> m_brushPool;
@@ -677,7 +666,7 @@ private:
     //LayoutCache m_layoutCache;
     std::unordered_map<std::string, Microsoft::WRL::ComPtr<IDWriteTextLayout>> m_layoutCache;
     std::unordered_map<std::string, float> m_textWidthCache;
-    ComPtr<IDWriteFactory>    m_dwrite;
+    ComPtr<IDWriteFactory3>    m_dwrite;
 
     ComPtr<IDWriteTextAnalyzer> m_analyzer;
 
@@ -691,7 +680,9 @@ private:
 
     float m_sel_delta = 0;
     std::vector<D2D1_RECT_F> m_sel_rects = {};
-
+    ComPtr<FileCollectionLoader> m_loader;
+    std::vector<ComPtr<IDWriteFontFile>> m_defaultFontFiles; // 存储所有字体文件
+    std::vector<ComPtr<IDWriteFontFile>> m_privateFontFiles; // 存储所有字体文件
 };
 
 
@@ -1088,5 +1079,47 @@ private:
     std::vector<data> m_map;
 };
 
+
+// 创建自定义字体加载器
+class CustomFontCollectionLoader : public IDWriteFontCollectionLoader
+{
+public:
+    // IUnknown接口
+    STDMETHOD_(ULONG, AddRef)() { return InterlockedIncrement(&refCount); }
+    STDMETHOD_(ULONG, Release)()
+    {
+        ULONG newCount = InterlockedDecrement(&refCount);
+        if (newCount == 0) delete this;
+        return newCount;
+    }
+
+    STDMETHOD(QueryInterface)(REFIID riid, void** ppvObject)
+    {
+        if (riid == __uuidof(IDWriteFontCollectionLoader) ||
+            riid == __uuidof(IUnknown))
+        {
+            *ppvObject = this;
+            AddRef();
+            return S_OK;
+        }
+        *ppvObject = nullptr;
+        return E_NOINTERFACE;
+    }
+
+    // IDWriteFontCollectionLoader接口
+    STDMETHOD(CreateEnumeratorFromKey)(
+        IDWriteFactory* factory,
+        const void* collectionKey,
+        UINT32 collectionKeySize,
+        IDWriteFontFileEnumerator** fontFileEnumerator)
+    {
+        // 实现字体文件枚举器
+        *fontFileEnumerator = nullptr;
+        return E_NOTIMPL;
+    }
+
+private:
+    ULONG refCount = 1;
+};
 
 bool IsMouseOverWindow(HWND hWnd);

@@ -89,6 +89,8 @@ public:
     std::string get_title();
     std::string get_author();
     std::string get_version();
+
+    std::vector<std::string> get_font_path();
  
     bool has_script();
     bool has_font();
@@ -113,6 +115,7 @@ private:
     std::string m_current_html_path = "";
     mz_zip_archive zip = {};
     std::map<std::string, std::vector<uint8_t>> m_cache;
+    std::vector<std::string> m_font_path = {};
 
 
     static std::string url_decode(const std::string& in);

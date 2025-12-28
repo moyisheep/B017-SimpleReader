@@ -2878,9 +2878,9 @@ int WINAPI wWinMain(HINSTANCE h, HINSTANCE, LPWSTR, int n)
     //// 3. 现在可以使用 printf
 
  
-    freopen("stdout.txt", "w", stdout);
-    freopen("stdout.txt", "w", stderr);
-    printf("Hello from Win32 Window!\n");
+    //freopen("stdout.txt", "w", stdout);
+    //freopen("stdout.txt", "w", stderr);
+    //printf("Hello from Win32 Window!\n");
     // ---------- 1. 解析命令行 ----------
     int argc = 0;
     std::wstring cmd = GetCommandLineW();
@@ -4180,7 +4180,6 @@ void PreprocessHTML(std::string& html)
 
 
 
-
  std::wstring SimpleContainer::normalize_quotes(const std::wstring& src)
 {
      //Timer timer("      normalize_quotes");
@@ -4217,63 +4216,119 @@ ComPtr<ID2D1SolidColorBrush> SimpleContainer::getBrush(litehtml::uint_ptr hdc, c
     return brush;
 }
 
+bool IsTextInFont_GDI(const std::wstring& fontName, const std::wstring& text) {
+    if (text.empty()) return true;
 
-ComPtr<IDWriteTextLayout> SimpleContainer::getLayout(const std::string& txt,
-    litehtml::uint_ptr hFont,
-    float maxW)
-{
-    Timer timer("    getLayout");
-    // 1. 先替换花引号
-    auto* fp = reinterpret_cast<FontPair*>(hFont);
-    if (!fp->format) { return nullptr; }
-    std::string key = txt + fp->descr.hash() + fp->familyName + std::to_string(maxW);
-    auto it = m_layoutCache.find(key);
-    if (it != m_layoutCache.end()) { return it->second; }
+    // 1. 准备设备上下文和字体
+    HDC hdc = CreateCompatibleDC(nullptr);
+    if (!hdc) return false;
 
-    std::wstring clean = normalize_quotes(a2w(txt));
+    LOGFONT lf = { 0 };
+    const size_t maxFontNameLength = sizeof(lf.lfFaceName) / sizeof(lf.lfFaceName[0]) - 1;
+    wcsncpy_s(lf.lfFaceName, fontName.c_str(), maxFontNameLength);
+    lf.lfCharSet = DEFAULT_CHARSET;
 
-
-    std::vector<std::string> faces;
-    if (!fp->descr.family.empty() && !g_cfg.enableCustomFont)
-    {
-        faces = split_font_list(fp->descr.family);
-    }
-    else
-    {
-        faces.push_back(g_cfg.font_name);
+    HFONT hFont = CreateFontIndirect(&lf);
+    if (!hFont) {
+        DeleteDC(hdc);
+        return false;
     }
 
-    // 默认字体兜底
+    HFONT oldFont = (HFONT)SelectObject(hdc, hFont);
 
-    faces.push_back(g_cfg.default_font_name);
-    FontCachePair* fcp;
-   for(auto& name: faces)
-   {
-       fcp = m_fontCache.get(name, fp->descr, m_systemFonts.Get());
-       if (!fcp->font || !fcp->fmt) { continue; }
-       BOOL exists = false;
-       for (auto& w: clean)
-       {
-           fcp->font->HasCharacter(w, &exists);
-           if (!exists) { break; }
-       }
-       if (exists) { break; }
-   }
-   if (!fcp->fmt) { return nullptr; }
-    ComPtr<IDWriteTextLayout> layout = nullptr;
-   HRESULT hr = m_dwrite->CreateTextLayout(clean.c_str(), (UINT32)clean.size(),
-        fp->format.Get(), maxW, 512.f, &layout);
-   if (FAILED(hr))
-   {
-       OutputDebugStringA("[getLayout] failed to create layout");
-   }
-    if (!layout) return nullptr;
-  
+    // 2. 批量检测（最多每次检测65535个字符）
+    const size_t batchSize = 65535;
+    bool allExist = true;
+    std::vector<WORD> glyphIndices(batchSize);
 
-    m_layoutCache.emplace(key, layout);
+    for (size_t i = 0; i < text.length(); i += batchSize) {
+        size_t chunkSize = std::min(batchSize, text.length() - i);
 
-    return layout;
+        // 批量获取字形索引
+        if (GetGlyphIndices(hdc,
+            &text[i],
+            static_cast<UINT>(chunkSize),
+            glyphIndices.data(),
+            GGI_MARK_NONEXISTING_GLYPHS) == GDI_ERROR) {
+            allExist = false;
+            break;
+        }
+
+        // 检查所有字形是否存在
+        for (size_t j = 0; j < chunkSize; ++j) {
+            if (glyphIndices[j] == 0xFFFF) {
+                allExist = false;
+                break;
+            }
+        }
+
+        if (!allExist) break;
+    }
+
+    // 3. 清理资源
+    SelectObject(hdc, oldFont);
+    DeleteObject(hFont);
+    DeleteDC(hdc);
+
+    return allExist;
 }
+//ComPtr<IDWriteTextLayout> SimpleContainer::getLayout(const std::string& txt,
+//    litehtml::uint_ptr hFont)
+//{
+//    Timer timer("    getLayout");
+//    // 1. 先替换花引号
+//    auto* fp = reinterpret_cast<FontPair*>(hFont);
+//    if (!fp->format) { return nullptr; }
+//    std::string key = txt + fp->descr.hash() + fp->familyName ;
+//    auto it = m_layoutCache.find(key);
+//    if (it != m_layoutCache.end()) { return it->second; }
+//
+//    std::wstring clean = normalize_quotes(a2w(txt));
+//
+//    std::vector<std::string> faces;
+//
+//    if (!fp->descr.family.empty() && !g_cfg.enableCustomFont)
+//    {
+//        faces = split_font_list(fp->descr.family);
+//    }
+//    else
+//    {
+//        faces.push_back(g_cfg.font_name);
+//    }
+//
+//    // 默认字体兜底
+//
+//    faces.push_back(g_cfg.default_font_name);
+//
+//    FontCachePair* fcp;
+//   for(auto& name: faces)
+//   {
+//
+//       fcp = m_fontCache.get(name, fp->descr, m_systemFonts.Get());
+//       if (!fcp->font || !fcp->fmt) { continue; }
+//       BOOL exists = false;
+//       for (auto& w: clean)
+//       {
+//           fcp->font->HasCharacter(w, &exists);
+//           if (!exists) { break; }
+//       }
+//       if (exists) { break; }
+//   }
+//   if (!fcp->fmt) { return nullptr; }
+//   IDWriteTextLayout* layout = nullptr;
+//   HRESULT hr = m_dwrite->CreateTextLayout(clean.c_str(), (UINT32)clean.size(),
+//        fp->format.Get(), 8192.f, 512.f, &layout);
+//   if (FAILED(hr))
+//   {
+//       OutputDebugStringA("[getLayout] failed to create layout");
+//   }
+//    if (!layout) return nullptr;
+//  
+//   
+//    m_layoutCache.emplace(key, layout);
+//    
+//    return layout;
+//}
 
 
 void SimpleContainer::record_char_boxes(
@@ -4374,8 +4429,8 @@ void SimpleContainer::draw_text(litehtml::uint_ptr hdc,
     Timer t("  draw_text");
     if (!text || !*text || !hFont) return;
     auto* rt = reinterpret_cast<ID2D1DeviceContext*>(hdc);
-    FontPair* fp = reinterpret_cast<FontPair*>(hFont);
-    if (!fp) return;
+    auto* textFormat = reinterpret_cast<IDWriteTextFormat*>(hFont);
+    if (!textFormat) return;
 
     // 1. 画刷
     //std::unique_ptr<Timer> timer = std::make_unique<Timer> ("    [getBrush]");
@@ -4385,86 +4440,90 @@ void SimpleContainer::draw_text(litehtml::uint_ptr hdc,
     // 2. 文本
 
     std::wstring wtxt = a2w(text);
-    float maxW = 8192.0f;
+  
     //timer = std::make_unique<Timer>("    [getLayout]");
-    auto layout = getLayout(text,  hFont, maxW);
+    //auto layout = getLayout(text,  hFont);
     //timer.reset();
-   
-    if (!layout) return;
+    ComPtr<IDWriteTextLayout> layout;
+    HRESULT hr = m_dwrite->CreateTextLayout(wtxt.c_str(),
+        (UINT32)wtxt.size(),
+        textFormat, 8192.f, 512.f, &layout);
+    if (FAILED(hr)) return;
     //timer = std::make_unique<Timer>("    [record_char_boxes]");
-    record_char_boxes( layout, wtxt, GetMainFontNameFromTextLayout(layout), pos);
+  
     //timer.reset();
     // 3. 绘制文本
     //timer = std::make_unique<Timer>("    [DrawTextLayout]");
     rt->DrawTextLayout(D2D1::Point2F(static_cast<float>(pos.x),
         static_cast<float>(pos.y)),
         layout.Get(), brush.Get(), D2D1_DRAW_TEXT_OPTIONS_NO_SNAP);
+    record_char_boxes(layout, wtxt, GetMainFontNameFromTextLayout(layout), pos);
    //timer.reset();
 
     // 4. 绘制装饰线（下划线 / 删除线 / 上划线）
     //timer = std::make_unique<Timer>("    [draw_decoration]");
-    draw_decoration(hdc, fp, color, pos, layout.Get());
+    //draw_decoration(hdc, fp, color, pos, layout.Get());
     //timer.reset();
 }
-void SimpleContainer::draw_decoration(litehtml::uint_ptr hdc, const FontPair* fp,
-    litehtml::web_color color,
-    const litehtml::position& pos,
-    IDWriteTextLayout* layout)
-{
-    Timer timer("    draw_decoration");
-    if (fp->descr.decoration_line == litehtml::text_decoration_line_none)
-        return;
-    auto* rt = reinterpret_cast<ID2D1DeviceContext*>(hdc);
-    /* 1. 文本整体尺寸 */
-    DWRITE_TEXT_METRICS tm{};
-    layout->GetMetrics(&tm);
-    if (tm.width <= 0) return;
-
-    /* 2. 取第一行的 baseline */
-    std::vector<DWRITE_LINE_METRICS> lineMetrics;
-    UINT32 lineCount = 0;
-    layout->GetLineMetrics(nullptr, 0, &lineCount);
-    if (lineCount == 0) return;
-    lineMetrics.resize(lineCount);
-    layout->GetLineMetrics(lineMetrics.data(), lineCount, &lineCount);
-
-    const float baseline = lineMetrics[0].baseline;
-    const float yBase = static_cast<float>(pos.y) + baseline;
-
-    /* 3. 画刷 */
-    auto brush = getBrush(hdc, fp->descr.decoration_color.is_current_color
-        ? color
-        : fp->descr.decoration_color);
-    if (!brush) return;
-
-    /* 4. 线粗：先用 1 px，后续可按 decoration_thickness 计算 */
-    const float thick = fp->descr.decoration_thickness.val();
-
-    /* 5. 绘制三种装饰线 */
-    const float x0 = static_cast<float>(pos.x);
-    const float x1 = x0 + tm.width;
-
-    /* 下划线 */
-    if (fp->descr.decoration_line & litehtml::text_decoration_line_underline)
-    {
-        const float y = yBase + 1.0f;   // 可根据字体度量再微调
-        rt->DrawLine({ x0, y }, { x1, y }, brush.Get(), thick);
-    }
-
-    /* 删除线 */
-    if (fp->descr.decoration_line & litehtml::text_decoration_line_line_through)
-    {
-        const float y = yBase - lineMetrics[0].height * 0.35f;
-        rt->DrawLine({ x0, y }, { x1, y }, brush.Get(), thick);
-    }
-
-    /* 上划线 */
-    if (fp->descr.decoration_line & litehtml::text_decoration_line_overline)
-    {
-        const float y = yBase - lineMetrics[0].height;
-        rt->DrawLine({ x0, y }, { x1, y }, brush.Get(), thick);
-    }
-}
+//void SimpleContainer::draw_decoration(litehtml::uint_ptr hdc, const FontPair* fp,
+//    litehtml::web_color color,
+//    const litehtml::position& pos,
+//    IDWriteTextLayout* layout)
+//{
+//    Timer timer("    draw_decoration");
+//    if (fp->descr.decoration_line == litehtml::text_decoration_line_none)
+//        return;
+//    auto* rt = reinterpret_cast<ID2D1DeviceContext*>(hdc);
+//    /* 1. 文本整体尺寸 */
+//    DWRITE_TEXT_METRICS tm{};
+//    layout->GetMetrics(&tm);
+//    if (tm.width <= 0) return;
+//
+//    /* 2. 取第一行的 baseline */
+//    std::vector<DWRITE_LINE_METRICS> lineMetrics;
+//    UINT32 lineCount = 0;
+//    layout->GetLineMetrics(nullptr, 0, &lineCount);
+//    if (lineCount == 0) return;
+//    lineMetrics.resize(lineCount);
+//    layout->GetLineMetrics(lineMetrics.data(), lineCount, &lineCount);
+//
+//    const float baseline = lineMetrics[0].baseline;
+//    const float yBase = static_cast<float>(pos.y) + baseline;
+//
+//    /* 3. 画刷 */
+//    auto brush = getBrush(hdc, fp->descr.decoration_color.is_current_color
+//        ? color
+//        : fp->descr.decoration_color);
+//    if (!brush) return;
+//
+//    /* 4. 线粗：先用 1 px，后续可按 decoration_thickness 计算 */
+//    const float thick = fp->descr.decoration_thickness.val();
+//
+//    /* 5. 绘制三种装饰线 */
+//    const float x0 = static_cast<float>(pos.x);
+//    const float x1 = x0 + tm.width;
+//
+//    /* 下划线 */
+//    if (fp->descr.decoration_line & litehtml::text_decoration_line_underline)
+//    {
+//        const float y = yBase + 1.0f;   // 可根据字体度量再微调
+//        rt->DrawLine({ x0, y }, { x1, y }, brush.Get(), thick);
+//    }
+//
+//    /* 删除线 */
+//    if (fp->descr.decoration_line & litehtml::text_decoration_line_line_through)
+//    {
+//        const float y = yBase - lineMetrics[0].height * 0.35f;
+//        rt->DrawLine({ x0, y }, { x1, y }, brush.Get(), thick);
+//    }
+//
+//    /* 上划线 */
+//    if (fp->descr.decoration_line & litehtml::text_decoration_line_overline)
+//    {
+//        const float y = yBase - lineMetrics[0].height;
+//        rt->DrawLine({ x0, y }, { x1, y }, brush.Get(), thick);
+//    }
+//}
 // ----------------------------------------------------------
 // 工具：根据 box 类型返回实际矩形
 // ----------------------------------------------------------
@@ -5191,8 +5250,38 @@ std::wstring  SimpleContainer::toLower(std::wstring s)
 
 
 
+//std::vector<std::string>
+//SimpleContainer::split_font_list(const std::string& src) 
+//{
+//    //Timer timer("      split_font_list");
+//    std::vector<std::string> out;
+//    std::string token;
+//    for (size_t i = 0, n = src.size(); i < n; ++i)
+//    {
+//        if (src[i] == ',')
+//        {
+//            token = trim_any(token);
+//            if (!token.empty()) {
+//                out.emplace_back(token);
+//                token.clear();
+//            }
+//        }
+//        else
+//        {
+//            token += src[i];
+//        }
+//    }
+//    token = trim_any(token);
+//    if (!token.empty())
+//    {
+//        out.emplace_back(token);
+//    }
+//    return out;
+//};
+
+
 std::vector<std::string>
-SimpleContainer::split_font_list(const std::string& src) 
+SimpleContainer::split_font_list(const std::string& src)
 {
     //Timer timer("      split_font_list");
     std::vector<std::string> out;
@@ -5203,7 +5292,8 @@ SimpleContainer::split_font_list(const std::string& src)
         {
             token = trim_any(token);
             if (!token.empty()) {
-                out.emplace_back(token);
+                auto fonAlias = get_font_alias(token);
+                out.insert(out.end(), fonAlias.begin(), fonAlias.end());
                 token.clear();
             }
         }
@@ -5215,13 +5305,252 @@ SimpleContainer::split_font_list(const std::string& src)
     token = trim_any(token);
     if (!token.empty())
     {
-        out.emplace_back(token);
+        auto fonAlias = get_font_alias(token);
+        out.insert(out.end(), fonAlias.begin(), fonAlias.end());
     }
     return out;
 };
 
+std::vector<std::string> SimpleContainer::get_font_alias(std::string fontName)
+{
+    std::vector<std::string> fontAlias{ fontName };
+    if (g_book && g_cfg.enableEPUBFonts)
+    {
+            for (const auto& kv : g_book->m_fontBin)
+                if (kv.first.family == fontName)
+                {
+                    fontAlias.insert(fontAlias.end(), kv.second.begin(), kv.second.end());
+                    break;
+                }
+                    
+    }
+    return fontAlias;
+}
+void SimpleContainer::InitDefaultFont()
+{
+    const std::vector<std::wstring> SystemReadingFontPaths = {
+        // 1. 微软雅黑 - 中英文屏幕显示效果俱佳
+        L"C:\\Windows\\Fonts\\msyh.ttc",           // 微软雅黑常规
+        L"C:\\Windows\\Fonts\\msyhbd.ttc",         // 微软雅黑粗体
+        L"C:\\Windows\\Fonts\\msyhl.ttc",          // 微软雅黑细体
 
+        // 2. Segoe UI系列 - Windows系统UI字体，屏幕阅读友好
+        L"C:\\Windows\\Fonts\\segoeui.ttf",         // Segoe UI常规
+        L"C:\\Windows\\Fonts\\segoeuib.ttf",        // Segoe UI粗体
+        L"C:\\Windows\\Fonts\\segoeuii.ttf",        // Segoe UI斜体
+        L"C:\\Windows\\Fonts\\segoeuiz.ttf",        // Segoe UI可变字体
+        L"C:\\Windows\\Fonts\\seguisym.ttf",        // Segoe UI符号
 
+        // 3. 衬线字体（适合打印和电子书阅读）
+        L"C:\\Windows\\Fonts\\times.ttf",           // Times New Roman（经典衬线）
+        L"C:\\Windows\\Fonts\\timesbd.ttf",         // Times New Roman粗体
+        L"C:\\Windows\\Fonts\\timesbi.ttf",         // Times New Roman粗斜体
+        L"C:\\Windows\\Fonts\\timesi.ttf",          // Times New Roman斜体
+
+        L"C:\\Windows\\Fonts\\cambria.ttc",         // Cambria（Office默认衬线）
+        L"C:\\Windows\\Fonts\\cambriab.ttf",        // Cambria粗体
+        L"C:\\Windows\\Fonts\\cambriai.ttf",        // Cambria斜体
+        L"C:\\Windows\\Fonts\\cambriaz.ttf",        // Cambria可变字体
+
+  
+        L"C:\\Windows\\Fonts\\constanb.ttf",        // Constantia粗体
+        L"C:\\Windows\\Fonts\\constani.ttf",        // Constantia斜体
+
+        // 4. 无衬线字体（现代屏幕阅读）
+        L"C:\\Windows\\Fonts\\arial.ttf",           // Arial（经典无衬线）
+        L"C:\\Windows\\Fonts\\arialbd.ttf",         // Arial粗体
+        L"C:\\Windows\\Fonts\\arialbi.ttf",         // Arial粗斜体
+        L"C:\\Windows\\Fonts\\ariali.ttf",          // Arial斜体
+
+        L"C:\\Windows\\Fonts\\calibri.ttf",         // Calibri（Office默认）
+        L"C:\\Windows\\Fonts\\calibrib.ttf",        // Calibri粗体
+        L"C:\\Windows\\Fonts\\calibrii.ttf",        // Calibri斜体
+        L"C:\\Windows\\Fonts\\calibriz.ttf",        // Calibri可变字体
+
+        L"C:\\Windows\\Fonts\\verdana.ttf",         // Verdana（高可读性）
+        L"C:\\Windows\\Fonts\\verdanab.ttf",        // Verdana粗体
+        L"C:\\Windows\\Fonts\\verdanai.ttf",        // Verdana斜体
+        L"C:\\Windows\\Fonts\\verdanaz.ttf",        // Verdana可变字体
+
+        // 5. 等宽字体（代码和技术文档）
+        L"C:\\Windows\\Fonts\\consola.ttf",         // Consolas（编程字体）
+        L"C:\\Windows\\Fonts\\consolab.ttf",        // Consolas粗体
+        L"C:\\Windows\\Fonts\\consolai.ttf",        // Consolas斜体
+        L"C:\\Windows\\Fonts\\consolaz.ttf",        // Consolas可变字体
+
+        L"C:\\Windows\\Fonts\\cour.ttf",            // Courier New（经典等宽）
+        L"C:\\Windows\\Fonts\\courbd.ttf",          // Courier New粗体
+        L"C:\\Windows\\Fonts\\courbi.ttf",          // Courier New粗斜体
+        L"C:\\Windows\\Fonts\\couri.ttf",           // Courier New斜体
+
+        // 6. 现代字体（Windows 10/11新增）
+
+        L"C:\\Windows\\Fonts\\CascadiaCode.ttf",    // Cascadia Code（新编程字体）
+        L"C:\\Windows\\Fonts\\CascadiaMono.ttf",    // Cascadia Mono
+    };
+    for (auto& name: SystemReadingFontPaths)
+    {
+        ComPtr<IDWriteFontFile> file;
+        if (FAILED(m_dwrite->CreateFontFileReference(name.c_str(), nullptr, &file)))
+             continue;
+        BOOL isSupported = FALSE;
+        DWRITE_FONT_FILE_TYPE fileType = DWRITE_FONT_FILE_TYPE_UNKNOWN;
+        DWRITE_FONT_FACE_TYPE faceType = DWRITE_FONT_FACE_TYPE_UNKNOWN;
+        UINT32  faceCount = 0;
+        if (FAILED(file->Analyze(
+            &isSupported,
+            &fileType,
+            &faceType,
+            &faceCount)) || !isSupported || faceCount < 1)
+        {
+            continue;
+        }
+        m_defaultFontFiles.push_back(file);
+
+        //std::wstring wtxt = L" 加载系统字体成功：" + name + L"\n";
+        //OutputDebugStringW(wtxt.c_str());
+    }
+    BuildFontCollection();
+}
+
+bool SimpleContainer::AddPrivateFont(const wchar_t* path)
+{
+    ComPtr<IDWriteFontFile> file;
+    if (FAILED(m_dwrite->CreateFontFileReference(path, nullptr, &file)))
+        return false;
+    BOOL isSupported = FALSE;
+    DWRITE_FONT_FILE_TYPE fileType = DWRITE_FONT_FILE_TYPE_UNKNOWN;
+    DWRITE_FONT_FACE_TYPE faceType = DWRITE_FONT_FACE_TYPE_UNKNOWN;
+    UINT32  faceCount = 0;
+    if (FAILED(file->Analyze(
+        &isSupported,
+        &fileType,
+        &faceType,
+        &faceCount)) || !isSupported || faceCount < 1)
+    {
+        return false;
+    }
+    // 用系统自带的“文件集合加载器”
+   
+    m_privateFontFiles.push_back(file);
+
+    return true;
+}
+bool SimpleContainer::BuildFontCollection()
+{
+    if (m_privateFontFiles.empty() && m_defaultFontFiles.empty())
+        return false;
+
+    // 将字体文件指针数组传递给创建函数
+    std::vector<IDWriteFontFile*> rawFiles;
+    for (auto& file : m_privateFontFiles)
+    {
+        rawFiles.push_back(file.Get());
+    }
+    for (auto& file : m_defaultFontFiles)
+    {
+        rawFiles.push_back(file.Get());
+    }
+
+    // 创建字体集合
+    HRESULT hr = m_dwrite->CreateCustomFontCollection(
+        m_loader.Get(),  // 使用默认加载器
+        rawFiles.data(),
+        static_cast<UINT32>(rawFiles.size()),
+        &m_privateFonts);
+
+    return SUCCEEDED(hr);
+}
+
+void PrintFontCollectionFontNames(IDWriteFontCollection* fontCollection)
+{
+    if (!fontCollection)
+    {
+        std::wcout << L"Font collection is null" << std::endl;
+        return;
+    }
+
+    UINT32 familyCount = fontCollection->GetFontFamilyCount();
+    std::wcout << L"Font families in collection: " << familyCount << std::endl << std::endl;
+
+    for (UINT32 familyIndex = 0; familyIndex < familyCount; familyIndex++)
+    {
+        IDWriteFontFamily* family = nullptr;
+        HRESULT hr = fontCollection->GetFontFamily(familyIndex, &family);
+        if (FAILED(hr)) continue;
+
+        // Get family name
+        IDWriteLocalizedStrings* names = nullptr;
+        hr = family->GetFamilyNames(&names);
+        if (SUCCEEDED(hr))
+        {
+            UINT32 nameCount = names->GetCount();
+            for (UINT32 nameIndex = 0; nameIndex < nameCount; nameIndex++)
+            {
+                wchar_t nameBuffer[100];
+                UINT32 length = 0;
+                names->GetStringLength(nameIndex, &length);
+                if (length < 100)
+                {
+                    names->GetString(nameIndex, nameBuffer, length + 1);
+                    std::wcout << L"[" << familyIndex << L"] " << nameBuffer << L" ";
+                }
+            }
+            names->Release();
+        }
+        else
+        {
+            std::wcout << L"[" << familyIndex << L"] <Unknown> ";
+        }
+
+        // Get font count in this family
+        UINT32 fontCount = family->GetFontCount();
+        std::wcout << L"(" << fontCount << L" fonts)" << std::endl;
+
+        // Print each font in this family
+        for (UINT32 fontIndex = 0; fontIndex < fontCount; fontIndex++)
+        {
+            IDWriteFont* font = nullptr;
+            hr = family->GetFont(fontIndex, &font);
+            if (SUCCEEDED(hr))
+            {
+                // Get weight
+                DWRITE_FONT_WEIGHT weight = font->GetWeight();
+                const wchar_t* weightName = L"Normal";
+                if (weight < 400) weightName = L"Light";
+                else if (weight > 400) weightName = L"Bold";
+                else if (weight == 400) weightName = L"Normal";
+                else if (weight == 700) weightName = L"Bold";
+
+                // Get style
+                DWRITE_FONT_STYLE style = font->GetStyle();
+                const wchar_t* styleName = L"Normal";
+                if (style == DWRITE_FONT_STYLE_NORMAL) styleName = L"Normal";
+                else if (style == DWRITE_FONT_STYLE_ITALIC) styleName = L"Italic";
+                else if (style == DWRITE_FONT_STYLE_OBLIQUE) styleName = L"Oblique";
+
+                // Get stretch
+                DWRITE_FONT_STRETCH stretch = font->GetStretch();
+                const wchar_t* stretchName = L"Normal";
+                if (stretch == DWRITE_FONT_STRETCH_NORMAL) stretchName = L"Normal";
+                else if (stretch < DWRITE_FONT_STRETCH_NORMAL) stretchName = L"Condensed";
+                else if (stretch > DWRITE_FONT_STRETCH_NORMAL) stretchName = L"Expanded";
+
+                std::wcout << L"  [" << fontIndex << L"] "
+                    << weightName << L" "
+                    << styleName << L" "
+                    << stretchName
+                    << L" (Weight: " << weight
+                    << L", Stretch: " << stretch << L")" << std::endl;
+
+                font->Release();
+            }
+        }
+
+        family->Release();
+        std::wcout << std::endl;
+    }
+}
 litehtml::uint_ptr SimpleContainer::create_font(const litehtml::font_description& descr,
     const litehtml::document* doc,
     litehtml::font_metrics* fm)
@@ -5243,27 +5572,54 @@ litehtml::uint_ptr SimpleContainer::create_font(const litehtml::font_description
     }
 
     // 默认字体兜底
-    
+
     faces.push_back(g_cfg.default_font_name);
-    std::string family_name = "";
+    //PrintFontCollectionFontNames(m_privateFonts.Get());
+
+    // 2. 从文本格式获取字体
 
 
-    FontCachePair* fcp;
-    for (auto f : faces)
+
+    std::wstring familyName = L"";
+    UINT32 familyIndex = 0;
+    BOOL exists = FALSE;
+    for (auto& name: faces)
     {
-        family_name = f;
-        fcp = m_fontCache.get(f, descr, m_systemFonts.Get());
-        if (fcp->fmt)break;
+        //std::wstring wtxt = familyName + L" ";
+        //OutputDebugStringW(wtxt.c_str());
+        familyName = a2w(name);
+        m_privateFonts->FindFamilyName(familyName.c_str(), &familyIndex, &exists);
+        if (exists) break;
+
+       
+
     }
-    if (!fcp->fmt) {
-        OutputDebugStringW(L"[DWrite] 加载默认字体失败\n");
-        return 0;
-    }
-  
+    //OutputDebugStringW(L"\n");
+    if (!exists) return 0;
+
+    // 3. 获取字体族和字体
+    Microsoft::WRL::ComPtr<IDWriteFontFamily> fontFamilyObj;
+    m_privateFonts->GetFontFamily(familyIndex, &fontFamilyObj);
+
+    Microsoft::WRL::ComPtr<IDWriteFont> font;
+    fontFamilyObj->GetFirstMatchingFont(
+        static_cast<DWRITE_FONT_WEIGHT>(descr.weight),
+        DWRITE_FONT_STRETCH_NORMAL,
+        descr.style ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL,
+        &font);
+
+
+    IDWriteTextFormat* textFormat;
+    m_dwrite->CreateTextFormat(
+        familyName.c_str(), m_privateFonts.Get(),
+        static_cast<DWRITE_FONT_WEIGHT>(descr.weight),
+        descr.style ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL,
+        DWRITE_FONT_STRETCH_NORMAL,
+        static_cast<float>(descr.size), L"", &textFormat);
 
 
     DWRITE_FONT_METRICS m{};
-    fcp->font->GetMetrics(&m);
+    font->GetMetrics(&m);
     const float dip = descr.size / static_cast<float>(m.designUnitsPerEm);
 
     fm->font_size = descr.size;
@@ -5280,48 +5636,143 @@ litehtml::uint_ptr SimpleContainer::create_font(const litehtml::font_description
 
 
 
-    return reinterpret_cast<litehtml::uint_ptr>(new FontPair(fcp->fmt, descr, fcp->familyName));
+    return reinterpret_cast<litehtml::uint_ptr>(textFormat);
 }
+
+//litehtml::uint_ptr SimpleContainer::create_font(const litehtml::font_description& descr,
+//    const litehtml::document* doc,
+//    litehtml::font_metrics* fm)
+//{
+//    Timer t("  create_font");
+//    if (!m_dwrite || !fm) return 0;
+//
+//    /*----------------------------------------------------------
+//      1. 把 font-family 字符串拆成单个字体名
+//    ----------------------------------------------------------*/
+//    std::vector<std::string> faces;
+//    if (!descr.family.empty() && !g_cfg.enableCustomFont)
+//    {
+//        faces = split_font_list(descr.family);
+//    }
+//    else
+//    {
+//        faces.push_back(g_cfg.font_name);
+//    }
+//
+//    // 默认字体兜底
+//    
+//    faces.push_back(g_cfg.default_font_name);
+//    std::string family_name = "";
+//
+//
+//    FontCachePair* fcp;
+//    for (auto f : faces)
+//    {
+//        family_name = f;
+//        fcp = m_fontCache.get(f, descr, m_systemFonts.Get());
+//        if (fcp->fmt)break;
+//    }
+//    if (!fcp->fmt) {
+//        OutputDebugStringW(L"[DWrite] 加载默认字体失败\n");
+//        return 0;
+//    }
+//  
+//
+//
+//    DWRITE_FONT_METRICS m{};
+//    fcp->font->GetMetrics(&m);
+//    const float dip = descr.size / static_cast<float>(m.designUnitsPerEm);
+//
+//    fm->font_size = descr.size;
+//    fm->ascent = m.ascent * dip;
+//    fm->descent = m.descent * dip;
+//    fm->height = (m.ascent + m.descent + m.lineGap) * dip;
+//    fm->x_height = m.xHeight * dip;
+//    fm->draw_spaces = true;
+//    //fm->draw_spaces = descr.style == litehtml::font_style_italic || descr.decoration_line != litehtml::text_decoration_line_none;
+//    fm->ch_width = fm->font_size * 3 / 5;
+//    fm->sub_shift = descr.size / 5;
+//    fm->super_shift = descr.size / 3;
+//
+//
+//
+//
+//    return reinterpret_cast<litehtml::uint_ptr>(new FontPair(fcp->fmt, descr, fcp->familyName));
+//}
 
 void SimpleContainer::delete_font(litehtml::uint_ptr h)
 {
     Timer t("  delete_font");
     if (!h) return;
 
-    //auto* fp = reinterpret_cast<FontPair*>(h);
-    //fp->format->Release();
-    //delete fp;              // 4. 真正释放
+    auto textFormat = reinterpret_cast<IDWriteTextFormat*>(h);
+    if (textFormat) { textFormat->Release(); }
 }
+
 
 litehtml::pixel_t SimpleContainer::text_width(const char* text,
     litehtml::uint_ptr hFont)
 {
     Timer t("  text_width");
     if (!text || !*text || !hFont) return 0;
-    auto* fp = reinterpret_cast<FontPair*>(hFont);
+    auto* textFormat = reinterpret_cast<IDWriteTextFormat*>(hFont);
 
-    std::string key = std::string(text) + fp->familyName + fp->descr.hash();
-    auto it  = m_textWidthCache.find(key);
-    if (it != m_textWidthCache.end()) { return it->second; }
+    //std::string key = std::string(text) + std::to_string(hFont);
+    //auto it = m_textWidthCache.find(key);
+    //if (it != m_textWidthCache.end()) { return it->second; }
+
     // 1. 创建 TextLayout
- 
-    float maxW = 8192.0f;
-    auto layout = getLayout(text, hFont, maxW);
-    if (!layout) { return 0; }
+    ComPtr<IDWriteTextLayout> layout;
+    std::wstring wtxt = a2w(text);
+    HRESULT hr = m_dwrite->CreateTextLayout(wtxt.c_str(), (UINT32)wtxt.size(),
+        textFormat, 8192.f, 512.f, &layout);
+
+
+    if (FAILED(hr) ) { return 0; }
 
 
     // 3. 取逻辑宽度（已含空白、连字、kerning）
     DWRITE_TEXT_METRICS tm{};
-    HRESULT hr = layout->GetMetrics(&tm);
+     hr = layout->GetMetrics(&tm);
     if (FAILED(hr)) { return 0; }
 
- 
+
     // 4. DPI → 物理像素（Win7 也支持）
-         
     float physical = tm.widthIncludingTrailingWhitespace * m_dpi_x / 96.0f;
-    m_textWidthCache.emplace( key , physical);
+    //m_textWidthCache.emplace(key, physical);
     return physical;
 }
+
+
+//litehtml::pixel_t SimpleContainer::text_width(const char* text,
+//    litehtml::uint_ptr hFont)
+//{
+//    Timer t("  text_width");
+//    if (!text || !*text || !hFont) return 0;
+//    auto* fp = reinterpret_cast<FontPair*>(hFont);
+//
+//    std::string key = std::string(text) + fp->familyName + fp->descr.hash();
+//    auto it  = m_textWidthCache.find(key);
+//    if (it != m_textWidthCache.end()) { return it->second; }
+//    // 1. 创建 TextLayout
+// 
+//  
+//    auto layout = getLayout(text, hFont);
+//    if (!layout) { return 0; }
+//
+//
+//    // 3. 取逻辑宽度（已含空白、连字、kerning）
+//    DWRITE_TEXT_METRICS tm{};
+//    HRESULT hr = layout->GetMetrics(&tm);
+//    if (FAILED(hr)) { return 0; }
+//
+// 
+//    // 4. DPI → 物理像素（Win7 也支持）
+//         
+//    float physical = tm.widthIncludingTrailingWhitespace * m_dpi_x / 96.0f;
+//    m_textWidthCache.emplace( key , physical);
+//    return physical;
+//}
 
 
 void SimpleContainer::build_rounded_rect_path(
@@ -6256,10 +6707,10 @@ SimpleContainer::SimpleContainer(int w, int h, HWND hwnd):
     
 
     /* 4) DirectWrite 工厂 */
-    IDWriteFactory* pRaw = nullptr;
+    IDWriteFactory3* pRaw = nullptr;
     hr = DWriteCreateFactory(
         DWRITE_FACTORY_TYPE_SHARED,
-        __uuidof(IDWriteFactory),
+        __uuidof(IDWriteFactory3),
         reinterpret_cast<IUnknown**>(&pRaw));   // OK
     m_dwrite.Attach(pRaw);   // 把裸指针交给 ComPtr 管理
     if (FAILED(hr)) {
@@ -6267,12 +6718,15 @@ SimpleContainer::SimpleContainer(int w, int h, HWND hwnd):
         return;
     }
     m_dwrite->CreateTextAnalyzer(&m_analyzer);
+    m_loader = new FileCollectionLoader();
+    m_dwrite->RegisterFontCollectionLoader(m_loader.Get());
     /* 5) 系统字体集合 */
     hr = m_dwrite->GetSystemFontCollection(&m_systemFonts, FALSE);
     if (FAILED(hr)) {
         OutputDebugStringA("GetSystemFontCollection failed\n");
     }
     BuildFontList();
+    InitDefaultFont();
   
 }
 
@@ -6339,7 +6793,8 @@ void SimpleContainer::clear()
     m_d2dBmpCache.clear();
     m_anchor_map.clear();
     m_doc.reset();
-    m_privateFonts.Reset();
+    m_privateFontFiles.clear();
+    //m_privateFonts.Reset();
 
     m_clipStack.clear();
     m_fontCache.clear();
@@ -6365,7 +6820,7 @@ const char* SimpleContainer::get_default_font_name() const
 FontCache::FontCache() {
     DWriteCreateFactory(
         DWRITE_FACTORY_TYPE_SHARED,
-        __uuidof(IDWriteFactory),
+        __uuidof(IDWriteFactory3),
         reinterpret_cast<IUnknown**>(m_dw.GetAddressOf()));   // 
     m_loader = new FileCollectionLoader();
     m_dw->RegisterFontCollectionLoader(m_loader);
@@ -6493,15 +6948,26 @@ FontCache::CreatePrivateCollectionFromFile(IDWriteFactory* dw, const wchar_t* pa
              }
             if (!realName[0]) { continue; }
             ComPtr<IDWriteTextFormat> fmt;
-            if (SUCCEEDED(m_dw->CreateTextFormat(
+            HRESULT hr = m_dw->CreateTextFormat(
                 realName,
                 coll.Get(),
                 static_cast<DWRITE_FONT_WEIGHT>(descr.weight),
                 descr.style ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL,
                 DWRITE_FONT_STRETCH_NORMAL,
-                static_cast<float>(descr.size), L"en-us", &fmt)))
-            return new FontCachePair{ familyName,  fmt, font };
+                static_cast<float>(descr.size), L"en-us", &fmt);
 
+            ComPtr<IDWriteTextFormat2> fmt2;
+            if (SUCCEEDED(hr)) {
+                fmt.As(&fmt2); // 安全转换
+                fmt2->SetFontFallback(nullptr);
+                return new FontCachePair{ familyName,  fmt2, font };
+            }
+                
+                
+            
+               
+      
+            
          }
      }
 
@@ -6517,25 +6983,33 @@ FontCache::CreatePrivateCollectionFromFile(IDWriteFactory* dw, const wchar_t* pa
              if (!exists) continue;
 
              ComPtr<IDWriteFontFamily> family;
-             if (FAILED(sysColl->GetFontFamily(index, &family))) continue;
+             HRESULT hr = sysColl->GetFontFamily(index, &family);
+             if (FAILED(hr)) { continue; }
 
              ComPtr<IDWriteFont> font;
-             if (FAILED(family->GetFirstMatchingFont(
+             hr = family->GetFirstMatchingFont(
                  static_cast<DWRITE_FONT_WEIGHT>(descr.weight),
                  DWRITE_FONT_STRETCH_NORMAL,
                  descr.style ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL,
-                 &font))) continue;
+                 &font);
+             if (FAILED(hr)) { continue; }
+
              ComPtr<IDWriteTextFormat> fmt;
-             if (FAILED(m_dw->CreateTextFormat(
+             hr = m_dw->CreateTextFormat(
                  a2w(name).c_str(), sysColl,
                  static_cast<DWRITE_FONT_WEIGHT>(descr.weight),
                  descr.style ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL,
                  DWRITE_FONT_STRETCH_NORMAL,
-                 static_cast<float>(descr.size), L"en-us", &fmt))) {
-                 continue;
+                 static_cast<float>(descr.size), L"en-us", &fmt);
+             if (FAILED(hr)) { continue; }
+
+             ComPtr<IDWriteTextFormat2> fmt2;
+             if (SUCCEEDED(hr)) {
+                 fmt.As(&fmt2); // 安全转换
+                 fmt2->SetFontFallback(nullptr);
+                 return new FontCachePair{ familyName,  fmt2, font };
              }
- 
-            return new FontCachePair{ familyName, fmt , font};
+   
 
          }
      }
@@ -6662,12 +7136,22 @@ VirtualDoc::~VirtualDoc()
 
 }
 
+
+
 void VirtualDoc::load_book()
 {
     m_book = g_book;
     m_container = g_cMain;
     m_spine = m_book->m_ocf_pkg.spine;
 
+    auto font_path = m_book->get_font_path();
+    for (auto& path : font_path)
+    {
+        bool result = m_container->AddPrivateFont(a2w(path).c_str());
+        std::string txt = std::string(result ? "[成功]" : "[失败]") + " 加载字体：" + path + "\n";
+        OutputDebugStringA(txt.c_str());
+    }
+    m_container->BuildFontCollection();
 
 }
 

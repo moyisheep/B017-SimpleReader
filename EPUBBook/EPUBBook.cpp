@@ -140,6 +140,7 @@ void EPUBBook::build_epub_font_index(std::string tempDir)
                 if (fs::exists(tempFont.c_str()))
                 {
                     paths.push_back(tempFont);   // ÒÑ»º´æ
+                    m_font_path.push_back(tempFont);
                     continue;
                 }
                 std::ofstream outFile(tempFont, std::ios::binary);
@@ -149,7 +150,7 @@ void EPUBBook::build_epub_font_index(std::string tempDir)
                 }
                 outFile.write(reinterpret_cast<const char*>(fontFile.data()), fontFile.size());
                 outFile.close();
-
+                m_font_path.push_back(tempFont);
                 paths.push_back(tempFont);
             }
 
@@ -266,7 +267,7 @@ void EPUBBook::clear()
     m_fontBin.clear();
     m_current_book_path = "";
     m_current_html_path = "";
-
+    m_font_path.clear();
 }
 
 std::string EPUBBook::get_chapter_name_by_id(int spine_id)
@@ -321,6 +322,11 @@ std::string EPUBBook::get_author()
 std::string EPUBBook::get_version()
 {
     return m_ocf_pkg.version;
+}
+
+std::vector<std::string> EPUBBook::get_font_path()
+{
+    return m_font_path;
 }
 
 bool EPUBBook::has_script()
