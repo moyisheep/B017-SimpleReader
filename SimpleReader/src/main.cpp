@@ -4223,7 +4223,33 @@ ComPtr<ID2D1SolidColorBrush> SimpleContainer::getBrush(litehtml::uint_ptr hdc, c
     m_brushPool[key] = brush;
     return brush;
 }
+ComPtr<IDWriteTextLayout> SimpleContainer::getLayout(const std::string& txt,
+    litehtml::uint_ptr hFont)
+{
+    Timer timer("    getLayout");
+    // 1. 先替换花引号
+    auto* textFormat = reinterpret_cast<IDWriteTextFormat*>(hFont);
+    if (!textFormat) { return nullptr; }
+    std::string key = txt + "|" + std::to_string(hFont);
+    auto it = m_layoutCache.find(key);
+    if (it != m_layoutCache.end()) { return it->second; }
 
+    std::wstring clean = normalize_quotes(a2w(txt));
+
+   IDWriteTextLayout* layout = nullptr;
+   HRESULT hr = m_dwrite->CreateTextLayout(clean.c_str(), (UINT32)clean.size(),
+       textFormat, 8192.f, 512.f, &layout);
+   if (FAILED(hr))
+   {
+       OutputDebugStringA("[getLayout] failed to create layout");
+   }
+    if (!layout) return nullptr;
+  
+   
+    m_layoutCache.emplace(key, layout);
+    
+    return layout;
+}
 bool IsTextInFont_GDI(const std::wstring& fontName, const std::wstring& text) {
     if (text.empty()) return true;
 
@@ -4446,20 +4472,11 @@ void SimpleContainer::draw_text(litehtml::uint_ptr hdc,
     if (!brush) return;
     //timer.reset();
     // 2. 文本
-
+    auto layout = getLayout(text, hFont);
+    if (!layout) { return ; }
     std::wstring wtxt = normalize_quotes(a2w(text));
   
-    //timer = std::make_unique<Timer>("    [getLayout]");
-    //auto layout = getLayout(text,  hFont);
-    //timer.reset();
-    ComPtr<IDWriteTextLayout> layout;
-    HRESULT hr = m_dwrite->CreateTextLayout(wtxt.c_str(),
-        (UINT32)wtxt.size(),
-        textFormat, 8192.f, 512.f, &layout);
-    if (FAILED(hr)) return;
-    // 创建排版对象
-    IDWriteTypography* typography = nullptr;
-    hr = m_dwrite->CreateTypography(&typography);
+
 
  
 
@@ -5738,23 +5755,19 @@ litehtml::pixel_t SimpleContainer::text_width(const char* text,
     if (it != m_textWidthCache.end()) { return it->second; }
 
     // 1. 创建 TextLayout
-    ComPtr<IDWriteTextLayout> layout;
-    std::wstring wtxt = normalize_quotes(a2w(text));
-    HRESULT hr = m_dwrite->CreateTextLayout(wtxt.c_str(), (UINT32)wtxt.size(),
-        textFormat, 8192.f, 512.f, &layout);
     
-    if (FAILED(hr)) { return 0; }
 
-    // 创建排版对象
-    IDWriteTypography* typography = nullptr;
-    hr = m_dwrite->CreateTypography(&typography);
+    auto layout = getLayout(text, hFont);
+    if (!layout) { return 0; }
+ 
+
 
 
 
 
     // 3. 取逻辑宽度（已含空白、连字、kerning）
     DWRITE_TEXT_METRICS tm{};
-     hr = layout->GetMetrics(&tm);
+    HRESULT hr = layout->GetMetrics(&tm);
     if (FAILED(hr)) { return 0; }
 
 

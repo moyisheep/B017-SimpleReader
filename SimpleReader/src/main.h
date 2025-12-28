@@ -662,7 +662,7 @@ private:
     static std::wstring normalize_quotes(const std::wstring& src);
     ComPtr<ID2D1SolidColorBrush> getBrush(litehtml::uint_ptr hdc, const litehtml::web_color& c);
 
-    //ComPtr<IDWriteTextLayout> getLayout(const std::string& txt,  litehtml::uint_ptr hFont);
+    ComPtr<IDWriteTextLayout> getLayout(const std::string& txt,  litehtml::uint_ptr hFont);
     ComPtr<ID2D1Bitmap> getBitmap(litehtml::uint_ptr hdc, std::string url);
     //void draw_decoration(litehtml::uint_ptr hdc, const FontPair* fp, litehtml::web_color color, const litehtml::position& pos, IDWriteTextLayout* layout);
 
