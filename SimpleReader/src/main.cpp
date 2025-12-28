@@ -29,7 +29,7 @@ std::future<void> g_parse_task;
 std::unique_ptr<VirtualDoc> g_vd;
 //static float g_scrollY = 0.0f;   // 当前像素偏移
 static std::atomic<float> g_offsetY{ 0.0f };
-std::vector<FontItem> g_fontList;
+//std::vector<FontItem> g_fontList;
 
 
 constexpr UINT WM_EPUB_PARSED = WM_APP + 1;
@@ -876,7 +876,11 @@ static std::wstring a2w(const std::string& s)
     MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, &out[0], len);
     return out;
 }
-
+//static std::wstring a2w(const std::string& s)
+//{
+//    std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+//    return converter.from_bytes(s);
+//}
 static const char* B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 inline std::string base64_encode(const std::vector<uint8_t>& in) {
@@ -1028,14 +1032,16 @@ inline void SetStatus(int pane, const wchar_t* msg)
 
 INT_PTR CALLBACK FontDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
 {
+    auto fontList = g_cMain->getFontList();
     switch (msg)
     {
     case WM_INITDIALOG:
     {
         HWND hList = GetDlgItem(hDlg, IDC_LIST_FONT);
-        for (size_t i = 0; i < g_fontList.size(); ++i)
+        
+        for (size_t i = 0; i < fontList.size(); ++i)
         {
-            const FontItem& fi = g_fontList[i];
+            const FontItem& fi = fontList[i];
             int pos = (int)SendMessage(hList, LB_ADDSTRING, 0,
                 (LPARAM)fi.displayName.c_str());
             // 把索引 i 存进去
@@ -1098,7 +1104,9 @@ INT_PTR CALLBACK FontDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
                 if (pos != LB_ERR)
                 {
                     size_t idx = (size_t)SendMessage(hList, LB_GETITEMDATA, pos, 0);
-                    g_cfg.font_name = w2a(g_fontList[idx].familyName);   // 立即保存
+               
+                    g_cfg.font_name = w2a(fontList[idx].familyName);   // 立即保存
+                    if (g_cMain) { g_cMain->clear_font_cache(); }
                     if (g_vd) { g_vd->reload(); }
                 }
                 return TRUE;
@@ -1117,9 +1125,9 @@ INT_PTR CALLBACK FontDlgProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
             {
                 size_t idx = (size_t)SendMessage(hList, LB_GETITEMDATA, pos, 0);
 
-                if (idx < g_fontList.size())
+                if (idx < fontList.size())
                 {
-                    g_cfg.font_name = w2a(g_fontList[idx].familyName);   // 立即保存
+                    g_cfg.font_name = w2a(fontList[idx].familyName);   // 立即保存
                     if (g_vd) { g_vd->reload(); }
                     EndDialog(hDlg, static_cast<INT_PTR>(idx + 1)); // 任意非 0
                     return TRUE;
@@ -4439,7 +4447,7 @@ void SimpleContainer::draw_text(litehtml::uint_ptr hdc,
     //timer.reset();
     // 2. 文本
 
-    std::wstring wtxt = a2w(text);
+    std::wstring wtxt = normalize_quotes(a2w(text));
   
     //timer = std::make_unique<Timer>("    [getLayout]");
     //auto layout = getLayout(text,  hFont);
@@ -4449,6 +4457,14 @@ void SimpleContainer::draw_text(litehtml::uint_ptr hdc,
         (UINT32)wtxt.size(),
         textFormat, 8192.f, 512.f, &layout);
     if (FAILED(hr)) return;
+    // 创建排版对象
+    IDWriteTypography* typography = nullptr;
+    hr = m_dwrite->CreateTypography(&typography);
+
+ 
+
+
+
     //timer = std::make_unique<Timer>("    [record_char_boxes]");
   
     //timer.reset();
@@ -5717,18 +5733,23 @@ litehtml::pixel_t SimpleContainer::text_width(const char* text,
     if (!text || !*text || !hFont) return 0;
     auto* textFormat = reinterpret_cast<IDWriteTextFormat*>(hFont);
 
-    //std::string key = std::string(text) + std::to_string(hFont);
-    //auto it = m_textWidthCache.find(key);
-    //if (it != m_textWidthCache.end()) { return it->second; }
+    std::string key = std::string(text) + "|" + std::to_string(hFont);
+    auto it = m_textWidthCache.find(key);
+    if (it != m_textWidthCache.end()) { return it->second; }
 
     // 1. 创建 TextLayout
     ComPtr<IDWriteTextLayout> layout;
-    std::wstring wtxt = a2w(text);
+    std::wstring wtxt = normalize_quotes(a2w(text));
     HRESULT hr = m_dwrite->CreateTextLayout(wtxt.c_str(), (UINT32)wtxt.size(),
         textFormat, 8192.f, 512.f, &layout);
+    
+    if (FAILED(hr)) { return 0; }
+
+    // 创建排版对象
+    IDWriteTypography* typography = nullptr;
+    hr = m_dwrite->CreateTypography(&typography);
 
 
-    if (FAILED(hr) ) { return 0; }
 
 
     // 3. 取逻辑宽度（已含空白、连字、kerning）
@@ -5739,7 +5760,7 @@ litehtml::pixel_t SimpleContainer::text_width(const char* text,
 
     // 4. DPI → 物理像素（Win7 也支持）
     float physical = tm.widthIncludingTrailingWhitespace * m_dpi_x / 96.0f;
-    //m_textWidthCache.emplace(key, physical);
+    m_textWidthCache.emplace(key, physical);
     return physical;
 }
 
@@ -6725,7 +6746,7 @@ SimpleContainer::SimpleContainer(int w, int h, HWND hwnd):
     if (FAILED(hr)) {
         OutputDebugStringA("GetSystemFontCollection failed\n");
     }
-    BuildFontList();
+    //BuildFontList();
     InitDefaultFont();
   
 }
@@ -6733,9 +6754,9 @@ SimpleContainer::SimpleContainer(int w, int h, HWND hwnd):
 
 void SimpleContainer::BuildFontList()
 {
-    g_fontList.clear();
+    m_fontList.clear();
 
-    auto sysColl = m_systemFonts;
+    auto sysColl = m_privateFonts;
     if (!sysColl)
         return;
 
@@ -6771,11 +6792,11 @@ void SimpleContainer::BuildFontList()
             names->GetString(idx, displayName.data(), len + 1);
         }
 
-        g_fontList.push_back({ familyName, displayName });
+        m_fontList.push_back({ familyName, displayName });
     }
 
     // 可选：按 displayName 排序
-    std::sort(g_fontList.begin(), g_fontList.end(),
+    std::sort(m_fontList.begin(), m_fontList.end(),
         [](const FontItem& a, const FontItem& b)
         { return a.displayName <  b.displayName; });
 }
@@ -6802,6 +6823,12 @@ void SimpleContainer::clear()
     m_brushPool.clear();
     m_textWidthCache.clear();
 
+}
+
+std::vector<FontItem> SimpleContainer::getFontList()
+{
+    BuildFontList();
+    return m_fontList;
 }
 
 litehtml::pixel_t SimpleContainer::get_default_font_size() const

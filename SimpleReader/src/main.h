@@ -487,6 +487,11 @@ private:
     mutable std::mutex mtx_;
     Map                map_;
 };
+struct FontItem
+{
+    std::wstring familyName;   // 字体原名（en-us）
+    std::wstring displayName;  // 中文名（zh-cn），没有就用 familyName
+};
 
 
 // ---------- LiteHtml 容器 ----------
@@ -569,8 +574,9 @@ public:
     bool isImageCached(std::string src);
 
     void addImageCache(std::string hash, std::string svg);
-    void clear();
 
+    void clear();
+    std::vector<FontItem> getFontList();
  
     void init_dpi();
 
@@ -595,7 +601,7 @@ public:
     void present(float x, float y, litehtml::position* clip);
     void BuildFontList();
 
-    void clear_font_cache() { m_layoutCache.clear(); m_fontCache.clear();  }
+    void clear_font_cache() { m_layoutCache.clear(); m_fontCache.clear();  m_textWidthCache.clear(); }
     ComPtr<ID2D1Bitmap1> m_offscreenBmp;   // 离屏位图
     bool                 m_offscreenDirty = true; // 是否需要重绘
     std::wstring m_sel_text = L"";
@@ -683,6 +689,7 @@ private:
     ComPtr<FileCollectionLoader> m_loader;
     std::vector<ComPtr<IDWriteFontFile>> m_defaultFontFiles; // 存储所有字体文件
     std::vector<ComPtr<IDWriteFontFile>> m_privateFontFiles; // 存储所有字体文件
+    std::vector<FontItem> m_fontList;
 };
 
 
@@ -1046,11 +1053,6 @@ private:
     std::atomic<bool>& m_flag;
 };
 
-struct FontItem
-{
-    std::wstring familyName;   // 字体原名（en-us）
-    std::wstring displayName;  // 中文名（zh-cn），没有就用 familyName
-};
 
 
 
