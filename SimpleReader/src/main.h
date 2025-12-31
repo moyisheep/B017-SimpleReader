@@ -189,7 +189,6 @@ public:
     void hide_tooltip();
     void delayed_show_tooltip(std::string txt, unsigned width = 300, unsigned delayMs = 300);
     void cancel_delayed_tooltip();
-    void LoadToc();
     std::string extract_anchor(const char* href);
 
     litehtml::element::ptr find_link_in_chain(litehtml::element::ptr start);
@@ -601,9 +600,8 @@ public:
     void present(float x, float y, litehtml::position* clip);
     void BuildFontList();
 
-    void clear_font_cache() { m_layoutCache.clear(); m_fontCache.clear();  m_textWidthCache.clear(); }
-    ComPtr<ID2D1Bitmap1> m_offscreenBmp;   // 离屏位图
-    bool                 m_offscreenDirty = true; // 是否需要重绘
+    void clear_font_cache() { m_layoutCache.clear();   m_textWidthCache.clear(); }
+
     std::wstring m_sel_text = L"";
 
 private:
@@ -652,13 +650,13 @@ private:
 
     Microsoft::WRL::ComPtr<IDWriteFontCollection> m_privateFonts;  // 新增
     std::vector<std::wstring> m_tempFontFiles;
-    std::unordered_map<std::string, ComPtr<ID2D1Bitmap>> m_d2dBitmapCache;
+    //std::unordered_map<std::string, ComPtr<ID2D1Bitmap>> m_d2dBitmapCache;
 
     static std::wstring toLower(std::wstring s);
     //static std::optional<std::wstring> mapStatic(const std::wstring& key);
     float m_baselineY = 0;
     std::vector<ComPtr<ID2D1Layer>>  m_clipStack;  // 新增
-    ComPtr<IDWriteFontCollection> m_systemFonts;
+    //ComPtr<IDWriteFontCollection> m_systemFonts;
     static std::wstring normalize_quotes(const std::wstring& src);
     ComPtr<ID2D1SolidColorBrush> getBrush(litehtml::uint_ptr hdc, const litehtml::web_color& c);
 
@@ -668,7 +666,7 @@ private:
 
 
     std::unordered_map<uint32_t, ComPtr<ID2D1SolidColorBrush>> m_brushPool;
-    FontCache m_fontCache;
+    //FontCache m_fontCache;
     //LayoutCache m_layoutCache;
     std::unordered_map<std::string, Microsoft::WRL::ComPtr<IDWriteTextLayout>> m_layoutCache;
     std::unordered_map<std::string, float> m_textWidthCache;

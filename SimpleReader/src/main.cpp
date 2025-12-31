@@ -4490,7 +4490,7 @@ void SimpleContainer::draw_text(litehtml::uint_ptr hdc,
     rt->DrawTextLayout(D2D1::Point2F(static_cast<float>(pos.x),
         static_cast<float>(pos.y)),
         layout.Get(), brush.Get(), D2D1_DRAW_TEXT_OPTIONS_NO_SNAP);
-    record_char_boxes(layout, wtxt, GetMainFontNameFromTextLayout(layout), pos);
+    //record_char_boxes(layout, wtxt, GetMainFontNameFromTextLayout(layout), pos);
    //timer.reset();
 
     // 4. 绘制装饰线（下划线 / 删除线 / 上划线）
@@ -6755,10 +6755,10 @@ SimpleContainer::SimpleContainer(int w, int h, HWND hwnd):
     m_loader = new FileCollectionLoader();
     m_dwrite->RegisterFontCollectionLoader(m_loader.Get());
     /* 5) 系统字体集合 */
-    hr = m_dwrite->GetSystemFontCollection(&m_systemFonts, FALSE);
-    if (FAILED(hr)) {
-        OutputDebugStringA("GetSystemFontCollection failed\n");
-    }
+    //hr = m_dwrite->GetSystemFontCollection(&m_systemFonts, FALSE);
+    //if (FAILED(hr)) {
+    //    OutputDebugStringA("GetSystemFontCollection failed\n");
+    //}
     //BuildFontList();
     InitDefaultFont();
   
@@ -6831,7 +6831,7 @@ void SimpleContainer::clear()
     //m_privateFonts.Reset();
 
     m_clipStack.clear();
-    m_fontCache.clear();
+    //m_fontCache.clear();
     m_layoutCache.clear();
     m_brushPool.clear();
     m_textWidthCache.clear();
@@ -8721,7 +8721,7 @@ std::wstring SimpleContainer::get_selection_text() const
     if (start >= end)
         return L"";
 
-    OutputDebugStringW(m_plainText.c_str());
+    //OutputDebugStringW(m_plainText.c_str());
   
     // 直接使用substr安全地获取子字符串
     return m_plainText.substr(start, end - start);

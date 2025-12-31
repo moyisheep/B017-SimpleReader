@@ -110,7 +110,7 @@
       <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>Default</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\3rdParty\litehtml-master\include;$(SolutionDir)litehtml\include;$(SolutionDir)EPUBBook;$(SolutionDir)ReadingRecorder;$(SolutionDir)MML2SVG;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>E:\文件夹集合\B-编程\Projects\B015 Simple Markdown\SimpleMarkdown\litehtml\include;$(SolutionDir)litehtml\include;$(SolutionDir)EPUBBook;$(SolutionDir)ReadingRecorder;$(SolutionDir)MML2SVG;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -118,7 +118,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\3rdParty\litehtml-master\build\RelWithDebInfo;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>E:\文件夹集合\B-编程\Projects\B015 Simple Markdown\SimpleMarkdown\x64\Release\LIB;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>litehtml.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalManifestDependencies>
       </AdditionalManifestDependencies>
