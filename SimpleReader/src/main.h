@@ -394,11 +394,17 @@ struct AppSettings {
     COLORREF highlight_color_cr = RGB(238, 165, 102);  // #eea566
     COLORREF hover_color_cr = RGB(240, 240, 240);  
     // 2) D2D1 颜色（保持原透明度 0.4，可按需改）
+    //D2D1::ColorF highlight_color_d2d{
+    //    238.0f / 255.0f,  // R
+    //    165.0f / 255.0f,  // G
+    //    102.0f / 255.0f,  // B
+    //    0.4f              // A
+    //};
     D2D1::ColorF highlight_color_d2d{
-        238.0f / 255.0f,  // R
-        165.0f / 255.0f,  // G
-        102.0f / 255.0f,  // B
-        0.4f              // A
+    255.0f / 255.0f,  // R
+    0.0f / 255.0f,  // G
+    0.0f / 255.0f,  // B
+    1.0f              // A
     };
     D2D1::ColorF default_background_color{
         255.0f / 255.0f,  // R
@@ -601,7 +607,7 @@ public:
     void BuildFontList();
 
     void clear_font_cache() { m_layoutCache.clear();   m_textWidthCache.clear(); }
-
+    void clear_background();
     std::wstring m_sel_text = L"";
 
 private:
@@ -635,6 +641,8 @@ private:
     std::wstring           m_plainText;       // 整篇纯文本
 
     ComPtr<ID2D1SolidColorBrush> m_selBrush;
+    ComPtr<ID2D1SolidColorBrush> m_backgroundBrush;
+    ComPtr<ID2D1SolidColorBrush> m_debugBrush;
     void record_char_boxes(
         ComPtr<IDWriteTextLayout> layout,
         const std::wstring& wtxt,

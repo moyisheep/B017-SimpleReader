@@ -1232,7 +1232,8 @@ void CALLBACK OnScrollTimer(UINT, UINT, DWORD_PTR, DWORD_PTR, DWORD_PTR)
     g_offsetY.store(newY, std::memory_order_relaxed);
     g_velocity.store(v, std::memory_order_relaxed);
 
-    InvalidateRect(g_hView, nullptr, FALSE);
+    ScrollWindowEx(g_hView, 0, v * dt, NULL, NULL, NULL, NULL, SW_INVALIDATE);
+    //InvalidateRect(g_hView, nullptr, FALSE);
 
     // 速度接近 0 时停止定时器
     if (std::fabs(v) < 0.1f) {
@@ -1254,6 +1255,7 @@ void convert_coordinate(POINT& pt)
     }
 
 }
+
 
 void CALLBACK OnFlush(UINT, UINT, DWORD_PTR, DWORD_PTR, DWORD_PTR)
 {
@@ -1352,8 +1354,14 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         convert_coordinate(pt);
         litehtml::position::vector redraw_boxes;
         g_cMain->m_doc->on_lbutton_down(pt.x, pt.y, 0, 0, redraw_boxes);
+        float offset = g_offsetY.load(std::memory_order_relaxed);
         if (!redraw_boxes.empty()) {
-            InvalidateRect(hwnd, nullptr, false);
+            for (auto& box : redraw_boxes)
+            {
+                RECT rc{ box.left(), box.top()-offset, box.right(), box.bottom()-offset };
+                InvalidateRect(hwnd, &rc, false);
+            }
+
         }
         return 0;
     }
@@ -1373,8 +1381,15 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
             litehtml::position::vector redraw_boxes;
             g_cMain->m_doc->on_lbutton_up(pt.x, pt.y, 0, 0, redraw_boxes);
+            float offset = g_offsetY.load(std::memory_order_relaxed);
             if (!redraw_boxes.empty()) {
-                InvalidateRect(hwnd, nullptr, false);
+                for (auto& box : redraw_boxes)
+                {
+                    RECT rc{ box.left(), box.top() - offset, box.right(), box.bottom() - offset };
+                    InvalidateRect(hwnd, &rc, false);
+                }
+                //UpdateWindow(hwnd);
+
             }
    
         }
@@ -1411,8 +1426,16 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
             litehtml::position::vector redraw_boxes;
             g_cMain->m_doc->on_mouse_over(pt.x, pt.y, 0, 0, redraw_boxes);
+            float offset = g_offsetY.load(std::memory_order_relaxed);
             if (!redraw_boxes.empty()) {
-                InvalidateRect(hwnd, nullptr, false);
+                for (auto& box : redraw_boxes)
+                {
+                    
+                    RECT rc{ g_center_offset+box.left(), box.top() - offset, g_center_offset+box.right(), box.bottom() - offset };
+                    InvalidateRect(hwnd, &rc, false);
+                }
+                //UpdateWindow(hwnd);
+
             }
       
         }
@@ -1439,8 +1462,8 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             free(sel);          // 对应 _wcsdup
         }
         UpdateCache();
-        InvalidateRect(hwnd, nullptr, FALSE);
-        UpdateWindow(g_hView);
+        InvalidateRect(hwnd, nullptr, TRUE);
+        //UpdateWindow(g_hView);
 
         return 0;
     }
@@ -1466,8 +1489,15 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         {
             litehtml::position::vector redraw_boxes;
             g_cMain->m_doc->on_mouse_leave(redraw_boxes);
+            float offset = g_offsetY.load(std::memory_order_relaxed);
             if (!redraw_boxes.empty()) {
-                InvalidateRect(hwnd, nullptr, false);
+                for (auto& box : redraw_boxes)
+                {
+                    RECT rc{ box.left(), box.top() - offset, box.right(), box.bottom() - offset };
+                    InvalidateRect(hwnd, &rc, false);
+                }
+                //UpdateWindow(hwnd);
+
             }
         }
 
@@ -1483,7 +1513,7 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             g_cMain->m_zoom_factor = 1.0f;
             UpdateCache();
             // 3. 重绘
-            InvalidateRect(hwnd, NULL, FALSE);
+            InvalidateRect(hwnd, NULL, TRUE);
             return 0;  // 已处理该消息
         }
         return 0;
@@ -1502,7 +1532,7 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
    
             UpdateCache();
             // 3. 重绘
-            InvalidateRect(hwnd, NULL, FALSE);
+            InvalidateRect(hwnd, NULL, TRUE);
         
             return 0;   // 已处理，不再传递
         }
@@ -1530,8 +1560,9 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         else
         {
             float cur = g_offsetY.load(std::memory_order_relaxed);
-            cur = std::clamp(cur + pxDelta, -h/2.0f, std::max(g_vd->m_height - h / 2.0f, 0.0f));
-            g_offsetY.store(cur, std::memory_order_relaxed);
+            float newOffset = std::clamp(cur + pxDelta, -h/2.0f, std::max(g_vd->m_height - h / 2.0f, 0.0f));
+            g_offsetY.store(newOffset, std::memory_order_relaxed);
+            InvalidateRect(hwnd, nullptr, TRUE);
         }
 
         // 更新阅读记录
@@ -1539,32 +1570,46 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         {
             g_tickTimer = timeSetEvent(g_cfg.record_update_interval_ms, 0, Tick, 0, TIME_ONESHOT);
         }
-        litehtml::position::vector redraw_box;
+        litehtml::position::vector redraw_boxes;
         if (g_cMain && g_cMain->m_doc)
         {
-            g_cMain->m_doc->on_mouse_leave(redraw_box);
+            g_cMain->m_doc->on_mouse_leave(redraw_boxes);
+            float offset = g_offsetY.load(std::memory_order_relaxed);
+            if (!redraw_boxes.empty()) {
+                for (auto& box : redraw_boxes)
+                {
+                    RECT rc{ box.left(), box.top() - offset, box.right(), box.bottom() - offset };
+                    InvalidateRect(hwnd, &rc, false);
+                }
+
+            }
 
         }
         UpdateCache();
-        InvalidateRect(hwnd, nullptr, FALSE);
+        
         return 0;
     }
 
     case WM_PAINT:
     {
-        PAINTSTRUCT ps; BeginPaint(hwnd, &ps);
-  
+        PAINTSTRUCT ps; 
+        HDC hdc = BeginPaint(hwnd, &ps);
+        
+
         if (g_cMain && g_cMain->m_doc)
         {
             g_frame_count += 1;
             //OutputDebugStringA("[View] WM_PAINT\n");
-            RECT rc;
-            GetClientRect(g_hView, &rc);
+            //RECT rc;
+            //GetClientRect(g_hView, &rc);
             int x = g_center_offset;
             int y = -g_offsetY.load(std::memory_order_relaxed);
-            float w = g_cfg.document_width;
-            float h = rc.bottom - rc.top;
-            litehtml::position clip(x, 0, w, h / g_cMain->m_zoom_factor);
+            //float w = g_cfg.document_width;
+            //float h = rc.bottom - rc.top;
+            //litehtml::position clip(x, 0, w, h / g_cMain->m_zoom_factor);
+
+            RECT r = ps.rcPaint;
+            litehtml::position clip{(float)r.left, (float)r.top, (float)(r.right- r.left), (float)(r.bottom-r.top)};
             g_cMain->present(x, y, &clip);
 
             
@@ -1576,11 +1621,23 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
         }
 
-
+        // 可视化重绘区域
+        //HBRUSH hBkBrush = CreateSolidBrush(RGB(255, 255, 255));
+        //HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, hBkBrush);
+        //SetBkMode(hdc, TRANSPARENT);
+        //RECT updateRect = ps.rcPaint;
+        //HPEN hRedPen = CreatePen(PS_SOLID, 3, RGB(255, 0, 0));
+        //HPEN hOldPen = (HPEN)SelectObject(hdc, hRedPen);
+        //Rectangle(hdc, updateRect.left, updateRect.top, updateRect.right, updateRect.bottom);
+        //SelectObject(hdc, hOldPen);
+        //SelectObject(hdc, hOldBrush);
+        //DeleteObject(hBkBrush);
+        //DeleteObject(hRedPen);
         EndPaint(hwnd, &ps);
         return 0;
     }
     case WM_ERASEBKGND:
+        if (g_cMain) { g_cMain->clear_background(); }
         return 1;
     }
     return DefWindowProc(hwnd, msg, wp, lp);
@@ -1767,7 +1824,7 @@ LRESULT CALLBACK ImageviewProc(HWND hwnd, UINT m, WPARAM w, LPARAM l)
 
         g_imageviewRenderW = renderW;
    
-        InvalidateRect(hwnd, nullptr, false);
+        InvalidateRect(hwnd, nullptr, TRUE);
 
         return 0;
     }
@@ -2194,7 +2251,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             std::memory_order_relaxed));
 
         UpdateCache();
-        InvalidateRect(g_hView, nullptr, FALSE);
+        //InvalidateRect(g_hView, nullptr, FALSE);
+        ScrollWindowEx(hwnd, 0, delta, NULL, NULL, NULL, NULL, SW_INVALIDATE);
+
         return 0;
     }
 
@@ -2535,7 +2594,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         }
 
         UpdateCache();
-        InvalidateRect(g_hView, nullptr, FALSE);
+        InvalidateRect(g_hView, nullptr, TRUE);
         return 0;
     }
     case WM_DESTROY: {
@@ -6761,7 +6820,12 @@ SimpleContainer::SimpleContainer(int w, int h, HWND hwnd):
     //}
     //BuildFontList();
     InitDefaultFont();
-  
+    m_dc->CreateSolidColorBrush(
+        D2D1_COLOR_F{1.0, 1.0, 1.0, 1.0},
+        &m_backgroundBrush);
+    m_dc->CreateSolidColorBrush(
+        D2D1_COLOR_F{ 1.0, 0.0, 0.0, 1.0 },
+        &m_debugBrush);
 }
 
 
@@ -8736,7 +8800,7 @@ void SimpleContainer::present(float x, float y, litehtml::position* clip)
     m_plainText.clear();
 
     m_dc->BeginDraw();
-    m_dc->Clear(g_cfg.background_color);
+
 
     // 保存原始矩阵
     m_dc->GetTransform(&m_oldMatrix);
@@ -8752,10 +8816,12 @@ void SimpleContainer::present(float x, float y, litehtml::position* clip)
     m_dc->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_CLEARTYPE);
     
  
-
+    D2D1_RECT_F rc{ clip->left(), clip->top(), clip->right(), clip->bottom() };
+    m_dc->FillRectangle(rc, m_backgroundBrush.Get());
 
     m_doc->draw(getContext(), x, y, clip);
  
+    m_dc->DrawRectangle(rc, m_debugBrush.Get());
 
     // 高亮选中行
     if (!m_selBrush)
@@ -9481,4 +9547,12 @@ void TimerOutput::print()
 void TimerOutput::clear()
 {
     m_map = {};
+}
+
+
+void SimpleContainer::clear_background() 
+{
+    m_dc->BeginDraw(); 
+    m_dc->Clear(g_cfg.background_color); 
+    m_dc->EndDraw();
 }
