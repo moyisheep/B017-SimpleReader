@@ -158,15 +158,9 @@ struct CharBox
 // 一行文本的所有字符
 using LineBoxes = std::vector<CharBox>;
 
-// ---------- 字体缓存 ----------
-struct FontPair {
-    ComPtr<IDWriteTextFormat2> format;
-    litehtml::font_description descr;
-    std::string familyName;
-};
 
-// -------------- 运行时策略 -----------------
-enum class Renderer { GDI, D2D};
+
+
 
 class AppBootstrap {
 public:
@@ -293,44 +287,8 @@ private:
         }
     };
 };
-// 全局缓存（也可放 D2DBackend 内）
-
-struct FontCachePair 
-{
-    std::string familyName;
-    ComPtr<IDWriteTextFormat2> fmt;
-    ComPtr<IDWriteFont> font;
-};
-class FontCache {
-public:
-    FontCache();
-    ~FontCache() = default;
-    // 主入口：根据 litehtml 描述 + 可选私有集合，返回 TextFormat
-    FontCachePair*
-        get(std::string& familyName, const litehtml::font_description& descr, IDWriteFontCollection* sysColl = nullptr);
-    ComPtr<IDWriteFontCollection> CreatePrivateCollectionFromFile(IDWriteFactory* dw, const wchar_t* path);
-
-    void clear();
-private:
 
 
-    // 内部：真正创建
-    FontCachePair*
-        create(std::string& familyName, const litehtml::font_description& descr, IDWriteFontCollection* sysColl);
-
-    // 工具：在指定集合里找家族
-    bool findFamily(IDWriteFontCollection* coll,
-        const std::string& name,
-        Microsoft::WRL::ComPtr<IDWriteFontFamily>& family,
-        UINT32& index);
-
-    std::unordered_map<std::string, FontCachePair*> m_map;
-    mutable std::shared_mutex              m_mtx;
-    Microsoft::WRL::ComPtr<IDWriteFactory3>   m_dw;
-    std::unordered_map<std::string, ComPtr<IDWriteFontCollection>> collCache;
-    FileCollectionLoader* m_loader;
-
-};
 
 
 
@@ -373,7 +331,7 @@ struct AppSettings {
     int default_document_width = 800;
     std::string font_name = "Georgia";
     float zoom_factor = 1.0f;
-    Renderer fontRenderer = Renderer::D2D;
+
     std::string default_font_name = "Microsoft YaHei";
 
     std::wstring temp_dir = L"SimpleReaderTemp";
@@ -420,78 +378,8 @@ struct AppSettings {
     };
 
 };
-struct AppStates {
-    // ---- 取消令牌 ----
-    std::shared_ptr<std::atomic_bool> cancelToken;
-
-    // ---- 状态机 ----
-
-    bool isLoaded = false;
-    // 工具：生成新令牌，旧令牌立即失效
-    void newCancelToken() {
-        if (cancelToken) cancelToken->store(true);
-        cancelToken = std::make_shared<std::atomic_bool>(false);
-    }
-};
-
-// ------------------------------------------------------------------
-struct LayoutKey {
-    std::string txt;
-    std::string  fontKey;
-    float        maxW;
-
-    bool operator==(const LayoutKey& o) const noexcept {
-        return txt == o.txt && fontKey == o.fontKey && maxW == o.maxW;
-    }
-};
-
-// ------------------------------------------------------------------
-namespace std {
-    template<>
-    struct hash<LayoutKey> {
-        size_t operator()(const LayoutKey& k) const noexcept {
-            std::string txt = k.txt + k.fontKey + std::to_string(k.maxW);
-
-            return std::hash<std::string>{}(txt);
-        }
-    };
-}
 
 
-class LayoutCache {
-public:
-    LayoutCache() = default;   // 补上
-
-    using Map = std::unordered_map<LayoutKey,
-        Microsoft::WRL::ComPtr<IDWriteTextLayout>,
-        std::hash<LayoutKey>>;
-
-    void set(const LayoutKey& k, const Microsoft::WRL::ComPtr<IDWriteTextLayout>& layout) {
-        std::lock_guard<std::mutex> lk(mtx_);
-        map_[k] = layout;        // ComPtr 直接拷贝，引用计数自动管理
-    }
-
-    Microsoft::WRL::ComPtr<IDWriteTextLayout> get(const LayoutKey& k) const {
-        Timer timer("    LayoutCache::get");
-        std::lock_guard<std::mutex> lk(mtx_);
-        auto it = map_.find(k);
-        return it != map_.end() ? it->second : nullptr;
-    }
-
-    void clear() noexcept {
-        Map empty;
-        {
-            std::lock_guard<std::mutex> lk(mtx_);
-            map_.swap(empty);
-        }
-    }
-
-    LayoutCache(const LayoutCache&) = delete;
-    LayoutCache& operator=(const LayoutCache&) = delete;
-private:
-    mutable std::mutex mtx_;
-    Map                map_;
-};
 struct FontItem
 {
     std::wstring familyName;   // 字体原名（en-us）
@@ -976,26 +864,7 @@ private:
 };
 
 
-struct BmpHeader {
-    uint16_t bfType = 0x4D42;          // 'BM'
-    uint32_t bfSize = 0;
-    uint16_t bfReserved1 = 0;
-    uint16_t bfReserved2 = 0;
-    uint32_t bfOffBits = 54;           // 54 = sizeof(BmpHeader) + sizeof(BmpInfo)
-};
-struct BmpInfo {
-    uint32_t biSize = 40;
-    int32_t  biWidth = 0;
-    int32_t  biHeight = 0;
-    uint16_t biPlanes = 1;
-    uint16_t biBitCount = 32;
-    uint32_t biCompression = 0;      // BI_RGB
-    uint32_t biSizeImage = 0;
-    int32_t  biXPelsPerMeter = 0;
-    int32_t  biYPelsPerMeter = 0;
-    uint32_t biClrUsed = 0;
-    uint32_t biClrImportant = 0;
-};
+
 //
 //namespace mathml2tex {
 //
@@ -1003,45 +872,6 @@ struct BmpInfo {
 //    std::string convert(const std::string& mathml);
 //
 //} // namespace mathml2tex
-
-//enum PuncClass {
-//    PC_NORMAL,   // 普通字符
-//    PC_LEFT,   // 左引号、左括号、书名号前半
-//    PC_RIGHT,  // 右引号、右括号、句末标点
-//    PC_MIDDLE, // 破折号、省略号（不可拆）
-//};
-//
-//static PuncClass classify(UChar32 cp) {
-//    switch (cp) {
-//        /* ---------- 左半部分 ---------- */
-//    case 0x3008: case 0x300A: case 0x300C: case 0x300E: // 〈 《 「 『
-//    case 0xFF08:                                        // （
-//    case 0x3010: case 0x3014: case 0x3016: case 0x3018: // 【 〔 〖 〘
-//    case 0xFF3B: case 0xFF5B: case 0xFF5F:              // ［ ｛ ｟
-//    case 0x2018: case 0x201C:                           // ‘ “
-//        return PC_LEFT;
-//
-//        /* ---------- 右半部分 ---------- */
-//    case 0x3001: case 0x3002:                           // 、 。
-//    case 0xFF01: case 0xFF1F:                           // ！ ？
-//    case 0xFF0C: case 0xFF1B: case 0xFF1A:              // ， ； ：
-//    case 0x3009: case 0x300B: case 0x300D: case 0x300F: // 〉 》 」 』
-//    case 0xFF09:                                        // ）
-//    case 0x3011: case 0x3015: case 0x3017: case 0x3019: // 】 〕 〗 〙
-//    case 0xFF3D: case 0xFF5D: case 0xFF60:              // ］ ｝ ｠
-//    case 0x2019: case 0x201D:                           // ’ ”
-//        return PC_RIGHT;
-//
-//        /* ---------- 中间整体 ---------- */
-//    case 0x2014:                                        // —  破折号
-//    case 0x2026:                                        // …  省略号
-//    case 0x2025:                                        // ‥  二点省略
-//        return PC_MIDDLE;
-//
-//    default:
-//        return PC_NORMAL;
-//    }
-//}
 
 
 class BusyGuard {
@@ -1087,47 +917,13 @@ private:
     std::vector<data> m_map;
 };
 
+struct AppStates {
 
-// 创建自定义字体加载器
-class CustomFontCollectionLoader : public IDWriteFontCollectionLoader
-{
-public:
-    // IUnknown接口
-    STDMETHOD_(ULONG, AddRef)() { return InterlockedIncrement(&refCount); }
-    STDMETHOD_(ULONG, Release)()
-    {
-        ULONG newCount = InterlockedDecrement(&refCount);
-        if (newCount == 0) delete this;
-        return newCount;
-    }
 
-    STDMETHOD(QueryInterface)(REFIID riid, void** ppvObject)
-    {
-        if (riid == __uuidof(IDWriteFontCollectionLoader) ||
-            riid == __uuidof(IUnknown))
-        {
-            *ppvObject = this;
-            AddRef();
-            return S_OK;
-        }
-        *ppvObject = nullptr;
-        return E_NOINTERFACE;
-    }
+    // ---- 状态机 ----
 
-    // IDWriteFontCollectionLoader接口
-    STDMETHOD(CreateEnumeratorFromKey)(
-        IDWriteFactory* factory,
-        const void* collectionKey,
-        UINT32 collectionKeySize,
-        IDWriteFontFileEnumerator** fontFileEnumerator)
-    {
-        // 实现字体文件枚举器
-        *fontFileEnumerator = nullptr;
-        return E_NOTIMPL;
-    }
+    bool isLoaded = false;
 
-private:
-    ULONG refCount = 1;
 };
 
 bool IsMouseOverWindow(HWND hWnd);
