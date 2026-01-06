@@ -2,8 +2,6 @@
 
 
 
-std::unique_ptr<TimerOutput> g_timerOutput = std::make_unique<TimerOutput>();
-
 
 
 HWND  g_hToc = nullptr;    // 侧边栏 TreeView
@@ -616,216 +614,6 @@ static ImgFmt detect_fmt(const uint8_t* d, size_t n, const char* ext)
     return ImgFmt::UNKNOWN;
 }
 
-
-void SavePixelsToPNG(const BYTE* pixels, UINT w, UINT h, UINT stride, const wchar_t* file)
-{
-    ComPtr<IWICImagingFactory> wic;
-    CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&wic));
-
-    ComPtr<IWICBitmap> wicBmp;
-    wic->CreateBitmapFromMemory(
-        w, h,
-        GUID_WICPixelFormat32bppPBGRA,
-        stride,
-        stride * h,
-        const_cast<BYTE*>(pixels),
-        &wicBmp);
-
-    ComPtr<IWICBitmapEncoder> enc;
-    wic->CreateEncoder(GUID_ContainerFormatPng, nullptr, &enc);
-
-    ComPtr<IWICStream> stream;
-    wic->CreateStream(&stream);
-    stream->InitializeFromFilename(file, GENERIC_WRITE);
-    enc->Initialize(stream.Get(), WICBitmapEncoderNoCache);
-
-    ComPtr<IWICBitmapFrameEncode> frame;
-    ComPtr<IPropertyBag2> props;
-    enc->CreateNewFrame(&frame, &props);
-    frame->Initialize(props.Get());
-    frame->SetSize(w, h);
-    WICPixelFormatGUID format = GUID_WICPixelFormat32bppPBGRA;
-    frame->SetPixelFormat(&format);
-    frame->WriteSource(wicBmp.Get(), nullptr);
-    frame->Commit();
-    enc->Commit();
-}
-
-void PrintFontFamilies(ComPtr<IDWriteFontCollection> fontCollection)
-{
-    ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
-    UINT32 familyCount = fontCollection->GetFontFamilyCount();
-    char buf[512];
-
-    for (UINT32 i = 0; i < familyCount; ++i)
-    {
-        Microsoft::WRL::ComPtr<IDWriteFontFamily> family;
-        fontCollection->GetFontFamily(i, &family);
-
-        Microsoft::WRL::ComPtr<IDWriteLocalizedStrings> names;
-        family->GetFamilyNames(&names);
-
-        UINT32 idx = 0;
-        UINT32 len = 0;
-        BOOL exists = FALSE;
-        names->FindLocaleName(L"en-us", &idx, &exists);
-        if (!exists) idx = 0;
-
-        names->GetStringLength(idx, &len);
-        std::wstring wname(len + 1, 0);
-        names->GetString(idx, wname.data(), len + 1);
-
-        // 转成 UTF-8
-        std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> conv;
-        std::string name = conv.to_bytes(wname.c_str());
-        DumpHex(L"[actual]   ", wname);
-        snprintf(buf, sizeof(buf), "[Font] %s\n", name.c_str());
-        OutputDebugStringA(buf);
-    }
-
-    ::CoUninitialize();
-}
-void PrintSystemFontFamilies()
-{
-    ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
-
-    // 1. 拿 IDWriteFactory
-    Microsoft::WRL::ComPtr<IDWriteFactory> factory;
-    DWriteCreateFactory(
-        DWRITE_FACTORY_TYPE_SHARED,
-        __uuidof(IDWriteFactory),
-        reinterpret_cast<IUnknown**>(factory.GetAddressOf()));
-
-    // 2. 拿系统字体集合
-    Microsoft::WRL::ComPtr<IDWriteFontCollection> sysFonts;
-    factory->GetSystemFontCollection(&sysFonts);
-
-    UINT32 familyCount = sysFonts->GetFontFamilyCount();
-    char buf[512];
-
-    for (UINT32 i = 0; i < familyCount; ++i)
-    {
-        Microsoft::WRL::ComPtr<IDWriteFontFamily> family;
-        sysFonts->GetFontFamily(i, &family);
-
-        Microsoft::WRL::ComPtr<IDWriteLocalizedStrings> names;
-        family->GetFamilyNames(&names);
-
-        UINT32 idx = 0;
-        UINT32 len = 0;
-        BOOL exists = FALSE;
-        names->FindLocaleName(L"en-us", &idx, &exists);
-        if (!exists) idx = 0;
-
-        names->GetStringLength(idx, &len);
-        std::wstring wname(len + 1, 0);
-        names->GetString(idx, wname.data(), len + 1);
-
-        // 转成 UTF-8
-        std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> conv;
-        std::string name = conv.to_bytes(wname.c_str());
-
-        snprintf(buf, sizeof(buf), "[SystemFont] %s\n", name.c_str());
-        OutputDebugStringA(buf);
-    }
-
-    ::CoUninitialize();
-}
-// 把 ID2D1Bitmap 保存为 PNG，返回 true 表示成功
-bool DumpBitmap(ID2D1Bitmap* bmp, const wchar_t* file)
-{
-    if (!bmp || !file) return false;
-
-    // 1. 尺寸
-    D2D1_SIZE_U sz = bmp->GetPixelSize();
-    if (sz.width == 0 || sz.height == 0) return false;
-
-    // 2. 创建 WIC 工厂
-    ComPtr<IWICImagingFactory> wic;
-    HRESULT hr = CoCreateInstance(
-        CLSID_WICImagingFactory, nullptr,
-        CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&wic));
-    if (FAILED(hr)) return false;
-
-    // 3. 创建 WIC 位图（32bpp PBGRA）
-    ComPtr<IWICBitmap> wicBmp;
-    hr = wic->CreateBitmap(
-        sz.width, sz.height,
-        GUID_WICPixelFormat32bppPBGRA,
-        WICBitmapCacheOnLoad,
-        &wicBmp);
-    if (FAILED(hr)) return false;
-
-    // 4. 创建临时 D2D WIC RenderTarget，把 bmp 画进去
-    ComPtr<ID2D1Factory> d2dFactory;
-    bmp->GetFactory(&d2dFactory);
-
-    ComPtr<ID2D1RenderTarget> rt;
-    hr = d2dFactory->CreateWicBitmapRenderTarget(
-        wicBmp.Get(),
-        D2D1::RenderTargetProperties(
-            D2D1_RENDER_TARGET_TYPE_DEFAULT,
-            D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM,
-                D2D1_ALPHA_MODE_PREMULTIPLIED)),
-        &rt);
-    if (FAILED(hr)) return false;
-
-
-
-    // 5. 编码 PNG
-    ComPtr<IWICStream> stream;
-    hr = wic->CreateStream(&stream);
-    if (FAILED(hr)) return false;
-
-    hr = stream->InitializeFromFilename(file, GENERIC_WRITE);
-    if (FAILED(hr)) return false;
-
-    ComPtr<IWICBitmapEncoder> encoder;
-    hr = wic->CreateEncoder(GUID_ContainerFormatPng, nullptr, &encoder);
-    if (FAILED(hr)) return false;
-
-    hr = encoder->Initialize(stream.Get(), WICBitmapEncoderNoCache);
-    if (FAILED(hr)) return false;
-
-    ComPtr<IWICBitmapFrameEncode> frame;
-    ComPtr<IPropertyBag2> props;
-    hr = encoder->CreateNewFrame(&frame, &props);
-    if (FAILED(hr)) return false;
-
-    hr = frame->Initialize(props.Get());
-    if (FAILED(hr)) return false;
-
-    hr = frame->SetSize(sz.width, sz.height);
-    if (FAILED(hr)) return false;
-
-    WICPixelFormatGUID format = GUID_WICPixelFormat32bppPBGRA;
-    hr = frame->SetPixelFormat(&format);
-    if (FAILED(hr)) return false;
-
-    hr = frame->WriteSource(wicBmp.Get(), nullptr);
-    if (FAILED(hr)) return false;
-
-    hr = frame->Commit();
-    if (FAILED(hr)) return false;
-
-    hr = encoder->Commit();
-    return SUCCEEDED(hr);
-}
-
-void DumpAllFontNames()
-{
-    HDC hdc = GetDC(nullptr);
-    LOGFONTW lf{ 0 };
-    lf.lfCharSet = DEFAULT_CHARSET;
-    EnumFontFamiliesExW(hdc, &lf,
-        [](const LOGFONTW* lpelfe, const TEXTMETRICW*, DWORD, LPARAM) -> int {
-            OutputDebugStringW((L"[Enum] " + std::wstring(lpelfe->lfFaceName) + L"\n").c_str());
-            return 1;
-        }, 0, 0);
-    ReleaseDC(nullptr, hdc);
-}
-
-// 真正读文件
 
 
 
@@ -1585,7 +1373,7 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             
             
          
-            g_timerOutput->end();
+            TimerOutput::Instance().end();
             std::string txt = "==================================\n";
             OutputDebugStringA(txt.c_str());
 
@@ -7253,7 +7041,7 @@ void VirtualDoc::workerLoop()
             m_taskQueue.pop();
         }
         BusyGuard bg(m_workerBusy);   // 从这里开始置忙，析构时自动清 0
-        g_timerOutput->start("【总耗时】");
+        TimerOutput::Instance().start("【总耗时】");
         //OutputDebugStringA("[VirtualDod thread] 开始更新\n");
         // 1. 耗时 IO
                 /* ---------- 2. 耗时 IO ---------- */
@@ -7330,7 +7118,7 @@ void VirtualDoc::workerLoop()
         
 
         timer.reset();
-        g_timerOutput->print();
+        TimerOutput::Instance().print();
         timer = std::make_unique<Timer>("【创建耗时】");
  
 
@@ -7339,7 +7127,7 @@ void VirtualDoc::workerLoop()
             { html.c_str(), litehtml::encoding::utf_8 }, m_container.get(), litehtml::master_css, css);
         
         timer.reset();
-        g_timerOutput->print();
+        TimerOutput::Instance().print();
         timer = std::make_unique<Timer>("【渲染耗时】");
 
         m_doc->render(g_cfg.document_width);
@@ -7356,7 +7144,7 @@ void VirtualDoc::workerLoop()
         float delta = task.insertAtFront ? height : 0.0f;
  
         timer.reset();
-        g_timerOutput->print();
+        TimerOutput::Instance().print();
         
 
         PostMessage(g_hWnd, WM_EPUB_CACHE_UPDATED, 0, static_cast<LPARAM>(delta));
@@ -8298,7 +8086,7 @@ void SimpleContainer::present(float x, float y, litehtml::position* clip)
     m_swapChain->Present(1, 0);
 
     timer.reset();
-    g_timerOutput->print();
+    TimerOutput::Instance().print();
 
 }
 
@@ -8902,73 +8690,7 @@ void AppBootstrap::copy_to_clipboard(HWND hwnd, std::wstring txt)
 }
 
 
-Timer::Timer(const std::string& name):
-    name_(name), start_(std::chrono::high_resolution_clock::now()) 
-{
-    //std::cout << name_ << " started...\n";
-}
-Timer::~Timer() {
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start_);
-    g_timerOutput->add(name_, duration.count());
-    //std::string txt = name_ + ":" + std::to_string(duration.count() / 1000000.0f) + " s\n";
-    //OutputDebugStringA(txt.c_str());
-    //std::cout << name_ << " ended. Duration: " << duration.count() << " us\n";
-}
 
-void TimerOutput::add(std::string name, uint64_t duration)
-{
-    for(auto&m: m_map)
-    {
-        if (m.name == name) 
-        { 
-            m.duration += duration; 
-            m.times += 1;
-            return;
-        }
- 
-    }
-
-    m_map.push_back(data{name, duration, 1});
-}
-
-void TimerOutput::print()
-{
-    //std::sort(m_map.begin(), m_map.end(), [](const data& a, const data& b)
-    //    {
-    //        return a.duration < b.duration;
-    //    });
-
-    for (auto& m : m_map)
-    {
-        // 格式化为 9 位小数（纳秒精度）
-        std::ostringstream time_oss;
-        time_oss << std::fixed << std::setprecision(9) << (m.duration / 1000000000.0);
-        std::string time_str = time_oss.str();
-
-        // 在 . 后每 3 位插入一个空格
-        size_t dot_pos = time_str.find('.');
-        if (dot_pos != std::string::npos) {
-            for (size_t i = dot_pos + 4; i < time_str.length(); i += 4) {
-                time_str.insert(i, " ");
-            }
-        }
-
-        // 构建完整输出字符串
-        std::ostringstream oss;
-        oss << std::left << std::setw(30) << m.name << ": "
-            << std::right << std::setw(12) << time_str << " 秒, "
-            << std::right << std::setw(6) << m.times << " 次\n";
-
-        OutputDebugStringA(oss.str().c_str());
-    }
-
-    clear();
-}
-void TimerOutput::clear()
-{
-    m_map = {};
-}
 
 
 void SimpleContainer::clear_background() 

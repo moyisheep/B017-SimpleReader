@@ -362,3 +362,12 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 /Project1/data
+/SimpleReader/HtmlWindow.h
+/SimpleReader/HtmlWindow.cpp
+/SimpleReader/d2dContainer.h
+/SimpleReader/d2dContainer.cpp
+/SimpleReader/Settings.h
+/SimpleReader/ScrollBar.h
+/SimpleReader/ScrollBar.cpp
+/SimpleReader/TocWindow.h
+/SimpleReader/TocWindow.cpp

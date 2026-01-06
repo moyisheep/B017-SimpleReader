@@ -109,28 +109,7 @@ using namespace Gdiplus;
 
 
 
-
-class Timer {
-public:
-    // 构造函数开始计时
-    Timer(const std::string& name = "Timer");
-
-
-    // 析构函数结束计时并输出结果
-    ~Timer();
-
-    // 禁止拷贝和赋值
-    Timer(const Timer&) = delete;
-    Timer& operator=(const Timer&) = delete;
-
-    // 可以移动构造
-    Timer(Timer&&) = default;
-    Timer& operator=(Timer&&) = default;
-
-private:
-    std::string name_;
-    std::chrono::time_point<std::chrono::high_resolution_clock> start_;
-};
+#include "Timer.h"
 
 using Microsoft::WRL::ComPtr;
 
@@ -584,6 +563,7 @@ private:
     std::vector<ComPtr<IDWriteFontFile>> m_defaultFontFiles; // 存储所有字体文件
     std::vector<ComPtr<IDWriteFontFile>> m_privateFontFiles; // 存储所有字体文件
     std::vector<FontItem> m_fontList;
+
 };
 
 
@@ -894,28 +874,6 @@ private:
 
 
 
-class TimerOutput
-{
-public:
-    TimerOutput() { m_map = {}; }
-    ~TimerOutput(){}
-    void add(std::string name, uint64_t duration);
-    void print();
-
-    void clear();
-    void start(std::string info="timer") { timer = std::make_unique<Timer>(info); }
-    void end() { if (timer) { timer.reset(); print(); } }
-private:
-    std::string format_duration(double seconds);
-    struct data
-    {
-        std::string name = "";
-        uint64_t duration = 0;
-        uint64_t times = 0;
-    };
-    std::unique_ptr<Timer> timer;
-    std::vector<data> m_map;
-};
 
 struct AppStates {
 
