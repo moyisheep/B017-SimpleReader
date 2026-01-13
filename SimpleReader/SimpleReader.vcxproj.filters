@@ -7,7 +7,27 @@
     <ClInclude Include="resource.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Timer.h" />
+    <ClInclude Include="Timer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="d2dContainer.h">
+      <Filter>NewFilter1</Filter>
+    </ClInclude>
+    <ClInclude Include="HtmlWindow.h">
+      <Filter>NewFilter1</Filter>
+    </ClInclude>
+    <ClInclude Include="ScrollBarEx.h">
+      <Filter>NewFilter1</Filter>
+    </ClInclude>
+    <ClInclude Include="Settings.h">
+      <Filter>NewFilter1</Filter>
+    </ClInclude>
+    <ClInclude Include="TocWindow.h">
+      <Filter>NewFilter1</Filter>
+    </ClInclude>
+    <ClInclude Include="ScrollPosition.h">
+      <Filter>NewFilter1</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\app.ico">
@@ -43,7 +63,21 @@
     <ClCompile Include="main.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Timer.cpp" />
+    <ClCompile Include="Timer.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="d2dContainer.cpp">
+      <Filter>NewFilter1</Filter>
+    </ClCompile>
+    <ClCompile Include="HtmlWindow.cpp">
+      <Filter>NewFilter1</Filter>
+    </ClCompile>
+    <ClCompile Include="ScrollBarEx.cpp">
+      <Filter>NewFilter1</Filter>
+    </ClCompile>
+    <ClCompile Include="TocWindow.cpp">
+      <Filter>NewFilter1</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="resource.rc">

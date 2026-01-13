@@ -369,5 +369,4 @@ FodyWeavers.xsd
 /SimpleReader/Settings.h
 /SimpleReader/ScrollBar.h
 /SimpleReader/ScrollBar.cpp
-/SimpleReader/TocWindow.h
-/SimpleReader/TocWindow.cpp
+/SimpleReader/ScrollPosition.h
