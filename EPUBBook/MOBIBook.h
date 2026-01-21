@@ -340,7 +340,9 @@ namespace mobi {
 
         // 文件数据
         std::vector<uint8_t> file_data_;
-        std::vector<RecordIndex> record_indices_;
+        std::vector<RecordInfo> m_record_info_list;
+        PDBHeader m_pdb_header;
+        MobiHeader m_mobi_header;
 
         // 解析结果
         std::string title_;
@@ -403,6 +405,7 @@ namespace mobi {
         static MobiHeader swapMobiHeader(const MobiHeader& header);
         PDBHeader swapPDBHeader(const PDBHeader& header);
         RecordIndex swapRecordIndex(const RecordIndex& index);
+        RecordInfo swapRecordIndex(const RecordInfo& index);
         static ExthHeader swapExthHeader(const ExthHeader& header);
         static ExthRecord swapExthRecord(const ExthRecord& record);
 

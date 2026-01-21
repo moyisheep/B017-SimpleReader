@@ -85,7 +85,7 @@ namespace mobi {
             return false;
         }
 
-        if (record_indices_.empty() || record_indices_[0].offset >= file_data_.size()) {
+        if (m_record_info_list.empty() || m_record_info_list[0].data_offset >= file_data_.size()) {
             return false;
         }
 
@@ -99,17 +99,17 @@ namespace mobi {
 
 
         // 解析MOBI记录
-        bool mobi_found = false;
-        for (uint32_t i = 0; i < record_indices_.size(); i++) {
-            if (parseMobiRecord(i)) {
-                mobi_found = true;
-                break;
-            }
-        }
+        //bool mobi_found = false;
+        //for (uint32_t i = 0; i < m_record_info_list.size(); i++) {
+        //    if (parseMobiRecord(i)) {
+        //        mobi_found = true;
+        //        break;
+        //    }
+        //}
 
-        if (!mobi_found) {
-            return false;
-        }
+        //if (!mobi_found) {
+        //    return false;
+        //}
 
         // 解析EXTH元数据
         parseExthMetadata();
@@ -138,7 +138,12 @@ namespace mobi {
         }
 
         const PDBHeader* header = reinterpret_cast<const PDBHeader*>(file_data_.data());
+        if(!header)
+        {
+            return false;
+        }
 
+        m_pdb_header = swapPDBHeader(*header);
          //检查是否为PDB格式
         if (std::string(header->type, 4) != "BOOK" &&
             std::string(header->type, 4) != "TEXt" &&
@@ -154,42 +159,34 @@ namespace mobi {
             return false;
         }
 
-        PDBHeader* raw_header = reinterpret_cast< PDBHeader*>(file_data_.data());
-        auto header = swapPDBHeader(*raw_header);
      
-        uint32_t num_records = header.num_records;
+        uint32_t num_records = m_pdb_header.num_records;
 
         // 记录索引从PDB头之后开始
         const uint8_t* index_data = file_data_.data() + sizeof(PDBHeader);
 
-        record_indices_.resize(num_records);
+        m_record_info_list.resize(num_records);
         for (uint32_t i = 0; i < num_records; i++) {
-            const RecordIndex* idx = reinterpret_cast<const RecordIndex*>(
-                index_data + i * sizeof(RecordIndex));
+            const RecordInfo* raw_idx = reinterpret_cast<const RecordInfo*>(
+                index_data + i * sizeof(RecordInfo));
 
-            RecordIndex record;
-            record.offset = readUInt32(reinterpret_cast<const uint8_t*>(&idx->offset));
-            record.attributes = readUInt32(reinterpret_cast<const uint8_t*>(&idx->attributes));
-            std::memcpy(record.unique_id, idx->unique_id, 3);
-            record.next_record_offset = idx->next_record_offset;
-
-            record_indices_[i] = record;
+            m_record_info_list[i] = swapRecordIndex(*raw_idx);
         }
 
         return true;
     }
 
     bool MobiBook::parseMobiRecord(uint32_t record_index) {
-        if (record_index >= record_indices_.size()) {
+        if (record_index >= m_record_info_list.size()) {
             return false;
         }
 
-        const RecordIndex& record = record_indices_[record_index];
-        if (record.offset >= file_data_.size()) {
+        const RecordInfo& record = m_record_info_list[record_index];
+        if (record.data_offset >= file_data_.size()) {
             return false;
         }
 
-        const uint8_t* record_data = file_data_.data() + record.offset;
+        const uint8_t* record_data = file_data_.data() + record.data_offset;
 
         // 1. 读取原始大端序数据到结构体
         MobiHeader mobi_header_raw;
@@ -296,15 +293,15 @@ namespace mobi {
             return "";
         }
 
-        const uint8_t* record_data = file_data_.data() + record_indices_[0].offset;
+        const uint8_t* record_data = file_data_.data() + m_record_info_list[0].data_offset;
         const uint8_t* name_data = record_data + full_name_offset_;
 
         return decodeText(name_data, full_name_length_);
     }
 
     bool MobiBook::parseContentRecords() {
-        if (first_content_record_ >= record_indices_.size() ||
-            last_content_record_ >= record_indices_.size() ||
+        if (first_content_record_ >= m_record_info_list.size() ||
+            last_content_record_ >= m_record_info_list.size() ||
             first_content_record_ > last_content_record_) {
             return false;
         }
@@ -313,13 +310,13 @@ namespace mobi {
         image_records_.clear();
 
         for (uint16_t i = first_content_record_; i <= last_content_record_; i++) {
-            const RecordIndex& record = record_indices_[i];
+            const RecordInfo& record = m_record_info_list[i];
 
-            if (record.offset >= file_data_.size()) {
+            if (record.data_offset >= file_data_.size()) {
                 continue;
             }
 
-            const uint8_t* record_data = file_data_.data() + record.offset;
+            const uint8_t* record_data = file_data_.data() + record.data_offset;
 
             // 检查是否为图像记录
             bool is_image = false;
@@ -340,11 +337,11 @@ namespace mobi {
 
             // 计算记录长度
             uint32_t record_length = 0;
-            if (i + 1 < record_indices_.size()) {
-                record_length = record_indices_[i + 1].offset - record.offset;
+            if (i + 1 < m_record_info_list.size()) {
+                record_length = m_record_info_list[i + 1].data_offset - record.data_offset;
             }
             else {
-                record_length = file_data_.size() - record.offset;
+                record_length = file_data_.size() - record.data_offset;
             }
 
             std::vector<uint8_t> data(record_data, record_data + record_length);
@@ -566,23 +563,23 @@ namespace mobi {
     }
 
     bool MobiBook::parseRecord0() {
-        if (record_indices_.empty()) {
-            std::cerr << "No record indices" << std::endl;
+        if (m_record_info_list.empty()) {
+            std::cerr << "record info list is empty" << std::endl;
             return false;
         }
 
         // 第一个记录的索引
-        const RecordIndex& record0 = record_indices_[0];
+        const RecordInfo& record0 = m_record_info_list[0];
 
         
-        if (record0.offset + sizeof(PalmDocHeader) > file_data_.size()) {
+        if (record0.data_offset + sizeof(PalmDocHeader) > file_data_.size()) {
             std::cerr << "Record 0 data size is not enough" << std::endl;
             return false;
         }
 
         // 解析 PalmDOC 头
         const PalmDocHeader* raw_palm_doc_header = reinterpret_cast<const PalmDocHeader*>(
-            file_data_.data() + record0.offset);
+            file_data_.data() + record0.data_offset);
         auto palm_doc_header = swapPalmDocHeader(*raw_palm_doc_header);
      
         std::cout << "\n=== PalmDOC Header Info ===" << std::endl;
@@ -625,7 +622,7 @@ namespace mobi {
         std::cout << ")" << std::endl;
 
         // 检查是否有 MOBI 头
-        uint32_t mobi_header_offset = record0.offset + sizeof(PalmDocHeader);
+        uint32_t mobi_header_offset = record0.data_offset + sizeof(PalmDocHeader);
 
         if (mobi_header_offset + 4 > file_data_.size()) {
             std::cout << "No MOBI header" << std::endl;
@@ -645,12 +642,12 @@ namespace mobi {
         // 解析 MOBI 头
         const MobiHeader* raw_mobi_header = reinterpret_cast<const MobiHeader*>(
             file_data_.data() + mobi_header_offset);
-        auto mobi_header = swapMobiHeader(*raw_mobi_header);
+        auto m_mobi_header = swapMobiHeader(*raw_mobi_header);
      
-        std::cout << "MOBI Length: " << mobi_header.header_length << " Bytes" << std::endl;
+        std::cout << "MOBI Length: " << m_mobi_header.header_length << " Bytes" << std::endl;
 
-        std::cout << "MOBI Type: " << mobi_header.mobi_type << " (";
-        switch (mobi_header.mobi_type) {
+        std::cout << "MOBI Type: " << m_mobi_header.mobi_type << " (";
+        switch (m_mobi_header.mobi_type) {
         case MOBI_TYPE_BOOK:
             std::cout << "Mobipocket Book";
             break;
@@ -681,8 +678,8 @@ namespace mobi {
         }
         std::cout << ")" << std::endl;
 
-        std::cout << "Text Encoding: " << mobi_header.text_encoding << " (";
-        switch (mobi_header.text_encoding) {
+        std::cout << "Text Encoding: " << m_mobi_header.text_encoding << " (";
+        switch (m_mobi_header.text_encoding) {
         case ENCODING_CP1252:
             std::cout << "CP1252/WinLatin1";
             break;
@@ -695,26 +692,26 @@ namespace mobi {
         }
         std::cout << ")" << std::endl;
 
-        std::cout << "Unique ID: " << mobi_header.unique_id << std::endl;
-        std::cout << "File Version: " << mobi_header.file_version << std::endl;
-        std::cout << "Locale: " << mobi_header.locale << std::endl;
+        std::cout << "Unique ID: " << m_mobi_header.unique_id << std::endl;
+        std::cout << "File Version: " << m_mobi_header.file_version << std::endl;
+        std::cout << "Locale: " << m_mobi_header.locale << std::endl;
 
-        if (mobi_header.full_name_offset > 0 && mobi_header.full_name_length > 0) {
-            uint32_t name_offset = record0.offset + mobi_header.full_name_offset;
-            if (name_offset + mobi_header.full_name_length <= file_data_.size()) {
+        if (m_mobi_header.full_name_offset > 0 && m_mobi_header.full_name_length > 0) {
+            uint32_t name_offset = record0.data_offset + m_mobi_header.full_name_offset;
+            if (name_offset + m_mobi_header.full_name_length <= file_data_.size()) {
                 std::string full_name(reinterpret_cast<const char*>(
-                    file_data_.data() + name_offset), mobi_header.full_name_length);
+                    file_data_.data() + name_offset), m_mobi_header.full_name_length);
                 std::cout << "Full Name: " << full_name << std::endl;
             }
         }
 
-        std::cout << "First Image Index: " << mobi_header.first_image_index << std::endl;
+        std::cout << "First Image Index: " << m_mobi_header.first_image_index << std::endl;
 
         // 检查是否有EXTH头
-        if (mobi_header.exth_flags & 0x40) {
+        if (m_mobi_header.exth_flags & 0x40) {
             std::cout << "\n=== EXTH Header Info ===" << std::endl;
 
-            uint32_t exth_header_offset = mobi_header_offset + mobi_header.header_length;
+            uint32_t exth_header_offset = mobi_header_offset + m_mobi_header.header_length;
 
             if (exth_header_offset + sizeof(ExthHeader) <= file_data_.size()) {
                 const ExthHeader* raw_exth_header = reinterpret_cast<const ExthHeader*>(
@@ -815,7 +812,7 @@ namespace mobi {
         return records_parsed == record_count;
     }
     bool MobiBook::parseSpecialRecords() {
-        if (record_indices_.size() < 3) {
+        if (m_record_info_list.size() < 3) {
             std::cout << "记录数量不足以包含特殊记录" << std::endl;
             return false;
         }
@@ -823,13 +820,13 @@ namespace mobi {
         std::cout << "\n=== Special Records ===" << std::endl;
 
         // 检查最后几个记录是否为FLIS/FCIS/EOF
-        size_t last_index = record_indices_.size() - 1;
+        size_t last_index = m_record_info_list.size() - 1;
 
         // 检查EOF记录
-        const RecordIndex& eof_record = record_indices_[last_index];
-        if (eof_record.offset + 4 <= file_data_.size()) {
+        const RecordInfo& eof_record = m_record_info_list[last_index];
+        if (eof_record.data_offset + 4 <= file_data_.size()) {
             const EofRecord* eof = reinterpret_cast<const EofRecord*>(
-                file_data_.data() + eof_record.offset);
+                file_data_.data() + eof_record.data_offset);
 
             if (eof->byte0 == 0xE9 && eof->byte1 == 0x8E &&
                 eof->byte2 == 0x0D && eof->byte3 == 0x0A) {
@@ -839,16 +836,16 @@ namespace mobi {
 
         // 检查FCIS记录
         if (last_index >= 2) {
-            const RecordIndex& fcis_record = record_indices_[last_index - 1];
-            if (fcis_record.offset + 4 <= file_data_.size()) {
+            const RecordInfo& fcis_record = m_record_info_list[last_index - 1];
+            if (fcis_record.data_offset + 4 <= file_data_.size()) {
                 const char* identifier = reinterpret_cast<const char*>(
-                    file_data_.data() + fcis_record.offset);
+                    file_data_.data() + fcis_record.data_offset);
 
                 if (std::memcmp(identifier, "FCIS", 4) == 0) {
                     std::cout << "Found FCIS record (record " << last_index - 1 << ")" << std::endl;
 
                     const FcisRecord* fcis = reinterpret_cast<const FcisRecord*>(
-                        file_data_.data() + fcis_record.offset);
+                        file_data_.data() + fcis_record.data_offset);
                     std::cout << "  FCIS Text Length: " << fcis->text_length << " Bytes" << std::endl;
                 }
             }
@@ -856,10 +853,10 @@ namespace mobi {
 
         // 检查FLIS记录
         if (last_index >= 3) {
-            const RecordIndex& flis_record = record_indices_[last_index - 2];
-            if (flis_record.offset + 4 <= file_data_.size()) {
+            const RecordInfo& flis_record = m_record_info_list[last_index - 2];
+            if (flis_record.data_offset + 4 <= file_data_.size()) {
                 const char* identifier = reinterpret_cast<const char*>(
-                    file_data_.data() + flis_record.offset);
+                    file_data_.data() + flis_record.data_offset);
 
                 if (std::memcmp(identifier, "FLIS", 4) == 0) {
                     std::cout << "Found FLIS record (record " << last_index - 2 << ")" << std::endl;
@@ -979,7 +976,7 @@ namespace mobi {
         isbn_.clear();
         version_.clear();
         file_data_.clear();
-        record_indices_.clear();
+        m_record_info_list.clear();
         exth_records_.clear();
         content_records_.clear();
         image_records_.clear();
@@ -1140,6 +1137,14 @@ namespace mobi {
     RecordIndex MobiBook::swapRecordIndex(const RecordIndex& index) {
         RecordIndex swapped = index;
         swapped.offset = swapUint32(index.offset);
+        // attributes 是单字节，不需要交换
+        // unique_id[3] 是字节数组，不需要交换
+        return swapped;
+    }
+
+    RecordInfo MobiBook::swapRecordIndex(const RecordInfo& index) {
+        RecordInfo swapped = index;
+        swapped.data_offset = swapUint32(index.data_offset);
         // attributes 是单字节，不需要交换
         // unique_id[3] 是字节数组，不需要交换
         return swapped;
