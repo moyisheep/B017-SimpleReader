@@ -20,7 +20,7 @@ std::shared_ptr<SimpleContainer> g_cTooltip;
 std::shared_ptr<SimpleContainer> g_cImage;
 std::shared_ptr<SimpleContainer> g_cHome;
 
-std::shared_ptr<EPUBBook>  g_book;
+std::shared_ptr<Book>  g_book;
 
 std::future<void> g_parse_task;
 
@@ -2112,10 +2112,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                     OutputDebugStringA(txt.c_str());
                     return ; 
                 }
-                if (g_cfg.enableEPUBFonts) { g_book->build_epub_font_index(make_temp_dir()); }
+                if (g_cfg.enableEPUBFonts && g_cMain) { g_cMain->build_font_index(make_temp_dir()); }
                 if (g_toc)
                 {
-                    g_toc->Load(g_book->m_ocf_pkg);                 // 代替 EPUBBook::LoadToc()
+                    g_toc->Load(g_book->get_ocf_package());                 // 代替 EPUBBook::LoadToc()
                 }
                 PostMessage(g_hWnd, WM_EPUB_PARSED, 0, 0);
             }
@@ -2151,7 +2151,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         g_vd->clear();
         g_recorder->flush();
         g_recorder->openBook(g_book->get_book_path());
-   
+    
+        if(g_cMain)
+        {
+            g_cMain->set_book(g_book);
+            g_cMain->build_font_index(make_temp_dir());
+        }
         DumpBookRecord();
 
         
@@ -2163,7 +2168,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         g_cfg.line_height = record.lineHeightMul > 0 ? record.lineHeightMul : g_cfg.default_line_height;
         g_cfg.document_width = record.docWidth > 0 ? record.docWidth : g_cfg.default_document_width;
     
-        int spine_size = g_book->m_ocf_pkg.spine.size();
+        int spine_size = g_book->get_spine().size();
         SendMessage(g_hViewScroll, SBM_SETSPINECOUNT, spine_size, 0);
 
         g_cfg.enableCSS = record.enableCSS;
@@ -2180,7 +2185,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 
         g_cfg.font_name = record.fontName;
         g_vd->load_book();
-        g_vd->load_html(g_book->m_ocf_pkg.spine[spine_id].href);
+        g_vd->load_html(g_book->get_spine()[spine_id].href);
 
         UpdateCache();          // 复用前面给出的 UpdateCache()
 
@@ -2403,7 +2408,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             CheckMenuItem(GetMenu(g_hWnd), IDM_TOGGLE_EPUB_FONTS,
                 MF_BYCOMMAND | (g_cfg.enableEPUBFonts ? MF_CHECKED : MF_UNCHECKED));
             if (g_cMain) { g_cMain->clear_font_cache(); }
-            if (g_book && g_book->m_fontBin.empty()) {  g_book->build_epub_font_index(make_temp_dir()); }
+            if (g_cMain && g_cMain->m_fontBin.empty()) { g_cMain->build_font_index(make_temp_dir()); }
             if (g_vd) { g_vd->reload(); }
             break;
 
@@ -4924,9 +4929,9 @@ SimpleContainer::split_font_list(const std::string& src)
 std::vector<std::string> SimpleContainer::get_font_alias(std::string fontName)
 {
     std::vector<std::string> fontAlias{ fontName };
-    if (g_book && g_cfg.enableEPUBFonts)
+    if (g_cfg.enableEPUBFonts)
     {
-            for (const auto& kv : g_book->m_fontBin)
+            for (const auto& kv : m_fontBin)
                 if (kv.first.family == fontName)
                 {
                     fontAlias.insert(fontAlias.end(), kv.second.begin(), kv.second.end());
@@ -6314,6 +6319,9 @@ void SimpleContainer::clear()
     m_brushPool.clear();
     m_textWidthCache.clear();
 
+    m_fontBin.clear();
+    m_font_path.clear();
+
 }
 
 std::vector<FontItem> SimpleContainer::getFontList()
@@ -6356,9 +6364,9 @@ void VirtualDoc::load_book()
 {
     m_book = g_book;
     m_container = g_cMain;
-    m_spine = m_book->m_ocf_pkg.spine;
+    m_spine = m_book->get_spine();
 
-    auto font_path = m_book->get_font_path();
+    auto font_path = m_container->get_font_path();
     for (auto& path : font_path)
     {
         bool result = m_container->AddPrivateFont(a2w(path).c_str());
@@ -6666,7 +6674,7 @@ bool VirtualDoc::load_by_id(int spine_id, bool isPushBack)
         if (href.empty()) return false;
 
   
-        std::string html = m_book->load_html(href);
+        std::string html = m_book->get_string(href);
         if (html.empty()) return false;
 
    
@@ -8586,4 +8594,127 @@ void SimpleContainer::clear_background()
     m_dc->BeginDraw(); 
     m_dc->Clear(g_cfg.background_color); 
     m_dc->EndDraw();
+}
+
+void SimpleContainer::build_font_index(const std::string& tempDir )
+{
+    if (!m_book) { return; }
+
+    // 2. 正则
+    const std::regex rx_face(R"(@font-face\s*\{([^}]*)\})", std::regex::icase);
+    const std::regex rx_fam(R"(font-family\s*:\s*['"]?([^;'"}]+)['"]?)", std::regex::icase);
+    const std::regex rx_url(R"(url\s*\(\s*['"]?([^)'"]+)['"]?\s*\))", std::regex::icase);
+    const std::regex rx_loc(R"(local\s*\(\s*['"]?([^)'"]+)['"]?\s*\))", std::regex::icase);
+    const std::regex rx_w(R"(font-weight\s*:\s*(\d+|bold))", std::regex::icase);
+    const std::regex rx_i(R"(font-style\s*:\s*(italic|oblique))", std::regex::icase);
+
+    // 3. 遍历所有 CSS
+   
+    for (const auto& item : m_book->get_ocf_package().manifest)
+    {
+        if (item.media_type != "text/css") continue;
+
+        auto cssFile = m_book->get_binary("", item.href);
+        std::string css_dir = fs::path(item.href).parent_path().generic_string();
+        if (cssFile.empty()) continue;
+
+        std::string css{ (char*)cssFile.data(), cssFile.size() };
+
+        for (std::sregex_iterator it(css.begin(), css.end(), rx_face), end; it != end; ++it)
+        {
+            std::string block = it->str();
+            std::smatch m;
+
+            std::string family;
+            std::vector<std::string> paths;   // 可能多个 src
+            int weight = 400;
+            bool italic = false;
+
+            // family
+            if (std::regex_search(block, m, rx_fam)) family = m[1];
+
+            // weight / style
+            if (std::regex_search(block, m, rx_w))
+                weight = (m[1] == "bold" || m[1] == "700") ? 700 : std::stoi(m[1]);
+            if (std::regex_search(block, m, rx_i)) italic = true;
+
+            // 解析 src 中所有 url(...) 
+            for (std::sregex_iterator srcIt(block.begin(), block.end(), rx_url), srcEnd; srcIt != srcEnd; ++srcIt)
+            {
+                std::string url = (*srcIt)[1];
+
+                // 跳过网络字体
+                if (url.starts_with("http://") || url.starts_with("https://"))
+                    continue;
+
+                // 去掉 query/fragment
+                if (auto pos = url.find('?'); pos != std::string::npos) url.erase(pos);
+                if (auto pos = url.find('#'); pos != std::string::npos) url.erase(pos);
+
+                // 保留扩展名
+                std::string ext = ".ttf";
+                if (auto dot = url.rfind('.'); dot != std::string::npos)
+                {
+                    ext = url.substr(dot);
+                    std::transform(ext.begin(), ext.end(), ext.begin(), ::towlower);
+                    static const std::unordered_set<std::string> ok{ ".ttf", ".otf", ".woff", ".woff2", ".ttc" };
+                    if (!ok.contains(ext)) ext = ".ttf";
+                }
+
+                // 解压
+                auto fontFile = m_book->get_binary(css_dir, url);
+                if (fontFile.empty()) continue;
+
+                std::string hashHex = blake3_hex(fontFile);   // 32 字节 → 64 字符
+                std::string tempFont = tempDir + hashHex + ext;    // 例如：a1b2c3...ff.woff2
+                // 2. 如果文件已存在，直接记录路径，不再写盘
+                if (fs::exists(tempFont.c_str()))
+                {
+                    paths.push_back(tempFont);   // 已缓存
+                    m_font_path.push_back(tempFont);
+                    continue;
+                }
+                std::ofstream outFile(tempFont, std::ios::binary);
+                if (!outFile) {
+                    //std::cerr << "无法打开二进制文件" << std::endl;
+                    continue;
+                }
+                outFile.write(reinterpret_cast<const char*>(fontFile.data()), fontFile.size());
+                outFile.close();
+                m_font_path.push_back(tempFont);
+                paths.push_back(tempFont);
+            }
+
+            // local(...)
+            for (std::sregex_iterator locIt(block.begin(), block.end(), rx_loc), locEnd; locEnd != locIt; ++locIt)
+            {
+                paths.push_back((*locIt)[1]);
+            }
+
+            if (family.empty() || paths.empty()) continue;
+
+            FontKey key{ family, weight, italic, 0 };
+            m_fontBin[key] = std::move(paths);
+        }
+    }
+}
+
+std::string SimpleContainer::blake3_hex(const std::vector<uint8_t>& data)
+{
+    blake3_hasher hasher;
+    blake3_hasher_init(&hasher);
+    blake3_hasher_update(&hasher, data.data(), data.size());
+
+    std::array<uint8_t, BLAKE3_OUT_LEN> hash;          // 32 字节
+    blake3_hasher_finalize(&hasher, hash.data(), hash.size());
+
+    std::ostringstream oss;
+    for (uint8_t b : hash)
+        oss << std::hex << std::setw(2) << std::setfill('0') << (b & 0xFF);
+    return oss.str();                                  // 64 个十六进制字符
+}
+
+std::vector<std::string> SimpleContainer::get_font_path()
+{
+    return m_font_path;
 }

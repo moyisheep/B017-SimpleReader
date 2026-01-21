@@ -16,28 +16,7 @@
 #include <tinyxml2.h>
 #include <blake3.h>
 
-// -------------- 新增数据结构 --------------
-struct OCFItem {
-    std::string id, href, media_type, properties;
-};
-struct OCFRef {
-    std::string idref, href, linear = "yes";
-};
-struct OCFNavPoint {
-    std::string label, href;
-    int order = 0;
-};
-struct OCFPackage {
-    std::string rootfile;                // OPF 绝对路径
-    std::string opf_dir;                 // 目录，带 '/'
-    std::string version;
-    std::vector<OCFItem>   manifest;
-    std::vector<OCFRef>    spine;
-    std::vector<OCFNavPoint> toc;
-    std::map<std::string, std::string> meta;
-    std::string toc_path;
-};
-
+#include "Book.h"
 
 struct FontKey {
     std::string family;
@@ -62,64 +41,64 @@ namespace std {
 
 
 // ---------- EPUB 零解压 ----------
-class EPUBBook {
+class EPUBBook: public Book 
+{
 public:
 
-    OCFPackage m_ocf_pkg;                     // 解析结果
+
 
     // -------------- EPUBBook 内部新增成员 --------------
 
-    bool load(const std::string& epub_path);
-    std::vector<uint8_t> get_binary(std::string base_url, std::string url);
-
-
-    std::vector<uint8_t> read_zip(std::string file_name);
-
-    std::string load_html(const std::string& path);
+    bool load(const std::string& epub_path) override;
+    std::vector<uint8_t> get_binary(std::string base_url, std::string url) override;
 
 
 
-    void load_all_fonts(void);
+    std::string get_string(const std::string& path) override;
 
 
-    std::string get_book_path();
-    std::string get_current_dir();
-    std::string get_chapter_name_by_id(int spine_id);
+    std::string get_book_path() override;
+    std::string get_current_dir() override;
+    std::string get_chapter_name_by_id(int spine_id) override;
 
-    std::string get_title();
-    std::string get_author();
-    std::string get_version();
+    std::string get_title() override;
+    std::string get_author() override;
+    std::string get_version() override;
 
-    std::vector<std::string> get_font_path();
+    std::vector<OCFRef>& get_spine() override;
+    OCFPackage& get_ocf_package() override;
+
+
  
-    bool has_script();
-    bool has_font();
-    bool has_css();
+    bool has_script() override;
+    bool has_font() override;
+    bool has_css() override;
 
 
-    bool is_toc_item(int spine_id);
+   // bool is_toc_item(int spine_id);
 
 
-    void clear();
+    void clear() override;
 
 
 
-    void build_epub_font_index(std::string tempDir);
-    std::unordered_map<FontKey, std::vector<std::string>> m_fontBin;
-    std::string resolve_path(std::string base_url, std::string href);
+    std::string resolve_path(std::string base_url, std::string href) override;
 
     EPUBBook() noexcept {}
     ~EPUBBook();
 private:
+    OCFPackage m_ocf_pkg;                     // 解析结果
     std::string m_current_book_path = "";
     std::string m_current_html_path = "";
     mz_zip_archive zip = {};
     std::map<std::string, std::vector<uint8_t>> m_cache;
-    std::vector<std::string> m_font_path = {};
 
+
+private:
+    std::vector<uint8_t> read_zip(std::string file_name);
 
     static std::string url_decode(const std::string& in);
-    static std::string blake3_hex(const std::vector<uint8_t>& data);
+
     bool is_xhtml(const std::string& file_path);
 
 

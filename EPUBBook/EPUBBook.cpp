@@ -39,134 +39,10 @@ bool EPUBBook::is_xhtml(const std::string& file_path)
 
 
 
-void EPUBBook::load_all_fonts() {
-
-    //FontKey key{ L"serif", 400, false, 0 };
-    //m_fontBin[key] = { g_cfg.default_serif };
-    //key = { L"sans-serif", 400, false, 0 };
-    //m_fontBin[key] = { g_cfg.default_sans_serif };
-    //key = { L"monospace", 400, false, 0 };
-    //m_fontBin[key] = { g_cfg.default_monospace };
 
 
-}
-
-std::string EPUBBook::blake3_hex(const std::vector<uint8_t>& data)
-{
-    blake3_hasher hasher;
-    blake3_hasher_init(&hasher);
-    blake3_hasher_update(&hasher, data.data(), data.size());
-
-    std::array<uint8_t, BLAKE3_OUT_LEN> hash;          // 32 字节
-    blake3_hasher_finalize(&hasher, hash.data(), hash.size());
-
-    std::ostringstream oss;
-    for (uint8_t b : hash)
-        oss << std::hex << std::setw(2) << std::setfill('0') << (b & 0xFF);
-    return oss.str();                                  // 64 个十六进制字符
-}
-
-void EPUBBook::build_epub_font_index(std::string tempDir)
-{
 
 
-    // 2. 正则
-    const std::regex rx_face(R"(@font-face\s*\{([^}]*)\})", std::regex::icase);
-    const std::regex rx_fam(R"(font-family\s*:\s*['"]?([^;'"}]+)['"]?)", std::regex::icase);
-    const std::regex rx_url(R"(url\s*\(\s*['"]?([^)'"]+)['"]?\s*\))", std::regex::icase);
-    const std::regex rx_loc(R"(local\s*\(\s*['"]?([^)'"]+)['"]?\s*\))", std::regex::icase);
-    const std::regex rx_w(R"(font-weight\s*:\s*(\d+|bold))", std::regex::icase);
-    const std::regex rx_i(R"(font-style\s*:\s*(italic|oblique))", std::regex::icase);
-
-    // 3. 遍历所有 CSS
-    for (const auto& item : m_ocf_pkg.manifest)
-    {
-        if (item.media_type != "text/css") continue;
-
-        auto cssFile = get_binary("", item.href);
-        std::string css_dir = fs::path(item.href).parent_path().generic_string();
-        if (cssFile.empty()) continue;
-
-        std::string css { (char*)cssFile.data(), cssFile.size() };
-
-        for (std::sregex_iterator it(css.begin(), css.end(), rx_face), end; it != end; ++it)
-        {
-            std::string block = it->str();
-            std::smatch m;
-
-            std::string family;
-            std::vector<std::string> paths;   // 可能多个 src
-            int weight = 400;
-            bool italic = false;
-
-            // family
-            if (std::regex_search(block, m, rx_fam)) family = m[1];
-
-            // weight / style
-            if (std::regex_search(block, m, rx_w))
-                weight = (m[1] == "bold" || m[1] == "700") ? 700 : std::stoi(m[1]);
-            if (std::regex_search(block, m, rx_i)) italic = true;
-
-            // 解析 src 中所有 url(...) 
-            for (std::sregex_iterator srcIt(block.begin(), block.end(), rx_url), srcEnd; srcIt != srcEnd; ++srcIt)
-            {
-                std::string url = (*srcIt)[1];
-
-                // 跳过网络字体
-                if (url.starts_with("http://") || url.starts_with("https://"))
-                    continue;
-
-                // 去掉 query/fragment
-                if (auto pos = url.find('?'); pos != std::string::npos) url.erase(pos);
-                if (auto pos = url.find('#'); pos != std::string::npos) url.erase(pos);
-
-                // 保留扩展名
-                std::string ext = ".ttf";
-                if (auto dot = url.rfind('.'); dot != std::string::npos)
-                {
-                    ext = url.substr(dot);
-                    std::transform(ext.begin(), ext.end(), ext.begin(), ::towlower);
-                    static const std::unordered_set<std::string> ok{ ".ttf", ".otf", ".woff", ".woff2", ".ttc" };
-                    if (!ok.contains(ext)) ext = ".ttf";
-                }
-
-                // 解压
-                auto fontFile = get_binary(css_dir, url);
-                if (fontFile.empty()) continue;
-
-                std::string hashHex = blake3_hex(fontFile);   // 32 字节 → 64 字符
-                std::string tempFont = tempDir + hashHex + ext;    // 例如：a1b2c3...ff.woff2
-                // 2. 如果文件已存在，直接记录路径，不再写盘
-                if (fs::exists(tempFont.c_str()))
-                {
-                    paths.push_back(tempFont);   // 已缓存
-                    m_font_path.push_back(tempFont);
-                    continue;
-                }
-                std::ofstream outFile(tempFont, std::ios::binary);
-                if (!outFile) {
-                    //std::cerr << "无法打开二进制文件" << std::endl;
-                    continue;
-                }
-                outFile.write(reinterpret_cast<const char*>(fontFile.data()), fontFile.size());
-                outFile.close();
-                m_font_path.push_back(tempFont);
-                paths.push_back(tempFont);
-            }
-
-            // local(...)
-            for (std::sregex_iterator locIt(block.begin(), block.end(), rx_loc), locEnd; locEnd != locIt; ++locIt)
-            {
-                paths.push_back((*locIt)[1]);
-            }
-
-            if (family.empty() || paths.empty()) continue;
-
-            FontKey key{ family, weight, italic, 0 };
-            m_fontBin[key] = std::move(paths);
-        }
-    }
-}
 
 
 void EPUBBook::parse_ncx_points(tinyxml2::XMLElement* navPoint, int level,
@@ -264,10 +140,10 @@ void EPUBBook::clear()
     m_cache.clear();
 
     m_ocf_pkg = {};
-    m_fontBin.clear();
+
     m_current_book_path = "";
     m_current_html_path = "";
-    m_font_path.clear();
+
 }
 
 std::string EPUBBook::get_chapter_name_by_id(int spine_id)
@@ -324,10 +200,16 @@ std::string EPUBBook::get_version()
     return m_ocf_pkg.version;
 }
 
-std::vector<std::string> EPUBBook::get_font_path()
+std::vector<OCFRef>& EPUBBook::get_spine()
 {
-    return m_font_path;
+    return m_ocf_pkg.spine;
 }
+
+OCFPackage& EPUBBook::get_ocf_package()
+{
+    return m_ocf_pkg;
+}
+
 
 bool EPUBBook::has_script()
 {
@@ -369,18 +251,18 @@ std::vector<uint8_t> EPUBBook::get_binary(std::string base_url, std::string url)
     return read_zip(path);
 }
 
-bool EPUBBook::is_toc_item(int spine_id)
-{
-    if (spine_id < 0 || spine_id >= m_ocf_pkg.spine.size()) { return false; }
-    for (auto& it : m_ocf_pkg.toc)
-    {
-        if (it.href == m_ocf_pkg.spine[spine_id].href)
-        {
-            return true;
-        }
-    }
-    return false;
-}
+//bool EPUBBook::is_toc_item(int spine_id)
+//{
+//    if (spine_id < 0 || spine_id >= m_ocf_pkg.spine.size()) { return false; }
+//    for (auto& it : m_ocf_pkg.toc)
+//    {
+//        if (it.href == m_ocf_pkg.spine[spine_id].href)
+//        {
+//            return true;
+//        }
+//    }
+//    return false;
+//}
 
 
 std::vector<uint8_t> EPUBBook::read_zip(std::string file_name) {
@@ -407,7 +289,7 @@ std::vector<uint8_t> EPUBBook::read_zip(std::string file_name) {
     return mf;
 }
 
-std::string EPUBBook::load_html(const std::string& path)
+std::string EPUBBook::get_string(const std::string& path)
 {
     auto mf = read_zip(path);
     if (mf.empty()) return {};

@@ -29,5 +29,8 @@
     <ClInclude Include="MOBIBook.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Book.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

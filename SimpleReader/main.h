@@ -106,7 +106,7 @@ using namespace Gdiplus;
 #include "MML2SVG.h"
 #include "ReadingRecorder.h"
 #include "EPUBBook.h"
-
+#include "Book.h"
 
 
 #include "Timer.h"
@@ -471,17 +471,22 @@ public:
 
     void clear_font_cache() { m_layoutCache.clear();   m_textWidthCache.clear(); }
     void clear_background();
+    void build_font_index(const std::string& tempDir);
+    std::string blake3_hex(const std::vector<uint8_t>& data);
+    void set_book(std::shared_ptr<Book>& book) { m_book = book; }
     std::wstring m_sel_text = L"";
-
+    std::unordered_map<FontKey, std::vector<std::string>> m_fontBin;
+    std::vector<std::string> get_font_path() ;
 private:
 
     float m_dpi_x = 96.0f;
     float m_dpi_y = 96.0f;
 
-
+    std::shared_ptr<Book> m_book;
     std::vector<RECT> get_selection_rows() const;
     std::wstring get_selection_text() const;
-
+    std::vector<std::string> m_font_path = {};
+  
 
 
     //ComPtr<ID2D1HwndRenderTarget> m_rt;
@@ -650,7 +655,7 @@ private:
         int spine_id;
     };
     std::vector<OCFRef> m_spine;
-    std::shared_ptr<EPUBBook> m_book;
+    std::shared_ptr<Book> m_book;
     std::shared_ptr<SimpleContainer> m_container;
     //std::vector<DocCache> m_doc_cache;
 
