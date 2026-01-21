@@ -995,6 +995,7 @@ void CALLBACK OnScrollTimer(UINT, UINT, DWORD_PTR, DWORD_PTR, DWORD_PTR)
     g_velocity.store(v, std::memory_order_relaxed);
 
     //ScrollWindowEx(g_hView, 0, v * dt, NULL, NULL, NULL, NULL, SW_INVALIDATE);
+
     InvalidateRect(g_hView, nullptr, FALSE);
 
     // 速度接近 0 时停止定时器
@@ -1102,6 +1103,7 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         {
             RECT rcClient;
             GetClientRect(hwnd, &rcClient);   // ← 这才是客户区
+
             g_cMain->resize(rcClient.right, rcClient.bottom);
             UpdateCache();
         }
@@ -1290,6 +1292,7 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
    
             UpdateCache();
             // 3. 重绘
+
             InvalidateRect(hwnd, NULL, TRUE);
         
             return 0;   // 已处理，不再传递
@@ -1314,12 +1317,14 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             if (g_scrollTimer == 0) {
                 g_scrollTimer = timeSetEvent(1, 0, OnScrollTimer, 0, TIME_PERIODIC);
             }
+       
         }
         else
         {
             float cur = g_offsetY.load(std::memory_order_relaxed);
             float newOffset = std::clamp(cur + pxDelta, -h/2.0f, std::max(g_vd->m_height - h / 2.0f, 0.0f));
             g_offsetY.store(newOffset, std::memory_order_relaxed);
+    
             InvalidateRect(hwnd, nullptr, TRUE);
         }
 
@@ -1338,7 +1343,7 @@ LRESULT CALLBACK ViewWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 {
 
                     RECT rc{ g_center_offset + box.left(), box.top() - offset, g_center_offset + box.right(), box.bottom() - offset };
-                    InvalidateRect(hwnd, &rc, false);
+                    InvalidateRect(hwnd, &rc, FALSE);
                 }
             }
 
@@ -2354,6 +2359,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         }
 
         UpdateCache();
+
         InvalidateRect(g_hView, nullptr, TRUE);
         return 0;
     }
@@ -3972,6 +3978,7 @@ void SimpleContainer::record_char_boxes(
 {
     Timer timer("    record_char_boxes");
 
+    
     LineBoxes line;
     float originX = static_cast<float>(pos.x);
     float originY = static_cast<float>(pos.y);
@@ -4073,6 +4080,7 @@ void SimpleContainer::draw_text(litehtml::uint_ptr hdc,
     // 2. 文本
     auto layout = getLayout(text, hFont);
     if (!layout) { return ; }
+    layout->AddRef();
     std::wstring wtxt = normalize_quotes(a2w(text));
   
 
@@ -4882,7 +4890,6 @@ std::wstring  SimpleContainer::toLower(std::wstring s)
 
 
 
-
 std::vector<std::string>
 SimpleContainer::split_font_list(const std::string& src)
 {
@@ -5269,7 +5276,7 @@ litehtml::pixel_t SimpleContainer::text_width(const char* text,
 
     auto layout = getLayout(text, hFont);
     if (!layout) { return 0; }
- 
+    layout->AddRef();
 
 
 
@@ -7718,6 +7725,7 @@ int64_t SimpleContainer::hit_test(float x, float y)
 
 void SimpleContainer::on_lbutton_down(int x, int y)
 {
+
     m_selecting = true;
     m_sel_rects = {};
     m_selStart = m_selEnd = -1;
@@ -7747,7 +7755,12 @@ void SimpleContainer::on_mouse_move(int x, int y)
                     row.left, row.top, row.right, row.bottom);
                 m_sel_rects.push_back(r);
             }
-            InvalidateRect(m_hwnd, nullptr, false);
+            for(auto& r: m_sel_rects)
+            {
+                RECT rect{ r.left, r.top, r.right, r.bottom };
+                InvalidateRect(m_hwnd, &rect, FALSE);
+            }
+         
         }
 
     }
@@ -7766,6 +7779,7 @@ void SimpleContainer::on_mouse_move(int x, int y)
 
 void SimpleContainer::on_mouse_wheel(float delta)
 {
+   
     if (m_selStart != m_selEnd && m_selStart >= 0 && m_selEnd >= 0)
     {
 
@@ -7786,7 +7800,11 @@ void SimpleContainer::on_lbutton_up()
 
     m_currentCursor = IDC_ARROW;
     SetCursor(LoadCursor(nullptr, m_currentCursor));
-    InvalidateRect(g_hView, nullptr, false);
+    for (auto& r : m_sel_rects)
+    {
+        RECT rect{ r.left, r.top, r.right, r.bottom };
+        InvalidateRect(m_hwnd, &rect, FALSE);
+    }
 }
 void SimpleContainer::copy_to_clipboard()
 {
@@ -7820,7 +7838,7 @@ std::vector<RECT> SimpleContainer::get_selection_rows() const
     if (m_selStart == m_selEnd) return rows;
 
     const size_t start = std::min(m_selStart, m_selEnd);
-    const size_t end = std::max(m_selStart, m_selEnd);
+    const size_t end = std::max(m_selStart, m_selEnd) + 1;
 
     /* 1. 先按原逻辑收集每一“词”的矩形 */
     for (const auto& line : m_lines)
@@ -7883,7 +7901,7 @@ std::wstring SimpleContainer::get_selection_text() const
 
     // 确保选区不越界
     const size_t start = std::min(m_selStart, m_selEnd);
-    const size_t end = std::min(std::max(m_selStart, m_selEnd), static_cast<int64_t>(m_plainText.size()));
+    const size_t end = std::min(std::max(m_selStart, m_selEnd) + 1, static_cast<int64_t>(m_plainText.size()));
 
     if (start >= end)
         return L"";
@@ -7920,7 +7938,7 @@ void SimpleContainer::present(float x, float y, litehtml::position* clip)
     
  
     D2D1_RECT_F rc{ clip->left(), clip->top(), clip->right(), clip->bottom() };
-    //m_dc->FillRectangle(rc, m_backgroundBrush.Get());
+    m_dc->FillRectangle(rc, m_backgroundBrush.Get());
 
     m_doc->draw(getContext(), x, y, clip);
  
@@ -8025,7 +8043,7 @@ void SimpleContainer::on_lbutton_dblclk(int x, int y)
 
     /* 5. 更新选区 */
     m_selStart = wordStart;
-    m_selEnd = wordEnd;
+    m_selEnd = wordEnd - 1;
     if (m_selStart != m_selEnd && m_selStart >= 0 && m_selEnd >= 0)
     {
 

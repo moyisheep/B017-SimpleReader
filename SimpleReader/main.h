@@ -331,18 +331,13 @@ struct AppSettings {
     COLORREF highlight_color_cr = RGB(238, 165, 102);  // #eea566
     COLORREF hover_color_cr = RGB(240, 240, 240);  
     // 2) D2D1 颜色（保持原透明度 0.4，可按需改）
-    //D2D1::ColorF highlight_color_d2d{
-    //    238.0f / 255.0f,  // R
-    //    165.0f / 255.0f,  // G
-    //    102.0f / 255.0f,  // B
-    //    0.4f              // A
-    //};
     D2D1::ColorF highlight_color_d2d{
-    255.0f / 255.0f,  // R
-    0.0f / 255.0f,  // G
-    0.0f / 255.0f,  // B
-    1.0f              // A
+        238.0f / 255.0f,  // R
+        165.0f / 255.0f,  // G
+        102.0f / 255.0f,  // B
+        0.4f              // A
     };
+
     D2D1::ColorF default_background_color{
         255.0f / 255.0f,  // R
         255.0f / 255.0f,  // G
@@ -447,6 +442,7 @@ public:
 
     void addImageCache(std::string hash, std::string svg);
 
+
     void clear();
     std::vector<FontItem> getFontList();
  
@@ -515,6 +511,10 @@ private:
         const std::wstring& wtxt,
         const std::wstring& familyName, 
         const litehtml::position& pos);
+
+
+
+  
 
     std::vector<std::string> split_font_list(const std::string& src);
 
