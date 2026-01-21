@@ -2065,14 +2065,26 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     {
         const wchar_t* file = (const wchar_t*)lp;
         const wchar_t* ext = wcsrchr(file, L'.');
-        if (!ext || _wcsicmp(ext, L".epub") != 0)
+        
+        if(ext)
         {
-            SetStatus(STATUSBAR_INFO, L"不是有效的 epub 文件");
-            OutputDebugStringW(L"不是有效的 epub 文件\n");
-            CoTaskMemFree((void*)file);   // 释放堆拷贝
-            return 0;
+            if (std::wstring(ext) == std::wstring(L".epub"))
+            {
+                g_book = std::make_shared<EPUBBook>();
+            }
+            else if (std::wstring(ext) == std::wstring(L".mobi"))
+            {
+                g_book = std::make_shared<mobi::MobiBook>();
+            }
+            else
+            {
+                SetStatus(STATUSBAR_INFO, L"不是有效的 epub 文件");
+                OutputDebugStringW(L"不是有效的 epub 文件\n");
+                CoTaskMemFree((void*)file);   // 释放堆拷贝
+                return 0;
+            }
         }
-
+ 
         // 如果上一次任务还在跑，直接忽略（或加入队列）
         if (g_parse_task.valid() &&
             g_parse_task.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
@@ -2106,7 +2118,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 
                     return ;
                 }
-                if (!g_book->load(w2a(file))) 
+
+                if (!g_book || !g_book->load(w2a(file))) 
                 { 
                     std::string txt = "[EPUBBook] 打开失败: " + w2a(file) + "\n";
                     OutputDebugStringA(txt.c_str());
@@ -2716,9 +2729,9 @@ int WINAPI wWinMain(HINSTANCE h, HINSTANCE, LPWSTR, int n)
     //// 3. 现在可以使用 printf
 
  
-    //freopen("stdout.txt", "w", stdout);
-    //freopen("stdout.txt", "w", stderr);
-    //printf("Hello from Win32 Window!\n");
+    freopen("stdout.txt", "w", stdout);
+    freopen("stdout.txt", "w", stderr);
+    printf("Hello from Win32 Window!\n");
     // ---------- 1. 解析命令行 ----------
     int argc = 0;
     std::wstring cmd = GetCommandLineW();

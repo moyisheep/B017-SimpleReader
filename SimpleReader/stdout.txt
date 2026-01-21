@@ -1,0 +1,43 @@
+Hello from Win32 Window!
+
+=== PalmDOC Header Info ===
+Compression: 1 (No)
+Text Length: 1015883 Bytes
+Record Count: 249
+Record Size: 4096 Bytes
+Encryption Type: 0 (None)
+
+=== MOBI Header Info ===
+MOBI Length: 264 Bytes
+MOBI Type: 2 (Mobipocket Book)
+Text Encoding: 65001 (UTF-8)
+Unique ID: 0
+File Version: 7
+Locale: 0
+Full Name: 理想国 (商务汉译世界学术名著丛书)
+First Image Index: 253
+
+=== EXTH Header Info ===
+EXTH Header Length: 440 Bytes
+EXTH Record Count: 18
+EXTH record details:
+  Record 1 - Type: 121, Length: 12
+  Record 2 - Type: 125, Length: 12
+  Record 3 - Type: 129, Length: 25
+  Record 4 - Type: 131, Length: 12
+  Record 5 - Type: 201, Length: 12
+  Record 6 - Type: 202, Length: 12
+  Record 7 - Type: 203, Length: 12
+  Record 8 - Type: 16777217, Length: 61
+  Record 9 - Type: 16777218, Length: 14
+  Record 10 - Type: 16777219, Length: 14
+  Record 11 - Type: 16777220, Length: 29
+  Record 12 - Type: 501, Length: 12
+  Record 13 - Type: 100, Length: 25
+  Record 14 - Type: 106, Length: 33
+  Record 15 - Type: 113, Length: 44
+  Record 16 - Type: 524, Length: 10
+  Record 17 - Type: 101, Length: 29
+  Record 18 - Type: 503, Length: 56
+
+=== Special Records ===

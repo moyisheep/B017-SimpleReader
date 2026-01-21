@@ -106,6 +106,7 @@ using namespace Gdiplus;
 #include "MML2SVG.h"
 #include "ReadingRecorder.h"
 #include "EPUBBook.h"
+#include "MOBIBook.h"
 #include "Book.h"
 
 
