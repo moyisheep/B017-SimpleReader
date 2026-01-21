@@ -535,7 +535,7 @@ private:
     static std::wstring normalize_quotes(const std::wstring& src);
     ComPtr<ID2D1SolidColorBrush> getBrush(litehtml::uint_ptr hdc, const litehtml::web_color& c);
 
-    ComPtr<IDWriteTextLayout> getLayout(const std::string& txt,  litehtml::uint_ptr hFont);
+    IDWriteTextLayout* getLayout(const std::string& txt,  litehtml::uint_ptr hFont);
     ComPtr<ID2D1Bitmap> getBitmap(litehtml::uint_ptr hdc, std::string url);
     //void draw_decoration(litehtml::uint_ptr hdc, const FontPair* fp, litehtml::web_color color, const litehtml::position& pos, IDWriteTextLayout* layout);
 
@@ -543,7 +543,7 @@ private:
     std::unordered_map<uint32_t, ComPtr<ID2D1SolidColorBrush>> m_brushPool;
     //FontCache m_fontCache;
     //LayoutCache m_layoutCache;
-    std::unordered_map<std::string, Microsoft::WRL::ComPtr<IDWriteTextLayout>> m_layoutCache;
+    std::unordered_map<std::string, IDWriteTextLayout*> m_layoutCache;
     std::unordered_map<std::string, float> m_textWidthCache;
     ComPtr<IDWriteFactory3>    m_dwrite;
 

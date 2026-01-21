@@ -3930,14 +3930,15 @@ ComPtr<ID2D1SolidColorBrush> SimpleContainer::getBrush(litehtml::uint_ptr hdc, c
     m_brushPool[key] = brush;
     return brush;
 }
-ComPtr<IDWriteTextLayout> SimpleContainer::getLayout(const std::string& txt,
+IDWriteTextLayout* SimpleContainer::getLayout(const std::string& txt,
     litehtml::uint_ptr hFont)
 {
     Timer timer("    getLayout");
     // 1. 先替换花引号
     auto* textFormat = reinterpret_cast<IDWriteTextFormat*>(hFont);
     if (!textFormat) { return nullptr; }
-    std::string key = txt + "|" + std::to_string(hFont);
+    textFormat->AddRef();
+    std::string key = ":font=" + std::to_string(hFont) + ":text=" + std::string(txt);
     auto it = m_layoutCache.find(key);
     if (it != m_layoutCache.end()) { return it->second; }
 
@@ -4085,7 +4086,7 @@ void SimpleContainer::draw_text(litehtml::uint_ptr hdc,
     //timer = std::make_unique<Timer>("    [DrawTextLayout]");
     rt->DrawTextLayout(D2D1::Point2F(static_cast<float>(pos.x),
         static_cast<float>(pos.y)),
-        layout.Get(), brush.Get(), D2D1_DRAW_TEXT_OPTIONS_NO_SNAP);
+        layout, brush.Get(), D2D1_DRAW_TEXT_OPTIONS_NO_SNAP);
     //record_char_boxes(layout, wtxt, GetMainFontNameFromTextLayout(layout), pos);
    //timer.reset();
 
@@ -4879,35 +4880,6 @@ std::wstring  SimpleContainer::toLower(std::wstring s)
 
 
 
-//std::vector<std::string>
-//SimpleContainer::split_font_list(const std::string& src) 
-//{
-//    //Timer timer("      split_font_list");
-//    std::vector<std::string> out;
-//    std::string token;
-//    for (size_t i = 0, n = src.size(); i < n; ++i)
-//    {
-//        if (src[i] == ',')
-//        {
-//            token = trim_any(token);
-//            if (!token.empty()) {
-//                out.emplace_back(token);
-//                token.clear();
-//            }
-//        }
-//        else
-//        {
-//            token += src[i];
-//        }
-//    }
-//    token = trim_any(token);
-//    if (!token.empty())
-//    {
-//        out.emplace_back(token);
-//    }
-//    return out;
-//};
-
 
 std::vector<std::string>
 SimpleContainer::split_font_list(const std::string& src)
@@ -5246,7 +5218,7 @@ litehtml::uint_ptr SimpleContainer::create_font(const litehtml::font_description
         DWRITE_FONT_STRETCH_NORMAL,
         static_cast<float>(descr.size), L"", &textFormat);
 
-
+    
     DWRITE_FONT_METRICS m{};
     font->GetMetrics(&m);
     const float dip = descr.size / static_cast<float>(m.designUnitsPerEm);
@@ -5268,66 +5240,6 @@ litehtml::uint_ptr SimpleContainer::create_font(const litehtml::font_description
     return reinterpret_cast<litehtml::uint_ptr>(textFormat);
 }
 
-//litehtml::uint_ptr SimpleContainer::create_font(const litehtml::font_description& descr,
-//    const litehtml::document* doc,
-//    litehtml::font_metrics* fm)
-//{
-//    Timer t("  create_font");
-//    if (!m_dwrite || !fm) return 0;
-//
-//    /*----------------------------------------------------------
-//      1. 把 font-family 字符串拆成单个字体名
-//    ----------------------------------------------------------*/
-//    std::vector<std::string> faces;
-//    if (!descr.family.empty() && !g_cfg.enableCustomFont)
-//    {
-//        faces = split_font_list(descr.family);
-//    }
-//    else
-//    {
-//        faces.push_back(g_cfg.font_name);
-//    }
-//
-//    // 默认字体兜底
-//    
-//    faces.push_back(g_cfg.default_font_name);
-//    std::string family_name = "";
-//
-//
-//    FontCachePair* fcp;
-//    for (auto f : faces)
-//    {
-//        family_name = f;
-//        fcp = m_fontCache.get(f, descr, m_systemFonts.Get());
-//        if (fcp->fmt)break;
-//    }
-//    if (!fcp->fmt) {
-//        OutputDebugStringW(L"[DWrite] 加载默认字体失败\n");
-//        return 0;
-//    }
-//  
-//
-//
-//    DWRITE_FONT_METRICS m{};
-//    fcp->font->GetMetrics(&m);
-//    const float dip = descr.size / static_cast<float>(m.designUnitsPerEm);
-//
-//    fm->font_size = descr.size;
-//    fm->ascent = m.ascent * dip;
-//    fm->descent = m.descent * dip;
-//    fm->height = (m.ascent + m.descent + m.lineGap) * dip;
-//    fm->x_height = m.xHeight * dip;
-//    fm->draw_spaces = true;
-//    //fm->draw_spaces = descr.style == litehtml::font_style_italic || descr.decoration_line != litehtml::text_decoration_line_none;
-//    fm->ch_width = fm->font_size * 3 / 5;
-//    fm->sub_shift = descr.size / 5;
-//    fm->super_shift = descr.size / 3;
-//
-//
-//
-//
-//    return reinterpret_cast<litehtml::uint_ptr>(new FontPair(fcp->fmt, descr, fcp->familyName));
-//}
 
 void SimpleContainer::delete_font(litehtml::uint_ptr h)
 {
@@ -5346,7 +5258,7 @@ litehtml::pixel_t SimpleContainer::text_width(const char* text,
     if (!text || !*text || !hFont) return 0;
     auto* textFormat = reinterpret_cast<IDWriteTextFormat*>(hFont);
 
-    std::string key = std::string(text) + "|" + std::to_string(hFont);
+    std::string key = ":font=" + std::to_string(hFont) + ":text=" + std::string(text);
     auto it = m_textWidthCache.find(key);
     if (it != m_textWidthCache.end()) { return it->second; }
 
@@ -5373,36 +5285,6 @@ litehtml::pixel_t SimpleContainer::text_width(const char* text,
     return physical;
 }
 
-
-//litehtml::pixel_t SimpleContainer::text_width(const char* text,
-//    litehtml::uint_ptr hFont)
-//{
-//    Timer t("  text_width");
-//    if (!text || !*text || !hFont) return 0;
-//    auto* fp = reinterpret_cast<FontPair*>(hFont);
-//
-//    std::string key = std::string(text) + fp->familyName + fp->descr.hash();
-//    auto it  = m_textWidthCache.find(key);
-//    if (it != m_textWidthCache.end()) { return it->second; }
-//    // 1. 创建 TextLayout
-// 
-//  
-//    auto layout = getLayout(text, hFont);
-//    if (!layout) { return 0; }
-//
-//
-//    // 3. 取逻辑宽度（已含空白、连字、kerning）
-//    DWRITE_TEXT_METRICS tm{};
-//    HRESULT hr = layout->GetMetrics(&tm);
-//    if (FAILED(hr)) { return 0; }
-//
-// 
-//    // 4. DPI → 物理像素（Win7 也支持）
-//         
-//    float physical = tm.widthIncludingTrailingWhitespace * m_dpi_x / 96.0f;
-//    m_textWidthCache.emplace( key , physical);
-//    return physical;
-//}
 
 
 void SimpleContainer::build_rounded_rect_path(
@@ -5828,20 +5710,6 @@ AppBootstrap::~AppBootstrap() {
 litehtml::uint_ptr SimpleContainer::getContext() { return reinterpret_cast<litehtml::uint_ptr>(m_dc.Get()); }
 
 
-
-//void SimpleContainer::resize(int w, int h)
-//{
-//    if (w <= 0 || h <= 0) return;
-//
-//    m_w = w;
-//    m_h = h;
-//    m_d2dBmpCache.clear();   // 释放所有旧位图
-//    if (!m_rt) { return; }
-//
-//        D2D1_SIZE_U size{ static_cast<UINT32>(w), static_cast<UINT32>(h) };
-//        if (SUCCEEDED(m_rt->Resize(size))) return;   // DPI 不变时直接 Resize
-//
-//}
 
 
 void SimpleContainer::resize(int w, int h)
@@ -8050,11 +7918,11 @@ void SimpleContainer::present(float x, float y, litehtml::position* clip)
     
  
     D2D1_RECT_F rc{ clip->left(), clip->top(), clip->right(), clip->bottom() };
-    m_dc->FillRectangle(rc, m_backgroundBrush.Get());
+    //m_dc->FillRectangle(rc, m_backgroundBrush.Get());
 
     m_doc->draw(getContext(), x, y, clip);
  
-    m_dc->DrawRectangle(rc, m_debugBrush.Get());
+    //m_dc->DrawRectangle(rc, m_debugBrush.Get());
 
     // 高亮选中行
     if (!m_selBrush)
