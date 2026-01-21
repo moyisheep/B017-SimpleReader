@@ -1622,9 +1622,10 @@ LRESULT CALLBACK ImageviewProc(HWND hwnd, UINT m, WPARAM w, LPARAM l)
         g_bootstrap->hide_imageview();
         return 0;
     }
-    case WM_ERASEBKGND: {
+  
+    case WM_ERASEBKGND:
+        if (g_cImage) { g_cImage->clear_background(); }
         return 1;
-    }
     }
     return DefWindowProc(hwnd, m, w, l);
 }
@@ -1660,6 +1661,7 @@ LRESULT CALLBACK TooltipProc(HWND hwnd, UINT m, WPARAM w, LPARAM l)
     case WM_DESTROY:
         return 0;
     case WM_ERASEBKGND:
+        if (g_cTooltip) { g_cTooltip->clear_background(); }
         return 1;
     }
     return DefWindowProc(hwnd, m, w, l);
