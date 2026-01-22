@@ -1,4 +1,4 @@
-#ifndef MOBI_BOOK_H
+ï»¿#ifndef MOBI_BOOK_H
 #define MOBI_BOOK_H
 
 #include <string>
@@ -14,36 +14,36 @@
 
 namespace mobi {
 
-    // ==================== Êı¾İ½á¹¹¶¨Òå ====================
+    // ==================== æ•°æ®ç»“æ„å®šä¹‰ ====================
 
 #pragma pack(push, 1)
 
-// PDBÍ·
-// ¸ù¾İ¹æ·¶ĞŞÕıµÄ PDB Í·½á¹¹
+// PDBå¤´
+// æ ¹æ®è§„èŒƒä¿®æ­£çš„ PDB å¤´ç»“æ„
     struct PDBHeader {
-        char name[32];                  // Êı¾İ¿âÃû³Æ£¬ÒÔ0ÖÕÖ¹
-        uint16_t attributes;            // ÊôĞÔÎ»Óò
-        uint16_t version;               // ÎÄ¼ş°æ±¾
-        uint32_t creation_time;         // ´´½¨Ê±¼ä£º×Ô1904Äê1ÔÂ1ÈÕÒÔÀ´µÄÃëÊı
-        uint32_t modification_time;     // ĞŞ¸ÄÊ±¼ä
-        uint32_t backup_time;          // ×îºó±¸·İÊ±¼ä
-        uint32_t modification_number;   // ĞŞ¸Ä±àºÅ
-        uint32_t app_info_offset;      // Application Info Æ«ÒÆ£¨Èç¹û´æÔÚ£©
-        uint32_t sort_info_offset;     // Sort Info Æ«ÒÆ£¨Èç¹û´æÔÚ£©
-        char type[4];                   // ÀàĞÍ£¨ÀıÈç 'BOOK', 'TEXt', 'MOBI'£©
-        char creator[4];                // ´´½¨Õß
-        uint32_t unique_id_seed;       // Î¨Ò»IDÖÖ×Ó
-        uint32_t next_record_list_id;  // ÄÚ´æÖĞÊ¹ÓÃ£¬ÎÄ¼şÖĞÉèÎª0
-        uint16_t num_records;          // ¼ÇÂ¼ÊıÁ¿ N
+        char name[32];                  // æ•°æ®åº“åç§°ï¼Œä»¥0ç»ˆæ­¢
+        uint16_t attributes;            // å±æ€§ä½åŸŸ
+        uint16_t version;               // æ–‡ä»¶ç‰ˆæœ¬
+        uint32_t creation_time;         // åˆ›å»ºæ—¶é—´ï¼šè‡ª1904å¹´1æœˆ1æ—¥ä»¥æ¥çš„ç§’æ•°
+        uint32_t modification_time;     // ä¿®æ”¹æ—¶é—´
+        uint32_t backup_time;          // æœ€åå¤‡ä»½æ—¶é—´
+        uint32_t modification_number;   // ä¿®æ”¹ç¼–å·
+        uint32_t app_info_offset;      // Application Info åç§»ï¼ˆå¦‚æœå­˜åœ¨ï¼‰
+        uint32_t sort_info_offset;     // Sort Info åç§»ï¼ˆå¦‚æœå­˜åœ¨ï¼‰
+        char type[4];                   // ç±»å‹ï¼ˆä¾‹å¦‚ 'BOOK', 'TEXt', 'MOBI'ï¼‰
+        char creator[4];                // åˆ›å»ºè€…
+        uint32_t unique_id_seed;       // å”¯ä¸€IDç§å­
+        uint32_t next_record_list_id;  // å†…å­˜ä¸­ä½¿ç”¨ï¼Œæ–‡ä»¶ä¸­è®¾ä¸º0
+        uint16_t num_records;          // è®°å½•æ•°é‡ N
     };
 
-    // ¼ÇÂ¼ĞÅÏ¢½á¹¹£¨Ã¿¸ö¼ÇÂ¼Õ¼8×Ö½Ú£©
+    // è®°å½•ä¿¡æ¯ç»“æ„ï¼ˆæ¯ä¸ªè®°å½•å 8å­—èŠ‚ï¼‰
     struct RecordInfo {
-        uint32_t data_offset;          // ¼ÇÂ¼Êı¾İÆ«ÒÆ£¨Ïà¶ÔÓÚPDB¿ªÍ·£©
-        uint8_t attributes;            // ¼ÇÂ¼ÊôĞÔ
-        uint8_t unique_id[3];          // Î¨Ò»ID£¨3×Ö½Ú£©
+        uint32_t data_offset;          // è®°å½•æ•°æ®åç§»ï¼ˆç›¸å¯¹äºPDBå¼€å¤´ï¼‰
+        uint8_t attributes;            // è®°å½•å±æ€§
+        uint8_t unique_id[3];          // å”¯ä¸€IDï¼ˆ3å­—èŠ‚ï¼‰
     };
-    // ¼ÇÂ¼Ë÷Òı
+    // è®°å½•ç´¢å¼•
     struct RecordIndex {
         uint32_t offset;
         uint32_t attributes;
@@ -55,171 +55,171 @@ namespace mobi {
 
 
 
-    // PalmDOC Í·£¨Î»ÓÚµÚÒ»¸ö¼ÇÂ¼µÄ¿ªÍ·£©
+    // PalmDOC å¤´ï¼ˆä½äºç¬¬ä¸€ä¸ªè®°å½•çš„å¼€å¤´ï¼‰
     struct PalmDocHeader {
-        uint16_t compression;           // Ñ¹ËõÀàĞÍ£º1=ÎŞÑ¹Ëõ£¬2=PalmDOCÑ¹Ëõ£¬17480=HUFF/CDIC
-        uint16_t unused;               // ×ÜÊÇ0
-        uint32_t text_length;          // Î´Ñ¹ËõµÄÎÄ±¾×Ü³¤¶È
-        uint16_t record_count;         // ÓÃÓÚÎÄ±¾µÄPDB¼ÇÂ¼ÊıÁ¿
-        uint16_t record_size;          // Ã¿¸öÎÄ±¾¼ÇÂ¼µÄ×î´ó´óĞ¡£¬×ÜÊÇ4096
-        uint16_t encryption_type;      // ¼ÓÃÜÀàĞÍ£º0=ÎŞ¼ÓÃÜ£¬1=¾É¼ÓÃÜ£¬2=µ±Ç°¼ÓÃÜ
-        uint16_t unknown;              // Í¨³£Îª0
+        uint16_t compression;           // å‹ç¼©ç±»å‹ï¼š1=æ— å‹ç¼©ï¼Œ2=PalmDOCå‹ç¼©ï¼Œ17480=HUFF/CDIC
+        uint16_t unused;               // æ€»æ˜¯0
+        uint32_t text_length;          // æœªå‹ç¼©çš„æ–‡æœ¬æ€»é•¿åº¦
+        uint16_t record_count;         // ç”¨äºæ–‡æœ¬çš„PDBè®°å½•æ•°é‡
+        uint16_t record_size;          // æ¯ä¸ªæ–‡æœ¬è®°å½•çš„æœ€å¤§å¤§å°ï¼Œæ€»æ˜¯4096
+        uint16_t encryption_type;      // åŠ å¯†ç±»å‹ï¼š0=æ— åŠ å¯†ï¼Œ1=æ—§åŠ å¯†ï¼Œ2=å½“å‰åŠ å¯†
+        uint16_t unknown;              // é€šå¸¸ä¸º0
     };
 
-    // MOBI Í·±êÊ¶
+    // MOBI å¤´æ ‡è¯†
     const char MOBI_IDENTIFIER[5] = "MOBI";
 
-    // MOBI Í·½á¹¹
+    // MOBI å¤´ç»“æ„
     struct MobiHeader {
-        char identifier[4];            // "MOBI" ±êÊ¶
-        uint32_t header_length;        // MOBIÍ·³¤¶È£¨°üÀ¨Ç°4×Ö½Ú£©
-        uint32_t mobi_type;            // MobipocketÎÄ¼şÀàĞÍ
-        uint32_t text_encoding;        // ÎÄ±¾±àÂë£º1252=CP1252£¬65001=UTF-8
-        uint32_t unique_id;            // Î¨Ò»ID
-        uint32_t file_version;         // Mobipocket¸ñÊ½°æ±¾
-        uint32_t orthographic_index;   // Õı×Ö·¨Ë÷ÒıÎ»ÖÃ
-        uint32_t inflection_index;     // ±äĞÎË÷ÒıÎ»ÖÃ
-        uint32_t index_names;          // Ë÷ÒıÃû³ÆÎ»ÖÃ
-        uint32_t index_keys;           // Ë÷Òı¼üÎ»ÖÃ
-        uint32_t extra_index0;         // ¶îÍâË÷Òı0Î»ÖÃ
-        uint32_t extra_index1;         // ¶îÍâË÷Òı1Î»ÖÃ
-        uint32_t extra_index2;         // ¶îÍâË÷Òı2Î»ÖÃ
-        uint32_t extra_index3;         // ¶îÍâË÷Òı3Î»ÖÃ
-        uint32_t extra_index4;         // ¶îÍâË÷Òı4Î»ÖÃ
-        uint32_t extra_index5;         // ¶îÍâË÷Òı5Î»ÖÃ
-        uint32_t first_non_book_index; // µÚÒ»¸ö·ÇÎÄ±¾¼ÇÂ¼±àºÅ
-        uint32_t full_name_offset;     // ÍêÕûÃû³ÆÆ«ÒÆ£¨Ïà¶ÔÓÚ¼ÇÂ¼0£©
-        uint32_t full_name_length;     // ÍêÕûÃû³Æ³¤¶È
-        uint32_t locale;               // ÇøÓòÉèÖÃ´úÂë
-        uint32_t input_language;       // ÊäÈëÓïÑÔ£¨ÓÃÓÚ×Öµä£©
-        uint32_t output_language;      // Êä³öÓïÑÔ£¨ÓÃÓÚ×Öµä£©
-        uint32_t min_version;          // Ö§³ÖµÄ×îĞ¡°æ±¾
-        uint32_t first_image_index;    // µÚÒ»¸öÍ¼Ïñ¼ÇÂ¼±àºÅ
-        uint32_t huffman_record_offset; // HuffmanÑ¹Ëõ¼ÇÂ¼Æ«ÒÆ
-        uint32_t huffman_record_count; // HuffmanÑ¹Ëõ¼ÇÂ¼ÊıÁ¿
-        uint32_t huffman_table_offset; // Huffman±íÆ«ÒÆ
-        uint32_t huffman_table_length; // Huffman±í³¤¶È
-        uint32_t exth_flags;           // EXTH±êÖ¾Î»
-        uint8_t unknown32[32];         // 32×Ö½ÚÎ´ÖªÊı¾İ
-        uint32_t unknown_a4;           // Î´Öª£¬Í¨³£Îª0xFFFFFFFF
-        uint32_t drm_offset;           // DRMÃÜÔ¿ĞÅÏ¢Æ«ÒÆ
-        uint32_t drm_count;            // DRMÌõÄ¿ÊıÁ¿
-        uint32_t drm_size;             // DRMĞÅÏ¢×Ö½ÚÊı
-        uint32_t drm_flags;            // DRM±êÖ¾Î»
+        char identifier[4];            // "MOBI" æ ‡è¯†
+        uint32_t header_length;        // MOBIå¤´é•¿åº¦ï¼ˆåŒ…æ‹¬å‰4å­—èŠ‚ï¼‰
+        uint32_t mobi_type;            // Mobipocketæ–‡ä»¶ç±»å‹
+        uint32_t text_encoding;        // æ–‡æœ¬ç¼–ç ï¼š1252=CP1252ï¼Œ65001=UTF-8
+        uint32_t unique_id;            // å”¯ä¸€ID
+        uint32_t file_version;         // Mobipocketæ ¼å¼ç‰ˆæœ¬
+        uint32_t orthographic_index;   // æ­£å­—æ³•ç´¢å¼•ä½ç½®
+        uint32_t inflection_index;     // å˜å½¢ç´¢å¼•ä½ç½®
+        uint32_t index_names;          // ç´¢å¼•åç§°ä½ç½®
+        uint32_t index_keys;           // ç´¢å¼•é”®ä½ç½®
+        uint32_t extra_index0;         // é¢å¤–ç´¢å¼•0ä½ç½®
+        uint32_t extra_index1;         // é¢å¤–ç´¢å¼•1ä½ç½®
+        uint32_t extra_index2;         // é¢å¤–ç´¢å¼•2ä½ç½®
+        uint32_t extra_index3;         // é¢å¤–ç´¢å¼•3ä½ç½®
+        uint32_t extra_index4;         // é¢å¤–ç´¢å¼•4ä½ç½®
+        uint32_t extra_index5;         // é¢å¤–ç´¢å¼•5ä½ç½®
+        uint32_t first_non_book_index; // ç¬¬ä¸€ä¸ªéæ–‡æœ¬è®°å½•ç¼–å·
+        uint32_t full_name_offset;     // å®Œæ•´åç§°åç§»ï¼ˆç›¸å¯¹äºè®°å½•0ï¼‰
+        uint32_t full_name_length;     // å®Œæ•´åç§°é•¿åº¦
+        uint32_t locale;               // åŒºåŸŸè®¾ç½®ä»£ç 
+        uint32_t input_language;       // è¾“å…¥è¯­è¨€ï¼ˆç”¨äºå­—å…¸ï¼‰
+        uint32_t output_language;      // è¾“å‡ºè¯­è¨€ï¼ˆç”¨äºå­—å…¸ï¼‰
+        uint32_t min_version;          // æ”¯æŒçš„æœ€å°ç‰ˆæœ¬
+        uint32_t first_image_index;    // ç¬¬ä¸€ä¸ªå›¾åƒè®°å½•ç¼–å·
+        uint32_t huffman_record_offset; // Huffmanå‹ç¼©è®°å½•åç§»
+        uint32_t huffman_record_count; // Huffmanå‹ç¼©è®°å½•æ•°é‡
+        uint32_t huffman_table_offset; // Huffmanè¡¨åç§»
+        uint32_t huffman_table_length; // Huffmanè¡¨é•¿åº¦
+        uint32_t exth_flags;           // EXTHæ ‡å¿—ä½
+        uint8_t unknown32[32];         // 32å­—èŠ‚æœªçŸ¥æ•°æ®
+        uint32_t unknown_a4;           // æœªçŸ¥ï¼Œé€šå¸¸ä¸º0xFFFFFFFF
+        uint32_t drm_offset;           // DRMå¯†é’¥ä¿¡æ¯åç§»
+        uint32_t drm_count;            // DRMæ¡ç›®æ•°é‡
+        uint32_t drm_size;             // DRMä¿¡æ¯å­—èŠ‚æ•°
+        uint32_t drm_flags;            // DRMæ ‡å¿—ä½
 
-        // ÒÔÏÂ×Ö¶ÎÖ»ÓĞµ±header_length >= 228Ê±´æÔÚ
-        uint64_t unknown_b8;           // Î´ÖªµÄ8×Ö½Ú
+        // ä»¥ä¸‹å­—æ®µåªæœ‰å½“header_length >= 228æ—¶å­˜åœ¨
+        uint64_t unknown_b8;           // æœªçŸ¥çš„8å­—èŠ‚
 
-        // ÒÔÏÂ×Ö¶ÎÖ»ÓĞµ±header_length >= 244Ê±´æÔÚ
-        uint16_t first_content_record; // µÚÒ»¸öÄÚÈİ¼ÇÂ¼±àºÅ
-        uint16_t last_content_record;  // ×îºóÒ»¸öÄÚÈİ¼ÇÂ¼±àºÅ
-        uint32_t unknown_c4;           // Î´Öª£¬Í¨³£Îª0x00000001
-        uint32_t fcis_record;          // FCIS¼ÇÂ¼±àºÅ
-        uint32_t fcis_count;           // FCIS¼ÇÂ¼ÊıÁ¿
-        uint32_t flis_record;          // FLIS¼ÇÂ¼±àºÅ
-        uint32_t flis_count;           // FLIS¼ÇÂ¼ÊıÁ¿
-        uint64_t unknown_d8;           // Î´ÖªµÄ8×Ö½Ú
-        uint32_t unknown_e0;           // Î´Öª£¬Í¨³£Îª0xFFFFFFFF
-        uint32_t first_compilation_section; // µÚÒ»¸ö±àÒëÊı¾İ²¿·Ö¼ÆÊı
-        uint32_t num_compilation_sections;  // ±àÒëÊı¾İ²¿·ÖÊıÁ¿
-        uint32_t unknown_ec;           // Î´Öª£¬Í¨³£Îª0xFFFFFFFF
-        uint32_t extra_record_data_flags; // ¶îÍâ¼ÇÂ¼Êı¾İ±êÖ¾
+        // ä»¥ä¸‹å­—æ®µåªæœ‰å½“header_length >= 244æ—¶å­˜åœ¨
+        uint16_t first_content_record; // ç¬¬ä¸€ä¸ªå†…å®¹è®°å½•ç¼–å·
+        uint16_t last_content_record;  // æœ€åä¸€ä¸ªå†…å®¹è®°å½•ç¼–å·
+        uint32_t unknown_c4;           // æœªçŸ¥ï¼Œé€šå¸¸ä¸º0x00000001
+        uint32_t fcis_record;          // FCISè®°å½•ç¼–å·
+        uint32_t fcis_count;           // FCISè®°å½•æ•°é‡
+        uint32_t flis_record;          // FLISè®°å½•ç¼–å·
+        uint32_t flis_count;           // FLISè®°å½•æ•°é‡
+        uint64_t unknown_d8;           // æœªçŸ¥çš„8å­—èŠ‚
+        uint32_t unknown_e0;           // æœªçŸ¥ï¼Œé€šå¸¸ä¸º0xFFFFFFFF
+        uint32_t first_compilation_section; // ç¬¬ä¸€ä¸ªç¼–è¯‘æ•°æ®éƒ¨åˆ†è®¡æ•°
+        uint32_t num_compilation_sections;  // ç¼–è¯‘æ•°æ®éƒ¨åˆ†æ•°é‡
+        uint32_t unknown_ec;           // æœªçŸ¥ï¼Œé€šå¸¸ä¸º0xFFFFFFFF
+        uint32_t extra_record_data_flags; // é¢å¤–è®°å½•æ•°æ®æ ‡å¿—
 
-        // ÒÔÏÂ×Ö¶ÎÖ»ÓĞµ±header_length >= 248Ê±´æÔÚ
-        uint32_t indx_record_offset;   // INDX¼ÇÂ¼Æ«ÒÆ
-        uint32_t unknown_f8;           // Î´Öª
-        uint32_t unknown_fc;           // Î´Öª
+        // ä»¥ä¸‹å­—æ®µåªæœ‰å½“header_length >= 248æ—¶å­˜åœ¨
+        uint32_t indx_record_offset;   // INDXè®°å½•åç§»
+        uint32_t unknown_f8;           // æœªçŸ¥
+        uint32_t unknown_fc;           // æœªçŸ¥
 
-        // ÒÔÏÂ×Ö¶ÎÖ»ÓĞµ±header_length >= 256Ê±´æÔÚ
-        uint32_t unknown_100;          // Î´Öª
-        uint32_t unknown_104;          // Î´Öª
-        uint32_t unknown_108;          // Î´Öª
-        uint32_t unknown_10b;          // Î´Öª
+        // ä»¥ä¸‹å­—æ®µåªæœ‰å½“header_length >= 256æ—¶å­˜åœ¨
+        uint32_t unknown_100;          // æœªçŸ¥
+        uint32_t unknown_104;          // æœªçŸ¥
+        uint32_t unknown_108;          // æœªçŸ¥
+        uint32_t unknown_10b;          // æœªçŸ¥
     };
 
-    // EXTH Í·±êÊ¶
+    // EXTH å¤´æ ‡è¯†
     const char EXTH_IDENTIFIER[5] = "EXTH";
 
-    // EXTH Í·½á¹¹
+    // EXTH å¤´ç»“æ„
     struct ExthHeader {
-        char identifier[4];            // "EXTH" ±êÊ¶
-        uint32_t header_length;        // EXTHÍ·³¤¶È
-        uint32_t record_count;         // EXTH¼ÇÂ¼ÊıÁ¿
+        char identifier[4];            // "EXTH" æ ‡è¯†
+        uint32_t header_length;        // EXTHå¤´é•¿åº¦
+        uint32_t record_count;         // EXTHè®°å½•æ•°é‡
     };
 
-    // EXTH ¼ÇÂ¼½á¹¹
+    // EXTH è®°å½•ç»“æ„
     struct ExthRecord {
-        uint32_t type;                 // ¼ÇÂ¼ÀàĞÍ
-        uint32_t length;               // ¼ÇÂ¼³¤¶È
-        // Êı¾İ²¿·Ö½ôËæÆäºó
+        uint32_t type;                 // è®°å½•ç±»å‹
+        uint32_t length;               // è®°å½•é•¿åº¦
+        // æ•°æ®éƒ¨åˆ†ç´§éšå…¶å
     };
 
-    // FLIS ¼ÇÂ¼½á¹¹
+    // FLIS è®°å½•ç»“æ„
     struct FlisRecord {
         char identifier[4];            // "FLIS"
-        uint32_t unknown_4;            // ¹Ì¶¨Öµ: 8
-        uint16_t unknown_8;            // ¹Ì¶¨Öµ: 65
-        uint16_t unknown_a;            // ¹Ì¶¨Öµ: 0
-        uint32_t unknown_c;            // ¹Ì¶¨Öµ: 0
-        uint32_t unknown_10;           // ¹Ì¶¨Öµ: -1 (0xFFFFFFFF)
-        uint16_t unknown_14;           // ¹Ì¶¨Öµ: 1
-        uint16_t unknown_16;           // ¹Ì¶¨Öµ: 3
-        uint32_t unknown_18;           // ¹Ì¶¨Öµ: 3
-        uint32_t unknown_1c;           // ¹Ì¶¨Öµ: 1
-        uint32_t unknown_20;           // ¹Ì¶¨Öµ: -1 (0xFFFFFFFF)
+        uint32_t unknown_4;            // å›ºå®šå€¼: 8
+        uint16_t unknown_8;            // å›ºå®šå€¼: 65
+        uint16_t unknown_a;            // å›ºå®šå€¼: 0
+        uint32_t unknown_c;            // å›ºå®šå€¼: 0
+        uint32_t unknown_10;           // å›ºå®šå€¼: -1 (0xFFFFFFFF)
+        uint16_t unknown_14;           // å›ºå®šå€¼: 1
+        uint16_t unknown_16;           // å›ºå®šå€¼: 3
+        uint32_t unknown_18;           // å›ºå®šå€¼: 3
+        uint32_t unknown_1c;           // å›ºå®šå€¼: 1
+        uint32_t unknown_20;           // å›ºå®šå€¼: -1 (0xFFFFFFFF)
     };
 
-    // FCIS ¼ÇÂ¼½á¹¹
+    // FCIS è®°å½•ç»“æ„
     struct FcisRecord {
         char identifier[4];            // "FCIS"
-        uint32_t unknown_4;            // ¹Ì¶¨Öµ: 20
-        uint32_t unknown_8;            // ¹Ì¶¨Öµ: 16
-        uint32_t unknown_c;            // ¹Ì¶¨Öµ: 1
-        uint32_t unknown_10;           // ¹Ì¶¨Öµ: 0
-        uint32_t text_length;          // ÎÄ±¾³¤¶È£¨ÓëPalmDocHeaderÏàÍ¬£©
-        uint32_t unknown_18;           // ¹Ì¶¨Öµ: 0
-        uint32_t unknown_1c;           // ¹Ì¶¨Öµ: 32
-        uint32_t unknown_20;           // ¹Ì¶¨Öµ: 8
-        uint16_t unknown_24;           // ¹Ì¶¨Öµ: 1
-        uint16_t unknown_26;           // ¹Ì¶¨Öµ: 1
-        uint32_t unknown_28;           // ¹Ì¶¨Öµ: 0
+        uint32_t unknown_4;            // å›ºå®šå€¼: 20
+        uint32_t unknown_8;            // å›ºå®šå€¼: 16
+        uint32_t unknown_c;            // å›ºå®šå€¼: 1
+        uint32_t unknown_10;           // å›ºå®šå€¼: 0
+        uint32_t text_length;          // æ–‡æœ¬é•¿åº¦ï¼ˆä¸PalmDocHeaderç›¸åŒï¼‰
+        uint32_t unknown_18;           // å›ºå®šå€¼: 0
+        uint32_t unknown_1c;           // å›ºå®šå€¼: 32
+        uint32_t unknown_20;           // å›ºå®šå€¼: 8
+        uint16_t unknown_24;           // å›ºå®šå€¼: 1
+        uint16_t unknown_26;           // å›ºå®šå€¼: 1
+        uint32_t unknown_28;           // å›ºå®šå€¼: 0
     };
 
-    // EOF ¼ÇÂ¼½á¹¹
+    // EOF è®°å½•ç»“æ„
     struct EofRecord {
-        uint8_t byte0;                 // ¹Ì¶¨Öµ: 233 (0xe9)
-        uint8_t byte1;                 // ¹Ì¶¨Öµ: 142 (0x8e)
-        uint8_t byte2;                 // ¹Ì¶¨Öµ: 13 (0x0d) - CR
-        uint8_t byte3;                 // ¹Ì¶¨Öµ: 10 (0x0a) - LF
+        uint8_t byte0;                 // å›ºå®šå€¼: 233 (0xe9)
+        uint8_t byte1;                 // å›ºå®šå€¼: 142 (0x8e)
+        uint8_t byte2;                 // å›ºå®šå€¼: 13 (0x0d) - CR
+        uint8_t byte3;                 // å›ºå®šå€¼: 10 (0x0a) - LF
     };
 
-    // INDX Í·½á¹¹£¨Ë÷ÒıÔªÊı¾İ£©
+    // INDX å¤´ç»“æ„ï¼ˆç´¢å¼•å…ƒæ•°æ®ï¼‰
     struct IndxHeader {
         char identifier[4];            // "INDX"
-        uint32_t header_length;        // INDXÍ·³¤¶È
-        uint32_t index_type;           // Ë÷ÒıÀàĞÍ£º0=ÆÕÍ¨Ë÷Òı£¬2=±äĞÎË÷Òı
-        uint32_t unknown_c;            // Î´Öª
-        uint32_t unknown_10;           // Î´Öª
-        uint32_t idxt_offset;          // IDXT²¿·ÖÆ«ÒÆ
-        uint32_t index_record_count;   // Ë÷Òı¼ÇÂ¼ÊıÁ¿
-        uint32_t index_encoding;       // Ë÷Òı±àÂë£º1252=CP1252£¬65001=UTF-8
-        uint32_t index_language;       // Ë÷ÒıÓïÑÔ´úÂë
-        uint32_t total_index_count;    // Ë÷ÒıÌõÄ¿×ÜÊı
-        uint32_t ordt_offset;          // ORDT²¿·ÖÆ«ÒÆ
-        uint32_t ligt_offset;          // LIGT²¿·ÖÆ«ÒÆ
-        uint32_t unknown_30;           // Î´Öª
-        uint32_t unknown_34;           // Î´Öª
+        uint32_t header_length;        // INDXå¤´é•¿åº¦
+        uint32_t index_type;           // ç´¢å¼•ç±»å‹ï¼š0=æ™®é€šç´¢å¼•ï¼Œ2=å˜å½¢ç´¢å¼•
+        uint32_t unknown_c;            // æœªçŸ¥
+        uint32_t unknown_10;           // æœªçŸ¥
+        uint32_t idxt_offset;          // IDXTéƒ¨åˆ†åç§»
+        uint32_t index_record_count;   // ç´¢å¼•è®°å½•æ•°é‡
+        uint32_t index_encoding;       // ç´¢å¼•ç¼–ç ï¼š1252=CP1252ï¼Œ65001=UTF-8
+        uint32_t index_language;       // ç´¢å¼•è¯­è¨€ä»£ç 
+        uint32_t total_index_count;    // ç´¢å¼•æ¡ç›®æ€»æ•°
+        uint32_t ordt_offset;          // ORDTéƒ¨åˆ†åç§»
+        uint32_t ligt_offset;          // LIGTéƒ¨åˆ†åç§»
+        uint32_t unknown_30;           // æœªçŸ¥
+        uint32_t unknown_34;           // æœªçŸ¥
     };
 
-    // TAGX Í·½á¹¹
+    // TAGX å¤´ç»“æ„
     struct TagxHeader {
         char identifier[4];            // "TAGX"
-        uint32_t header_length;        // TAGXÍ·³¤¶È
-        uint32_t control_byte_count;   // ¿ØÖÆ×Ö½ÚÊıÁ¿
-        // ±êÇ©±í½ôËæÆäºó
+        uint32_t header_length;        // TAGXå¤´é•¿åº¦
+        uint32_t control_byte_count;   // æ§åˆ¶å­—èŠ‚æ•°é‡
+        // æ ‡ç­¾è¡¨ç´§éšå…¶å
     };
 
-    // Èç¹û½âÎöÍ¼Ïñ¼ÇÂ¼Ê±ÓĞË÷Òı½á¹¹
+    // å¦‚æœè§£æå›¾åƒè®°å½•æ—¶æœ‰ç´¢å¼•ç»“æ„
     struct ImageRecordIndex {
         uint32_t offset;
         uint32_t length;
@@ -245,8 +245,8 @@ namespace mobi {
         MOBI_TYPE_BOOK = 2,            // Mobipocket Book
         MOBI_TYPE_PALMDOC = 3,         // PalmDoc Book
         MOBI_TYPE_AUDIO = 4,           // Audio
-        MOBI_TYPE_KINDLEGEN1 = 232,    // KindleGen 1.2 Éú³É
-        MOBI_TYPE_KF8 = 248,           // KF8: KindleGen 2 Éú³É
+        MOBI_TYPE_KINDLEGEN1 = 232,    // KindleGen 1.2 ç”Ÿæˆ
+        MOBI_TYPE_KF8 = 248,           // KF8: KindleGen 2 ç”Ÿæˆ
         MOBI_TYPE_NEWS = 257,          // News
         MOBI_TYPE_NEWS_FEED = 258,     // News_Feed
         MOBI_TYPE_NEWS_MAGAZINE = 259, // News_Magazine
@@ -258,9 +258,151 @@ namespace mobi {
         MOBI_TYPE_HTML = 518           // HTML
     };
 
-    enum TextEncoding {
-        ENCODING_CP1252 = 1252,
-        ENCODING_UTF8 = 65001
+    // ==================== TextEncoding æšä¸¾ ====================
+    enum TextEncoding  {
+        // æ ‡å‡†ç¼–ç 
+        ENCODING_LATIN1 = 1,        // ISO-8859-1 (Latin-1)
+        ENCODING_UCS2 = 2,        // UCS-2 (UCS-2 Big Endian)
+        ENCODING_UTF16 = 3,        // UTF-16 (UTF-16 Big Endian)
+
+        // Windows Code Pages
+        ENCODING_CP1250 = 4,        // Windows-1250 (Central European)
+        ENCODING_CP1251 = 5,        // Windows-1251 (Cyrillic)
+        ENCODING_CP1252 = 1252,     // Windows-1252 (Western European)
+        ENCODING_CP1253 = 6,        // Windows-1253 (Greek)
+        ENCODING_CP1254 = 7,        // Windows-1254 (Turkish)
+        ENCODING_CP1255 = 8,        // Windows-1255 (Hebrew)
+        ENCODING_CP1256 = 9,        // Windows-1256 (Arabic)
+        ENCODING_CP1257 = 10,       // Windows-1257 (Baltic)
+        ENCODING_CP1258 = 11,       // Windows-1258 (Vietnamese)
+
+        // äºšæ´²ç¼–ç 
+        ENCODING_JIS = 12,       // JIS (Japanese Industrial Standard)
+        ENCODING_SJIS = 13,       // Shift-JIS (Japanese)
+        ENCODING_GB2312 = 14,       // GB2312 (Simplified Chinese)
+        ENCODING_BIG5 = 15,       // Big5 (Traditional Chinese)
+        ENCODING_EUC_KR = 16,       // EUC-KR (Korean)
+
+        // UTF ç¼–ç 
+        ENCODING_UTF16BE = 17,       // UTF-16 Big Endian (æ­£å¼åç§°)
+        ENCODING_UTF8 = 65001,    // UTF-8
+
+        // å…¶ä»–ç¼–ç 
+        ENCODING_MAC_ROMAN = 10000,    // Mac Roman
+        ENCODING_MAC_JAPANESE = 10001,    // Mac Japanese
+        ENCODING_MAC_TRADCHINESE = 10002, // Mac Traditional Chinese
+        ENCODING_MAC_KOREAN = 10003,    // Mac Korean
+        ENCODING_MAC_ARABIC = 10004,    // Mac Arabic
+        ENCODING_MAC_HEBREW = 10005,    // Mac Hebrew
+        ENCODING_MAC_GREEK = 10006,    // Mac Greek
+        ENCODING_MAC_CYRILLIC = 10007,    // Mac Cyrillic
+        ENCODING_MAC_DEVANAGARI = 10008,  // Mac Devanagari
+        ENCODING_MAC_GURMUKHI = 10009,    // Mac Gurmukhi
+
+        // å°‘è§çš„ç¼–ç 
+        ENCODING_ISO_8859_2 = 18,       // ISO-8859-2 (Latin-2)
+        ENCODING_ISO_8859_3 = 19,       // ISO-8859-3 (Latin-3)
+        ENCODING_ISO_8859_4 = 20,       // ISO-8859-4 (Latin-4)
+        ENCODING_ISO_8859_5 = 21,       // ISO-8859-5 (Cyrillic)
+        ENCODING_ISO_8859_6 = 22,       // ISO-8859-6 (Arabic)
+        ENCODING_ISO_8859_7 = 23,       // ISO-8859-7 (Greek)
+        ENCODING_ISO_8859_8 = 24,       // ISO-8859-8 (Hebrew)
+        ENCODING_ISO_8859_9 = 25,       // ISO-8859-9 (Latin-5)
+        ENCODING_ISO_8859_10 = 26,       // ISO-8859-10 (Latin-6)
+        ENCODING_ISO_8859_11 = 27,       // ISO-8859-11 (Thai)
+        ENCODING_ISO_8859_13 = 28,       // ISO-8859-13 (Latin-7)
+        ENCODING_ISO_8859_14 = 29,       // ISO-8859-14 (Latin-8)
+        ENCODING_ISO_8859_15 = 30,       // ISO-8859-15 (Latin-9)
+        ENCODING_ISO_8859_16 = 31        // ISO-8859-16 (Latin-10)
+    };
+
+    // ==================== Locale æšä¸¾ ====================
+    enum Locale  {
+        // è‹±è¯­
+        LOCALE_EN_US = 0x0409,          // English (United States)
+        LOCALE_EN_GB = 0x0809,          // English (United Kingdom)
+        LOCALE_EN_CA = 0x1009,          // English (Canada)
+        LOCALE_EN_AU = 0x0C09,          // English (Australia)
+        LOCALE_EN_NZ = 0x1409,          // English (New Zealand)
+        LOCALE_EN_IE = 0x1809,          // English (Ireland)
+        LOCALE_EN_IN = 0x4009,          // English (India)
+        LOCALE_EN_SG = 0x4809,          // English (Singapore)
+
+        // ç®€ä½“ä¸­æ–‡
+        LOCALE_ZH_CN = 0x0804,          // Chinese (Simplified, China)
+        LOCALE_ZH_SG = 0x1004,          // Chinese (Simplified, Singapore)
+
+        // ç¹ä½“ä¸­æ–‡
+        LOCALE_ZH_TW = 0x0404,          // Chinese (Traditional, Taiwan)
+        LOCALE_ZH_HK = 0x0C04,          // Chinese (Traditional, Hong Kong)
+        LOCALE_ZH_MO = 0x1404,          // Chinese (Traditional, Macau)
+
+        // æ—¥è¯­
+        LOCALE_JA_JP = 0x0411,          // Japanese (Japan)
+
+        // éŸ©è¯­
+        LOCALE_KO_KR = 0x0412,          // Korean (Korea)
+
+        // æ³•è¯­
+        LOCALE_FR_FR = 0x040C,          // French (France)
+        LOCALE_FR_CA = 0x0C0C,          // French (Canada)
+        LOCALE_FR_CH = 0x100C,          // French (Switzerland)
+        LOCALE_FR_BE = 0x140C,          // French (Belgium)
+
+        // å¾·è¯­
+        LOCALE_DE_DE = 0x0407,          // German (Germany)
+        LOCALE_DE_AT = 0x0C07,          // German (Austria)
+        LOCALE_DE_CH = 0x0807,          // German (Switzerland)
+
+        // è¥¿ç­ç‰™è¯­
+        LOCALE_ES_ES = 0x0C0A,          // Spanish (Spain)
+        LOCALE_ES_MX = 0x080A,          // Spanish (Mexico)
+        LOCALE_ES_AR = 0x2C0A,          // Spanish (Argentina)
+
+        // æ„å¤§åˆ©è¯­
+        LOCALE_IT_IT = 0x0410,          // Italian (Italy)
+        LOCALE_IT_CH = 0x0810,          // Italian (Switzerland)
+
+        // è‘¡è„ç‰™è¯­
+        LOCALE_PT_BR = 0x0416,          // Portuguese (Brazil)
+        LOCALE_PT_PT = 0x0816,          // Portuguese (Portugal)
+
+        // ä¿„è¯­
+        LOCALE_RU_RU = 0x0419,          // Russian (Russia)
+
+        // é˜¿æ‹‰ä¼¯è¯­
+        LOCALE_AR_SA = 0x0401,          // Arabic (Saudi Arabia)
+        LOCALE_AR_EG = 0x0C01,          // Arabic (Egypt)
+
+        // å°åœ°è¯­
+        LOCALE_HI_IN = 0x0439,          // Hindi (India)
+
+        // å…¶ä»–äºšæ´²è¯­è¨€
+        LOCALE_TH_TH = 0x041E,          // Thai (Thailand)
+        LOCALE_VI_VN = 0x042A,          // Vietnamese (Vietnam)
+
+        // åŒ—æ¬§è¯­è¨€
+        LOCALE_SV_SE = 0x041D,          // Swedish (Sweden)
+        LOCALE_NB_NO = 0x0414,          // Norwegian BokmÃ¥l (Norway)
+        LOCALE_DA_DK = 0x0406,          // Danish (Denmark)
+        LOCALE_FI_FI = 0x040B,          // Finnish (Finland)
+
+        // ä¸­ä¸œæ¬§è¯­è¨€
+        LOCALE_PL_PL = 0x0415,          // Polish (Poland)
+        LOCALE_CS_CZ = 0x0405,          // Czech (Czech Republic)
+        LOCALE_HU_HU = 0x040E,          // Hungarian (Hungary)
+        LOCALE_RO_RO = 0x0418,          // Romanian (Romania)
+        LOCALE_EL_GR = 0x0408,          // Greek (Greece)
+        LOCALE_TR_TR = 0x041F,          // Turkish (Turkey)
+
+        // å¸Œä¼¯æ¥è¯­
+        LOCALE_HE_IL = 0x040D,          // Hebrew (Israel)
+
+        // è·å…°è¯­
+        LOCALE_NL_NL = 0x0413,          // Dutch (Netherlands)
+        LOCALE_NL_BE = 0x0813,          // Dutch (Belgium)
+
+
     };
 
     enum ExthRecordType {
@@ -329,78 +471,74 @@ namespace mobi {
         EXTRA_TBS_INDEXING = 0x0002,
         EXTRA_UNCROSSABLE_BREAKS = 0x0004
     };
-    // ==================== MobiBookÀà ====================
+    // ==================== MobiBookç±» ====================
 
     class MobiBook : public Book {
     private:
-        // ÄÚ²¿×´Ì¬
+        // å†…éƒ¨çŠ¶æ€
         std::string book_path_;
         std::string current_dir_;
         bool is_loaded_ = false;
 
-        // ÎÄ¼şÊı¾İ
-        std::vector<uint8_t> file_data_;
-        std::vector<RecordInfo> m_record_info_list;
+        // æ–‡ä»¶æ•°æ®
+        std::vector<uint8_t> m_file_data;
+
+        std::string m_full_name = "";
+
+
+
+
+        // EXTHè®°å½•
         PDBHeader m_pdb_header;
         MobiHeader m_mobi_header;
-
-        // ½âÎö½á¹û
-        std::string title_;
-        std::string author_;
-        std::string publisher_;
-        std::string isbn_;
-        std::string version_;
-
-        // MOBIÌØ¶¨ĞÅÏ¢
-        uint32_t mobi_version_ = 0;
-        uint32_t text_encoding_ = 65001;  // Ä¬ÈÏUTF-8
-        uint16_t compression_type_ = 2;   // Ä¬ÈÏPalmDOCÑ¹Ëõ
-        uint16_t first_content_record_ = 0;
-        uint16_t last_content_record_ = 0;
-        uint32_t full_name_offset_ = 0;
-        uint32_t full_name_length_ = 0;
-
-        // EXTH¼ÇÂ¼
-        std::map<uint32_t, std::string> exth_records_;
-
-        // ÄÚÈİ¼ÇÂ¼
+        PalmDocHeader m_palm_doc_header;
+        ExthHeader m_exth_header;
+      
+        // å†…å®¹è®°å½•
+        std::vector<RecordInfo> m_record_info_list;
+        std::map<uint32_t, std::string> m_exth_records;
         std::vector<std::vector<uint8_t>> content_records_;
         std::vector<std::vector<uint8_t>> image_records_;
 
-        // OCF°üĞÅÏ¢
-        OCFPackage ocf_package_;
+        // OCFåŒ…ä¿¡æ¯
+        OCFPackage m_ocf_package;
         std::vector<OCFRef> spine_;
 
-        // Ë½ÓĞ·½·¨
+
+        uint32_t m_palm_doc_header_offset = 0;
+        uint32_t m_mobi_header_offset = 0;
+        uint32_t m_exth_header_offset = 0;
+        // ç§æœ‰æ–¹æ³•
         bool parsePDBHeader();
         bool parseRecordIndices();
-        bool parseMobiRecord(uint32_t record_index);
-        bool parseExthRecord(const uint8_t* data, uint32_t length);
+
         bool parseContentRecords();
         bool parseRecord0();
         bool parseExthRecords(uint32_t start_offset, uint32_t data_length, uint32_t record_count);
-        bool parseSpecialRecords();  // ½âÎöFLIS/FCIS/EOFµÈÌØÊâ¼ÇÂ¼
+        bool parseSpecialRecords();  // è§£æFLIS/FCIS/EOFç­‰ç‰¹æ®Šè®°å½•
 
-        // ÎÄ±¾´¦Àí
+        // æ–‡æœ¬å¤„ç†
         std::string decodeText(const uint8_t* data, uint32_t length);
         std::vector<uint8_t> decompressPalmDoc(const uint8_t* data, uint32_t length);
         std::string encodingToString(uint32_t encoding);
 
-        // ¸¨Öú·½·¨
+        // è¾…åŠ©æ–¹æ³•
         uint32_t readUInt32(const uint8_t* data);
         uint16_t readUInt16(const uint8_t* data);
-        void parseExthMetadata();
+
         std::string getFullName();
 
-        // OCF°üÉèÖÃ·½·¨
+        std::string getExthRecord(ExthRecordType);
+
+        // OCFåŒ…è®¾ç½®æ–¹æ³•
         void setupOCFPackage();
 
-        // ×Ö½ÚĞò×ª»»º¯Êı
+        // å­—èŠ‚åºè½¬æ¢å‡½æ•°
         static uint16_t swapUint16(uint16_t value);
         static uint32_t swapUint32(uint32_t value);
         static int32_t swapInt32(int32_t value);
 
-        // ½á¹¹Ìå×ª»»º¯Êı
+        // ç»“æ„ä½“è½¬æ¢å‡½æ•°
         static PalmDocHeader swapPalmDocHeader(const PalmDocHeader& header);
         static MobiHeader swapMobiHeader(const MobiHeader& header);
         PDBHeader swapPDBHeader(const PDBHeader& header);
@@ -415,33 +553,87 @@ namespace mobi {
 
         ImageRecordIndex swapImageRecordIndex(const ImageRecordIndex& index);
 
+        std::string convertPalmTime(uint32_t palm_time) const;
+
+   
+
+        void printPDBHeader() const;
+
+        void printRecordInfoStat() const;
+
+
+        void printRecordInfoList() const;
+
+        void printPalmDocHeader() const;
+
+        void printMobiHeader() const;
+
+        void printExthHeader() const;
+
+        void printExthRecords() const;
+
+        void printRecord0() const;
+
+        std::string getTypeDescription(const std::string& type) const;
+
+        std::string getCreatorDescription(const std::string& creator) const;
+
+        void printField(const std::string& label, const std::string& value, int label_width) const;
+
+        void printHexDecField(const std::string& label, uint32_t value, int label_width) const;
+
+        std::string formatFileSize(size_t bytes) const;
+
+        std::string getCompressionName(uint16_t compression) const;
+
+        std::string getEncryptionName(uint16_t  encryption) const;
+
+        std::string getMobiTypeName(uint32_t  mobi_type) const;
+
+        std::string getEncodingName(uint32_t  encoding) const;
+
+        std::string getLocaleName(uint32_t locale) const;
+
+        std::string getExthTypeName(uint32_t  type) const;
+
+        bool validatePalmDocHeader() const;
+
+        bool validateMobiHeader() const;
+
+        std::string toHexString(uint32_t value) const;
+
+        std::string formatExthValue(uint32_t type, const std::string& data) const;
+
+  
+
+
     public:
         MobiBook() = default;
         virtual ~MobiBook() { clear(); }
 
-        // Book½Ó¿ÚÊµÏÖ
+        // Bookæ¥å£å®ç°
         bool load(const std::string& mobi_path) override;
         std::vector<uint8_t> get_binary(std::string base_url, std::string url) override;
         std::string get_string(const std::string& path) override;
         std::string get_book_path() override { return book_path_; }
         std::string get_current_dir() override { return current_dir_; }
         std::string get_chapter_name_by_id(int spine_id) override;
-        std::string get_title() override { return title_; }
-        std::string get_author() override { return author_; }
-        std::string get_version() override { return version_; }
+        std::string get_title() override { return getExthRecord(EXTH_UPDATED_TITLE); }
+        std::string get_author() override { return getExthRecord(EXTH_AUTHOR); }
+        std::string get_version() override { return m_ocf_package.meta["version"]; }
         std::vector<OCFRef>& get_spine() override { return spine_; }
-        OCFPackage& get_ocf_package() override { return ocf_package_; }
+        OCFPackage& get_ocf_package() override { return m_ocf_package; }
         bool has_script() override { return false; }
         bool has_font() override { return false; }
         bool has_css() override { return false; }
         void clear() override;
         std::string resolve_path(std::string base_url, std::string href) override;
 
-        // MobiÌØÓĞ·½·¨
+        // Mobiç‰¹æœ‰æ–¹æ³•
         bool isLoaded() const { return is_loaded_; }
-        size_t getFileSize() const { return file_data_.size(); }
-        std::string getPublisher() const { return publisher_; }
-        std::string getISBN() const { return isbn_; }
+        size_t getFileSize() const { return m_file_data.size(); }
+        std::string getPublisher()  { return getExthRecord(EXTH_PUBLISHER); }
+        std::string getISBN()  { return getExthRecord(EXTH_ISBN); }
 
     private:
         bool readFile(const std::string& path);
