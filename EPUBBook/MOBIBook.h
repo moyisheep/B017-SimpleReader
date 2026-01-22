@@ -43,13 +43,6 @@ namespace mobi {
         uint8_t attributes;            // 记录属性
         uint8_t unique_id[3];          // 唯一ID（3字节）
     };
-    // 记录索引
-    struct RecordIndex {
-        uint32_t offset;
-        uint32_t attributes;
-        uint8_t unique_id[3];
-        uint8_t next_record_offset;
-    };
 
 
 
@@ -471,6 +464,9 @@ namespace mobi {
         EXTRA_TBS_INDEXING = 0x0002,
         EXTRA_UNCROSSABLE_BREAKS = 0x0004
     };
+
+    static const uint8_t VAR_INT_CONTINUE_MASK_FORWARD = 0x80;  // 前向编码：MSB=1表示继续
+    static const uint8_t VAR_INT_CONTINUE_MASK_BACKWARD = 0x01; // 后向编码：LSB=1表示继续
     // ==================== MobiBook类 ====================
 
     class MobiBook : public Book {
@@ -483,7 +479,6 @@ namespace mobi {
         // 文件数据
         std::vector<uint8_t> m_file_data;
 
-        std::string m_full_name = "";
 
 
 
@@ -499,15 +494,84 @@ namespace mobi {
         std::map<uint32_t, std::string> m_exth_records;
         std::vector<std::vector<uint8_t>> content_records_;
         std::vector<std::vector<uint8_t>> image_records_;
-
+        
         // OCF包信息
         OCFPackage m_ocf_package;
-        std::vector<OCFRef> spine_;
 
 
         uint32_t m_palm_doc_header_offset = 0;
         uint32_t m_mobi_header_offset = 0;
         uint32_t m_exth_header_offset = 0;
+
+        struct ParsedIndexEntry {
+            std::vector<uint8_t> control_bytes;
+            std::map<uint8_t, std::vector<uint32_t>> tag_values;
+            std::string text;
+        };
+
+        // 标签表条目
+        struct TagTableEntry {
+            uint8_t tag;                    // 标签
+            uint8_t value_count;            // 值数量
+            uint8_t bit_mask;               // 位掩码
+            uint8_t end_flag;               // 结束标志（0x01表示结束）
+        };
+
+        // IDXT 相关结构
+        struct IdxtEntry {
+            std::vector<uint8_t> control_bytes;           // 控制字节
+            std::map<uint8_t, std::vector<uint32_t>> tag_values; // 标签值（标签 -> 值列表）
+            std::string text;                             // 索引文本
+            uint32_t start_offset;                        // 条目在IDXT中的起始偏移
+            uint32_t length;                              // 条目总长度
+        };
+
+        // 更新 IndexInfo 结构体，添加IDXT信息
+        struct IndexInfo {
+            bool has_index = false;
+            uint32_t index_record_number = 0;
+            IndxHeader indx_header;
+            TagxHeader tagx_header;
+            std::vector<TagTableEntry> tag_table;
+            std::vector<uint8_t> control_bytes;
+
+            // 新增IDXT信息
+            std::vector<IdxtEntry> idxt_entries;
+            bool has_idxt = false;
+            uint32_t idxt_data_offset = 0;
+        };
+
+        uint32_t readForwardVarWidthInt(const uint8_t* data, uint32_t data_size, uint32_t& offset);
+
+        bool parseIdxtEntry(const uint8_t* data, uint32_t data_size, uint32_t& offset, IdxtEntry& entry);
+
+        // 私有方法声明
+        bool parseIdxtSection();  // 新增：解析IDXT部分
+        void parseIdxtEntries(const uint8_t* data, uint32_t data_length, uint32_t& offset);
+        std::vector<uint8_t> readVariableWidthInteger(const uint8_t* data, uint32_t& offset, bool forward_encoded) const;
+        uint32_t decodeVariableWidthInteger(const std::vector<uint8_t>& bytes) const;
+        MobiBook::ParsedIndexEntry parseIndexEntry(const IdxtEntry& entry) const;
+        std::string decodeIndexEntry(const IdxtEntry& entry) const;
+        void printIdxtSection() const;  // 新增：打印IDXT部分
+
+        IndexInfo m_index_info;
+
+        // 私有方法声明
+        bool parseIndexRecords();  // 新增：解析索引记录
+        void printIndexRecords() const;  // 新增：打印索引记录
+        bool parseIndxHeader(uint32_t offset);  // 解析INDX头
+        bool parseTagxHeader(uint32_t offset, uint32_t indx_header_length);  // 解析TAGX头
+        void parseTagTable(uint32_t offset, uint32_t length);  // 解析标签表
+
+        // 字节序转换函数声明
+        static IndxHeader swapIndxHeader(const IndxHeader& header);
+        static TagxHeader swapTagxHeader(const TagxHeader& header);
+        static TagTableEntry swapTagTableEntry(const TagTableEntry& entry);
+
+        // 辅助函数
+        std::string getIndexTypeName(uint32_t type) const;
+        std::string getEncodingNameFromCode(uint32_t encoding) const;
+
         // 私有方法
         bool parsePDBHeader();
         bool parseRecordIndices();
@@ -520,13 +584,9 @@ namespace mobi {
         // 文本处理
         std::string decodeText(const uint8_t* data, uint32_t length);
         std::vector<uint8_t> decompressPalmDoc(const uint8_t* data, uint32_t length);
-        std::string encodingToString(uint32_t encoding);
 
-        // 辅助方法
-        uint32_t readUInt32(const uint8_t* data);
-        uint16_t readUInt16(const uint8_t* data);
 
-        std::string getFullName();
+        std::string getFullName() const;
 
         std::string getExthRecord(ExthRecordType);
 
@@ -537,13 +597,14 @@ namespace mobi {
         static uint16_t swapUint16(uint16_t value);
         static uint32_t swapUint32(uint32_t value);
         static int32_t swapInt32(int32_t value);
+        static uint64_t swapUint64(uint64_t value);
 
         // 结构体转换函数
         static PalmDocHeader swapPalmDocHeader(const PalmDocHeader& header);
         static MobiHeader swapMobiHeader(const MobiHeader& header);
         PDBHeader swapPDBHeader(const PDBHeader& header);
-        RecordIndex swapRecordIndex(const RecordIndex& index);
-        RecordInfo swapRecordIndex(const RecordInfo& index);
+
+        RecordInfo swapRecordInfo(const RecordInfo& index);
         static ExthHeader swapExthHeader(const ExthHeader& header);
         static ExthRecord swapExthRecord(const ExthRecord& record);
 
@@ -604,7 +665,14 @@ namespace mobi {
 
         std::string formatExthValue(uint32_t type, const std::string& data) const;
 
-  
+        uint32_t getRecordLength(uint32_t record_index) const;
+
+        uint32_t readBackwardVarWidthInt(const uint8_t* data, uint32_t data_size, uint32_t& offset);
+
+        bool hasIndex() const { return m_index_info.has_index; }
+        uint32_t getIndexType() const { return m_index_info.indx_header.index_type; }
+        uint32_t getIndexRecordCount() const { return m_index_info.indx_header.index_record_count; }
+        uint32_t getTotalIndexCount() const { return m_index_info.indx_header.total_index_count; }
 
 
     public:
@@ -621,7 +689,7 @@ namespace mobi {
         std::string get_title() override { return getExthRecord(EXTH_UPDATED_TITLE); }
         std::string get_author() override { return getExthRecord(EXTH_AUTHOR); }
         std::string get_version() override { return m_ocf_package.meta["version"]; }
-        std::vector<OCFRef>& get_spine() override { return spine_; }
+        std::vector<OCFRef>& get_spine() override { return m_ocf_package.spine; }
         OCFPackage& get_ocf_package() override { return m_ocf_package; }
         bool has_script() override { return false; }
         bool has_font() override { return false; }
@@ -639,6 +707,8 @@ namespace mobi {
         bool readFile(const std::string& path);
         std::string normalizePath(const std::string& path);
     };
+
+
 
 } // namespace mobi
 

@@ -6451,7 +6451,11 @@ HtmlBlock VirtualDoc::get_html_block(std::string html, int spine_id)
         bi.spine_id = spine_id;
         bi.height = 0;
         bi.html = "<div style = \"height:" + std::to_string(g_cfg.split_space_height) + "px; \"></div>";
-        bi.block_id = block.body_blocks.back().block_id + 1;
+        if(!block.body_blocks.empty())
+        {
+            bi.block_id = block.body_blocks.back().block_id + 1;
+        }
+
         block.body_blocks.push_back(std::move(bi));
 
 
@@ -6688,6 +6692,8 @@ bool VirtualDoc::load_by_id(int spine_id, bool isPushBack)
 
   
         std::string html = m_book->get_string(href);
+        std::cout << html << std::endl;
+
         if (html.empty()) return false;
 
    

@@ -10,13 +10,6 @@ namespace mobi {
 
     // ==================== 辅助函数 ====================
 
-    uint32_t MobiBook::readUInt32(const uint8_t* data) {
-        return (data[0] << 24) | (data[1] << 16) | (data[2] << 8) | data[3];
-    }
-
-    uint16_t MobiBook::readUInt16(const uint8_t* data) {
-        return (data[0] << 8) | data[1];
-    }
 
     bool MobiBook::readFile(const std::string& path) {
         std::ifstream file(path, std::ios::binary | std::ios::ate);
@@ -79,7 +72,9 @@ namespace mobi {
         if (!parsePDBHeader()) {
             return false;
         }
+
         printPDBHeader();
+
         // 解析记录索引
         if (!parseRecordIndices()) {
             return false;
@@ -88,8 +83,10 @@ namespace mobi {
         if (m_record_info_list.empty() || m_record_info_list[0].data_offset >= m_file_data.size()) {
             return false;
         }
+
         //printRecordInfoList();
-        printRecordInfoStat();
+        //printRecordInfoStat();
+
         // 解析记录0（PalmDOC/MOBI头）
         if (!parseRecord0()) {
             return false;
@@ -97,6 +94,13 @@ namespace mobi {
         printRecord0();
         // 解析特殊记录（FLIS/FCIS/EOF）
         parseSpecialRecords();
+
+        if (!parseIndexRecords()) {
+            std::cout << "Failed to parse index records" << std::endl;
+        }
+
+        // 打印索引记录
+        printIndexRecords();
 
 
         // 解析MOBI记录
@@ -156,7 +160,7 @@ namespace mobi {
     }
 
     bool MobiBook::parseRecordIndices() {
-        if (m_file_data.size() < sizeof(PDBHeader) + sizeof(RecordIndex)) {
+        if (m_file_data.size() < sizeof(PDBHeader) + sizeof(RecordInfo)) {
             return false;
         }
 
@@ -171,7 +175,7 @@ namespace mobi {
             const RecordInfo* raw_idx = reinterpret_cast<const RecordInfo*>(
                 index_data + i * sizeof(RecordInfo));
 
-            m_record_info_list[i] = swapRecordIndex(*raw_idx);
+            m_record_info_list[i] = swapRecordInfo(*raw_idx);
         }
 
         return true;
@@ -179,15 +183,17 @@ namespace mobi {
 
 
 
-    std::string MobiBook::getFullName() {
-        //if (full_name_offset_ == 0 || full_name_length_ == 0) {
-        //    return "";
-        //}
-
-        //const uint8_t* record_data = m_file_data.data() + m_record_info_list[0].data_offset;
-        //const uint8_t* name_data = record_data + full_name_offset_;
-
-        //return decodeText(name_data, full_name_length_);
+    std::string MobiBook::getFullName() const
+    {
+        // 解析全名
+        if (m_mobi_header.full_name_offset > 0 && m_mobi_header.full_name_length > 0) {
+            uint32_t name_offset = m_palm_doc_header_offset + m_mobi_header.full_name_offset;
+            if (name_offset + m_mobi_header.full_name_length <= m_file_data.size()) {
+                return std::string(reinterpret_cast<const char*>(
+                    m_file_data.data() + name_offset), m_mobi_header.full_name_length);
+            }
+        }
+        return "";
     }
 
     bool MobiBook::parseContentRecords() {
@@ -200,7 +206,7 @@ namespace mobi {
         content_records_.clear();
         image_records_.clear();
 
-        for (uint16_t i = m_mobi_header.last_content_record; i <= m_mobi_header.last_content_record; i++) {
+        for (uint16_t i = m_mobi_header.first_content_record; i <= m_mobi_header.last_content_record; i++) {
             const RecordInfo& record = m_record_info_list[i];
 
             if (record.data_offset >= m_file_data.size()) {
@@ -211,7 +217,7 @@ namespace mobi {
 
             // 检查是否为图像记录
             bool is_image = false;
-            if (i >= 1) {  // 通常第一个图像记录在内容记录之后
+            if (i >= m_mobi_header.first_image_index) {  // 通常第一个图像记录在内容记录之后
                 // 检查常见图像标识符
                 if (record_data[0] == 0xFF && record_data[1] == 0xD8) {  // JPEG
                     is_image = true;
@@ -370,19 +376,20 @@ namespace mobi {
         }
         return "";
     };
-    void MobiBook::setupOCFPackage() {
+    void MobiBook::setupOCFPackage() 
+    {
         m_ocf_package.rootfile = book_path_;
         m_ocf_package.opf_dir = current_dir_;
         m_ocf_package.version = m_mobi_header.file_version;
 
         // 清空现有数据
-        spine_.clear();
+        m_ocf_package.spine.clear();
         m_ocf_package.manifest.clear();
         m_ocf_package.toc.clear();
         m_ocf_package.meta.clear();
 
         // 添加元数据
-        m_ocf_package.meta["title"] = getExthRecord(EXTH_UPDATED_TITLE);
+        m_ocf_package.meta["title"] = getFullName();
         m_ocf_package.meta["author"] = getExthRecord(EXTH_AUTHOR);
         m_ocf_package.meta["publisher"] = getExthRecord(EXTH_PUBLISHER);
         m_ocf_package.meta["isbn"] = getExthRecord(EXTH_ISBN);
@@ -406,13 +413,13 @@ namespace mobi {
             ref.idref = id;
             ref.href = href;
             ref.linear = "yes";
-            spine_.push_back(ref);
+            m_ocf_package.spine.push_back(ref);
 
             // 添加到目录
             OCFNavPoint nav;
             nav.label = "Chapter " + std::to_string(i + 1);
             nav.href = href;
-            nav.order = static_cast<int>(i + 1);
+            nav.order =  0;
             m_ocf_package.toc.push_back(nav);
         }
 
@@ -530,14 +537,7 @@ namespace mobi {
             m_file_data.data() + m_mobi_header_offset);
         m_mobi_header = swapMobiHeader(*raw_mobi_header);
 
-        // 解析全名
-        if (m_mobi_header.full_name_offset > 0 && m_mobi_header.full_name_length > 0) {
-            uint32_t name_offset = record0.data_offset + m_mobi_header.full_name_offset;
-            if (name_offset + m_mobi_header.full_name_length <= m_file_data.size()) {
-                m_full_name = std::string(reinterpret_cast<const char*>(
-                    m_file_data.data() + name_offset), m_mobi_header.full_name_length);
-            }
-        }
+
 
         // 检查是否有EXTH头
         if (m_mobi_header.exth_flags & 0x40) {
@@ -619,92 +619,487 @@ namespace mobi {
 
         return true;
     }
+
+    // 字节序转换函数实现
+    IndxHeader MobiBook::swapIndxHeader(const IndxHeader& header) {
+        IndxHeader swapped = header;
+        swapped.header_length = swapUint32(header.header_length);
+        swapped.index_type = swapUint32(header.index_type);
+        swapped.unknown_c = swapUint32(header.unknown_c);
+        swapped.unknown_10 = swapUint32(header.unknown_10);
+        swapped.idxt_offset = swapUint32(header.idxt_offset);
+        swapped.index_record_count = swapUint32(header.index_record_count);
+        swapped.index_encoding = swapUint32(header.index_encoding);
+        swapped.index_language = swapUint32(header.index_language);
+        swapped.total_index_count = swapUint32(header.total_index_count);
+        swapped.ordt_offset = swapUint32(header.ordt_offset);
+        swapped.ligt_offset = swapUint32(header.ligt_offset);
+        swapped.unknown_30 = swapUint32(header.unknown_30);
+        swapped.unknown_34 = swapUint32(header.unknown_34);
+        return swapped;
+    }
+
+    TagxHeader MobiBook::swapTagxHeader(const TagxHeader& header) {
+        TagxHeader swapped = header;
+        swapped.header_length = swapUint32(header.header_length);
+        swapped.control_byte_count = swapUint32(header.control_byte_count);
+        return swapped;
+    }
+
+    MobiBook::TagTableEntry MobiBook::swapTagTableEntry(const TagTableEntry& entry) {
+        // 标签表条目都是单字节，无需转换
+        return entry;
+    }
+
+    // 解析索引记录
+    bool MobiBook::parseIndexRecords() {
+        // 查找INDX记录
+        for (size_t i = 0; i < m_record_info_list.size(); ++i) {
+            const RecordInfo& record = m_record_info_list[i];
+
+            if (record.data_offset + 4 <= m_file_data.size()) {
+                const char* identifier = reinterpret_cast<const char*>(
+                    m_file_data.data() + record.data_offset);
+
+                if (std::memcmp(identifier, "INDX", 4) == 0) {
+                    m_index_info.has_index = true;
+                    m_index_info.index_record_number = static_cast<uint32_t>(i);
+
+                    // 解析INDX头
+                    if (!parseIndxHeader(record.data_offset)) {
+                        return false;
+                    }
+
+                    // 解析TAGX部分（紧接INDX头之后）
+                    uint32_t tagx_offset = record.data_offset + m_index_info.indx_header.header_length;
+                    if (!parseTagxHeader(tagx_offset, m_index_info.indx_header.header_length)) {
+                        return false;
+                    }
+
+                    std::cout << "Found INDEX record (record " << i << ")" << std::endl;
+
+                    // 解析IDXT部分
+                    if (!parseIdxtSection()) {
+                        std::cout << "Warning: Failed to parse IDXT section" << std::endl;
+                        // 可以继续，不一定失败
+                    }
+
+                    return true;
+                }
+            }
+        }
+
+        std::cout << "No INDEX record found" << std::endl;
+        return true; // 没有索引不是错误
+    }
+    // 解析INDX头
+    bool MobiBook::parseIndxHeader(uint32_t offset) {
+        if (offset + sizeof(IndxHeader) > m_file_data.size()) {
+            std::cout << "ERROR: Not enough data for INDX header" << std::endl;
+            return false;
+        }
+
+        const IndxHeader* indx = reinterpret_cast<const IndxHeader*>(
+            m_file_data.data() + offset);
+
+        // 检查标识符
+        if (std::memcmp(indx->identifier, "INDX", 4) != 0) {
+            std::cout << "ERROR: Invalid INDX identifier" << std::endl;
+            return false;
+        }
+
+        // 字节序转换
+        m_index_info.indx_header = swapIndxHeader(*indx);
+
+        return true;
+    }
+
+    // 解析TAGX头
+    bool MobiBook::parseTagxHeader(uint32_t offset, uint32_t indx_header_length) {
+        if (offset + sizeof(TagxHeader) > m_file_data.size()) {
+            std::cout << "ERROR: Not enough data for TAGX header" << std::endl;
+            return false;
+        }
+
+        const TagxHeader* tagx = reinterpret_cast<const TagxHeader*>(
+            m_file_data.data() + offset);
+
+        // 检查标识符
+        if (std::memcmp(tagx->identifier, "TAGX", 4) != 0) {
+            std::cout << "ERROR: Invalid TAGX identifier" << std::endl;
+            return false;
+        }
+
+        // 字节序转换
+        m_index_info.tagx_header = swapTagxHeader(*tagx);
+
+        // 解析标签表
+        uint32_t tag_table_offset = offset + sizeof(TagxHeader);
+        uint32_t tag_table_length = m_index_info.tagx_header.header_length - sizeof(TagxHeader);
+
+        if (tag_table_length > 0 && tag_table_length % sizeof(TagTableEntry) == 0) {
+            parseTagTable(tag_table_offset, tag_table_length);
+        }
+
+        return true;
+    }
+
+    // 解析标签表
+    void MobiBook::parseTagTable(uint32_t offset, uint32_t length) {
+        size_t entry_count = length / sizeof(TagTableEntry);
+        m_index_info.tag_table.clear();
+
+        for (size_t i = 0; i < entry_count; ++i) {
+            uint32_t entry_offset = offset + i * sizeof(TagTableEntry);
+
+            if (entry_offset + sizeof(TagTableEntry) <= m_file_data.size()) {
+                const TagTableEntry* entry = reinterpret_cast<const TagTableEntry*>(
+                    m_file_data.data() + entry_offset);
+
+                m_index_info.tag_table.push_back(*entry);
+            }
+        }
+    }
+
+    // 打印索引记录
+    void MobiBook::printIndexRecords() const {
+        if (!m_index_info.has_index) {
+            return;
+        }
+
+        std::cout << "\n=== Index Records ===" << std::endl;
+        std::cout << "Index Record Number: " << m_index_info.index_record_number << std::endl;
+
+        const IndxHeader& indx = m_index_info.indx_header;
+        std::cout << "\nINDX Header:" << std::endl;
+        std::cout << "  Header Length: " << indx.header_length << " bytes" << std::endl;
+        std::cout << "  Index Type: " << indx.index_type << " ("
+            << getIndexTypeName(indx.index_type) << ")" << std::endl;
+        std::cout << "  IDXT Offset: 0x" << std::hex << indx.idxt_offset << std::dec << std::endl;
+        std::cout << "  Index Record Count: " << indx.index_record_count << std::endl;
+        std::cout << "  Index Encoding: " << indx.index_encoding << " ("
+            << getEncodingNameFromCode(indx.index_encoding) << ")" << std::endl;
+        std::cout << "  Index Language: 0x" << std::hex << indx.index_language << std::dec << std::endl;
+        std::cout << "  Total Index Count: " << indx.total_index_count << std::endl;
+        std::cout << "  ORDT Offset: 0x" << std::hex << indx.ordt_offset << std::dec << std::endl;
+        std::cout << "  LIGT Offset: 0x" << std::hex << indx.ligt_offset << std::dec << std::endl;
+
+        const TagxHeader& tagx = m_index_info.tagx_header;
+        std::cout << "\nTAGX Header:" << std::endl;
+        std::cout << "  Header Length: " << tagx.header_length << " bytes" << std::endl;
+        std::cout << "  Control Byte Count: " << tagx.control_byte_count << std::endl;
+
+        if (!m_index_info.tag_table.empty()) {
+            std::cout << "\nTag Table (" << m_index_info.tag_table.size() << " entries):" << std::endl;
+            for (size_t i = 0; i < m_index_info.tag_table.size(); ++i) {
+                const TagTableEntry& entry = m_index_info.tag_table[i];
+                std::cout << "  Entry " << i << ": Tag=0x" << std::hex << (int)entry.tag
+                    << ", Values=" << std::dec << (int)entry.value_count
+                    << ", BitMask=0x" << std::hex << (int)entry.bit_mask
+                    << ", EndFlag=0x" << (int)entry.end_flag << std::dec << std::endl;
+            }
+        }
+
+        // 打印IDXT部分
+        printIdxtSection();
+    }
+
+    // 辅助函数：获取索引类型名称
+    std::string MobiBook::getIndexTypeName(uint32_t type) const {
+        switch (type) {
+        case 0: return "Normal Index";
+        case 2: return "Inflections Index";
+        default: return "Unknown";
+        }
+    }
+
+    // 辅助函数：根据编码代码获取编码名称
+    std::string MobiBook::getEncodingNameFromCode(uint32_t encoding) const {
+        switch (encoding) {
+        case 1252: return "CP1252 (WinLatin1)";
+        case 65001: return "UTF-8";
+        default: return "Unknown";
+        }
+    }
+
+    // 解析IDXT条目
+    void MobiBook::parseIdxtEntries(const uint8_t* data, uint32_t data_length, uint32_t& offset) {
+        uint32_t entry_count = m_index_info.indx_header.total_index_count;
+
+        for (uint32_t i = 0; i < entry_count && offset < data_length; ++i) {
+            IdxtEntry entry;
+            entry.start_offset = offset;
+
+            // 尝试解析索引条目
+            // 索引条目的格式取决于TAGX中的控制字节定义
+            uint32_t entry_start = offset;
+
+            // 读取控制字节
+            std::vector<uint8_t> control_bytes;
+            for (uint32_t j = 0; j < m_index_info.tagx_header.control_byte_count && offset < data_length; ++j) {
+                control_bytes.push_back(data[offset++]);
+            }
+
+            // 根据控制字节解析标签值
+            std::map<uint8_t, std::vector<uint32_t>> tag_values;
+            size_t control_byte_idx = 0;
+
+            for (const auto& tag_entry : m_index_info.tag_table) {
+                if (control_byte_idx >= control_bytes.size()) {
+                    break;
+                }
+
+                uint8_t control_byte = control_bytes[control_byte_idx];
+
+                // 检查位掩码
+                if (control_byte & tag_entry.bit_mask) {
+                    std::vector<uint32_t> values;
+
+                    // 读取指定数量的值
+                    for (uint8_t v = 0; v < tag_entry.value_count && offset + 4 <= data_length; ++v) {
+                        uint32_t value = *reinterpret_cast<const uint32_t*>(data + offset);
+                        value = swapUint32(value); // 字节序转换
+                        values.push_back(value);
+                        offset += 4;
+                    }
+
+                    tag_values[tag_entry.tag] = values;
+                }
+
+                // 检查是否结束
+                if (tag_entry.end_flag == 0x01) {
+                    control_byte_idx++;
+                }
+            }
+
+            // 读取索引文本（可变宽度整数表示的长度 + 数据）
+            if (offset < data_length) {
+                // 读取长度（前向编码的可变宽度整数）
+                std::vector<uint8_t> length_bytes;
+                while (offset < data_length) {
+                    uint8_t byte = data[offset++];
+                    length_bytes.push_back(byte);
+                    if (!(byte & VAR_INT_CONTINUE_MASK_FORWARD)) {
+                        break; // MSB为0表示结束
+                    }
+                }
+
+                uint32_t text_length = decodeVariableWidthInteger(length_bytes);
+
+                // 读取文本数据
+                if (offset + text_length <= data_length) {
+                    std::string text_data(reinterpret_cast<const char*>(data + offset), text_length);
+                    entry.text = text_data;
+                    offset += text_length;
+                }
+            }
+
+            entry.length = offset - entry_start;
+            m_index_info.idxt_entries.push_back(entry);
+        }
+    }
+
+    // 读取可变宽度整数
+    std::vector<uint8_t> MobiBook::readVariableWidthInteger(const uint8_t* data, uint32_t& offset, bool forward_encoded) const {
+        std::vector<uint8_t> bytes;
+
+        if (forward_encoded) {
+            // 前向编码：只有LSB有bit 8设置
+            while (true) {
+                if (offset >= m_file_data.size()) break;
+                uint8_t byte = data[offset++];
+                bytes.push_back(byte);
+                if (!(byte & VAR_INT_CONTINUE_MASK_FORWARD)) {
+                    break;
+                }
+            }
+        }
+        else {
+            // 后向编码：只有MSB有bit 8设置
+            // 需要先读取所有字节，然后反转
+            while (true) {
+                if (offset >= m_file_data.size()) break;
+                uint8_t byte = data[offset++];
+                bytes.push_back(byte);
+                if (!(byte & VAR_INT_CONTINUE_MASK_BACKWARD)) {
+                    break;
+                }
+            }
+            // 反转字节顺序用于解码
+            std::reverse(bytes.begin(), bytes.end());
+        }
+
+        return bytes;
+    }
+
+    // 解码可变宽度整数
+    uint32_t MobiBook::decodeVariableWidthInteger(const std::vector<uint8_t>& bytes) const {
+        uint32_t result = 0;
+
+        for (uint8_t byte : bytes) {
+            result = (result << 7) | (byte & 0x7F);
+        }
+
+        return result;
+    }
+
+    // 解析单个索引条目
+    MobiBook::ParsedIndexEntry MobiBook::parseIndexEntry(const IdxtEntry& entry) const {
+        ParsedIndexEntry parsed;
+
+        if (entry.text.empty()) {
+            return parsed;
+        }
+
+        const uint8_t* data = reinterpret_cast<const uint8_t*>(entry.text.data());
+        uint32_t offset = 0;
+        uint32_t length = static_cast<uint32_t>(entry.text.size());
+
+        // 读取控制字节
+        for (uint32_t i = 0; i < m_index_info.tagx_header.control_byte_count && offset < length; ++i) {
+            parsed.control_bytes.push_back(data[offset++]);
+        }
+
+        // 根据TAG表解析
+        size_t control_byte_idx = 0;
+
+        for (const auto& tag_entry : m_index_info.tag_table) {
+            if (control_byte_idx >= parsed.control_bytes.size()) {
+                break;
+            }
+
+            uint8_t control_byte = parsed.control_bytes[control_byte_idx];
+
+            if (control_byte & tag_entry.bit_mask) {
+                std::vector<uint32_t> values;
+
+                for (uint8_t v = 0; v < tag_entry.value_count && offset + 4 <= length; ++v) {
+                    uint32_t value = *reinterpret_cast<const uint32_t*>(data + offset);
+                    value = swapUint32(value);
+                    values.push_back(value);
+                    offset += 4;
+                }
+
+                parsed.tag_values[tag_entry.tag] = values;
+            }
+
+            if (tag_entry.end_flag == 0x01) {
+                control_byte_idx++;
+            }
+        }
+
+        // 剩余部分是文本
+        if (offset < length) {
+            parsed.text = std::string(reinterpret_cast<const char*>(data + offset), length - offset);
+        }
+
+        return parsed;
+    }
+
+    // 解码索引条目
+    std::string MobiBook::decodeIndexEntry(const IdxtEntry& entry) const {
+        ParsedIndexEntry parsed = parseIndexEntry(entry);
+
+        std::stringstream ss;
+        ss << "Index Entry: ";
+
+        if (!parsed.control_bytes.empty()) {
+            ss << "Control Bytes: ";
+            for (size_t i = 0; i < parsed.control_bytes.size(); ++i) {
+                ss << std::hex << std::setw(2) << std::setfill('0')
+                    << (int)parsed.control_bytes[i];
+                if (i < parsed.control_bytes.size() - 1) ss << " ";
+            }
+            ss << std::dec << " ";
+        }
+
+        if (!parsed.tag_values.empty()) {
+            ss << "Tags: ";
+            for (const auto& [tag, values] : parsed.tag_values) {
+                ss << "TAG(0x" << std::hex << (int)tag << std::dec << ")=[";
+                for (size_t i = 0; i < values.size(); ++i) {
+                    ss << values[i];
+                    if (i < values.size() - 1) ss << ",";
+                }
+                ss << "] ";
+            }
+        }
+
+        if (!parsed.text.empty()) {
+            ss << "Text: \"" << parsed.text << "\"";
+        }
+
+        return ss.str();
+    }
+
+
+
+
     // ==================== Book接口实现 ====================
 
-    std::vector<uint8_t> MobiBook::get_binary(std::string base_url, std::string url) {
+    std::vector<uint8_t> MobiBook::get_binary(std::string base_url, std::string url) 
+    {
         std::vector<uint8_t> result;
+        // 移除可能的查询参数和片段标识符
+        size_t query_pos = url.find('?');
+        if (query_pos != std::string::npos) {
+            url = url.substr(0, query_pos);
+        }
 
-        //if (url.empty()) {
-        //    return result;
-        //}
+        size_t fragment_pos = url.find('#');
+        if (fragment_pos != std::string::npos) {
+            url = url.substr(0, fragment_pos);
+        }
 
-        //std::string full_path = resolve_path(base_url, url);
+        // 1. 处理内容文件（HTML/XHTML章节）
+        if (url.find("content_") == 0 && url.find(".html") != std::string::npos) {
+            // 提取索引号，如 content_0.html -> 0
+            std::string index_str = url.substr(8); // "content_"
+            index_str = index_str.substr(0, index_str.find('.'));
 
-        //// 如果是MOBI文件本身
-        //if (full_path == book_path_) {
-        //    return m_file_data;
-        //}
+            try {
+                size_t index = std::stoul(index_str);
 
-        //// 检查是否是内容文件
-        //for (size_t i = 0; i < content_records_.size(); i++) {
-        //    std::string expected_href = "content_" + std::to_string(i) + ".html";
-        //    if (full_path.find(expected_href) != std::string::npos) {
-        //        // 处理压缩
-        //        std::vector<uint8_t> decompressed;
-        //        if (compression_type_ == 2) {  // PalmDOC压缩
-        //            decompressed = decompressPalmDoc(
-        //                content_records_[i].data(),
-        //                static_cast<uint32_t>(content_records_[i].size())
-        //            );
-        //        }
-        //        else {
-        //            decompressed = content_records_[i];
-        //        }
+                if (index < content_records_.size()) {
+                    // 获取对应的HTML内容
+                    return content_records_[index];            
+                }
 
-        //        // 转换为HTML
-        //        std::string html_content = "<!DOCTYPE html>\n";
-        //        html_content += "<html>\n";
-        //        html_content += "<head>\n";
-        //        html_content += "<meta charset=\"utf-8\">\n";
-        //        html_content += "<title>" + title_ + "</title>\n";
-        //        html_content += "</head>\n";
-        //        html_content += "<body>\n";
+            }
+            catch (const std::exception& e) {
+                // 解析失败，返回错误页面
+                std::cerr << "Error parsing content index: " << e.what() << std::endl;
+                return {};
+            }
+        }
+        // 2. 处理图像文件
+        else if (url.find("image_") == 0) {
+            // 提取索引号，如 image_0.jpg -> 0
+            std::string index_str = url.substr(6); // "image_"
 
-        //        if (i == 0) {
-        //            html_content += "<h1>" + title_ + "</h1>\n";
-        //            if (!author_.empty()) {
-        //                html_content += "<h2>Author: " + author_ + "</h2>\n";
-        //            }
-        //        }
+            // 移除扩展名
+            size_t dot_pos = index_str.find('.');
+            if (dot_pos != std::string::npos) {
+                index_str = index_str.substr(0, dot_pos);
+            }
 
-        //        html_content += "<div>\n";
+            try {
+                size_t index = std::stoul(index_str);
 
-        //        // 解码文本
-        //        std::string text = decodeText(
-        //            decompressed.data(),
-        //            static_cast<uint32_t>(decompressed.size())
-        //        );
+                if (index < image_records_.size()) {
+                    return image_records_[index];
+                }
 
-        //        // 简单格式化
-        //        std::stringstream ss(text);
-        //        std::string line;
-        //        while (std::getline(ss, line)) {
-        //            if (!line.empty()) {
-        //                html_content += "<p>" + line + "</p>\n";
-        //            }
-        //        }
-
-        //        html_content += "</div>\n";
-        //        html_content += "</body>\n";
-        //        html_content += "</html>\n";
-
-        //        result.resize(html_content.size());
-        //        std::memcpy(result.data(), html_content.data(), html_content.size());
-        //        return result;
-        //    }
-        //}
-
-        //// 检查是否是图像文件
-        //for (size_t i = 0; i < image_records_.size(); i++) {
-        //    std::string expected_href = "image_" + std::to_string(i);
-        //    if (full_path.find(expected_href) != std::string::npos) {
-        //        return image_records_[i];
-        //    }
-        //}
-
-        //return result;
-        return {};
+            }
+            catch (const std::exception& e) {
+                std::cerr << "Error parsing image index: " << e.what() << std::endl;
+                return {};
+            }
+        }
+ 
+        return result;
     }
+        
 
     std::string MobiBook::get_string(const std::string& path) {
         auto binary = get_binary("", path);
@@ -730,10 +1125,10 @@ namespace mobi {
         m_exth_records.clear();
         content_records_.clear();
         image_records_.clear();
-        spine_.clear();
+
         m_ocf_package = OCFPackage();
 
-        m_full_name = "";
+       
          m_palm_doc_header_offset = 0;
          m_mobi_header_offset = 0;
          m_exth_header_offset = 0;
@@ -807,6 +1202,18 @@ namespace mobi {
         return static_cast<int32_t>(swapped);
     }
 
+    // 交换64位整数的字节序
+    uint64_t MobiBook::swapUint64(uint64_t value) {
+        return ((value & 0x00000000000000FFULL) << 56) |
+            ((value & 0x000000000000FF00ULL) << 40) |
+            ((value & 0x0000000000FF0000ULL) << 24) |
+            ((value & 0x00000000FF000000ULL) << 8) |
+            ((value & 0x000000FF00000000ULL) >> 8) |
+            ((value & 0x0000FF0000000000ULL) >> 24) |
+            ((value & 0x00FF000000000000ULL) >> 40) |
+            ((value & 0xFF00000000000000ULL) >> 56);
+    }
+
     PalmDocHeader MobiBook::swapPalmDocHeader(const PalmDocHeader& header) {
         PalmDocHeader swapped = header;
         swapped.compression = swapUint16(header.compression);
@@ -821,6 +1228,7 @@ namespace mobi {
 
     MobiHeader MobiBook::swapMobiHeader(const MobiHeader& header) {
         MobiHeader swapped = header;
+
         // 注意：identifier[4] 是字符，不需要交换
 
         swapped.header_length = swapUint32(header.header_length);
@@ -857,6 +1265,41 @@ namespace mobi {
         swapped.drm_count = swapUint32(header.drm_count);
         swapped.drm_size = swapUint32(header.drm_size);
         swapped.drm_flags = swapUint32(header.drm_flags);
+
+        // 条件字段
+        if (header.header_length >= 228) {
+            swapped.unknown_b8 = swapUint64(header.unknown_b8);
+        }
+
+        if (header.header_length >= 244) {
+            swapped.first_content_record = swapUint16(header.first_content_record);
+            swapped.last_content_record = swapUint16(header.last_content_record);
+            swapped.unknown_c4 = swapUint32(header.unknown_c4);
+            swapped.fcis_record = swapUint32(header.fcis_record);
+            swapped.fcis_count = swapUint32(header.fcis_count);
+            swapped.flis_record = swapUint32(header.flis_record);
+            swapped.flis_count = swapUint32(header.flis_count);
+            swapped.unknown_d8 = swapUint64(header.unknown_d8);
+            swapped.unknown_e0 = swapUint32(header.unknown_e0);
+            swapped.first_compilation_section = swapUint32(header.first_compilation_section);
+            swapped.num_compilation_sections = swapUint32(header.num_compilation_sections);
+            swapped.unknown_ec = swapUint32(header.unknown_ec);
+            swapped.extra_record_data_flags = swapUint32(header.extra_record_data_flags);
+        }
+
+        if (header.header_length >= 248) {
+            swapped.indx_record_offset = swapUint32(header.indx_record_offset);
+            swapped.unknown_f8 = swapUint32(header.unknown_f8);
+            swapped.unknown_fc = swapUint32(header.unknown_fc);
+        }
+
+        if (header.header_length >= 256) {
+            swapped.unknown_100 = swapUint32(header.unknown_100);
+            swapped.unknown_104 = swapUint32(header.unknown_104);
+            swapped.unknown_108 = swapUint32(header.unknown_108);
+            swapped.unknown_10b = swapUint32(header.unknown_10b);
+        }
+
         return swapped;
     }
 
@@ -880,15 +1323,9 @@ namespace mobi {
         return swapped;
     }
 
-    RecordIndex MobiBook::swapRecordIndex(const RecordIndex& index) {
-        RecordIndex swapped = index;
-        swapped.offset = swapUint32(index.offset);
-        // attributes 是单字节，不需要交换
-        // unique_id[3] 是字节数组，不需要交换
-        return swapped;
-    }
 
-    RecordInfo MobiBook::swapRecordIndex(const RecordInfo& index) {
+
+    RecordInfo MobiBook::swapRecordInfo(const RecordInfo& index) {
         RecordInfo swapped = index;
         swapped.data_offset = swapUint32(index.data_offset);
         // attributes 是单字节，不需要交换
@@ -1483,9 +1920,9 @@ namespace mobi {
         printHexDecField("Unique ID:", m_mobi_header.unique_id, label_width);
         printHexDecField("File Version:", m_mobi_header.file_version, label_width);
 
-        if (!m_full_name.empty()) {
-            printField("Full Name:", m_full_name, label_width);
-        }
+      
+       printField("Full Name:", getFullName(), label_width);
+   
 
         // 本地化信息
         std::cout << std::endl;
@@ -2158,5 +2595,283 @@ namespace mobi {
         }
 
         return result.empty() ? "(empty)" : result;
+    }
+
+    uint32_t MobiBook::getRecordLength(uint32_t record_index) const {
+        if (record_index >= m_record_info_list.size()) {
+            return 0;
+        }
+
+        uint32_t next_offset = 0;
+        if (record_index + 1 < m_record_info_list.size()) {
+            // 使用下一个记录的偏移量计算当前记录长度
+            next_offset = m_record_info_list[record_index + 1].data_offset;
+        }
+        else {
+            // 如果是最后一个记录，使用文件结束位置
+            next_offset = static_cast<uint32_t>(m_file_data.size());
+        }
+
+        uint32_t current_offset = m_record_info_list[record_index].data_offset;
+        return next_offset - current_offset;
+    }
+
+    // 读取后向编码的可变宽度整数（用于尾部条目）
+    uint32_t MobiBook::readBackwardVarWidthInt(const uint8_t* data, uint32_t data_size, uint32_t& offset) {
+        std::vector<uint8_t> bytes;
+        uint32_t start_offset = offset;
+
+        // 向后读取直到遇到结束标记
+        while (offset < data_size) {
+            uint8_t byte = data[offset++];
+            bytes.push_back(byte);
+
+            // 后向编码：只有MSB的bit 8（即LSB）为1表示继续
+            // 实际上应该是检查bit 0 (LSB)
+            if (!(byte & 0x01)) {
+                break;
+            }
+        }
+
+        // 需要反转字节数组
+        std::reverse(bytes.begin(), bytes.end());
+
+        // 解码可变宽度整数（每字节7位）
+        uint32_t result = 0;
+        for (uint8_t byte : bytes) {
+            result = (result << 7) | ((byte >> 1) & 0x7F);  // 注意：这里需要移位，因为bit 0是继续标记
+        }
+
+        return result;
+    }
+
+    // 读取前向编码的可变宽度整数（用于文本长度）
+    uint32_t MobiBook::readForwardVarWidthInt(const uint8_t* data, uint32_t data_size, uint32_t& offset) {
+        uint32_t result = 0;
+
+        while (offset < data_size) {
+            uint8_t byte = data[offset++];
+            result = (result << 7) | (byte & 0x7F);
+
+            // 前向编码：MSB为0表示结束
+            if (!(byte & 0x80)) {
+                break;
+            }
+        }
+
+        return result;
+    }
+
+    // 解析单个IDXT条目
+    bool MobiBook::parseIdxtEntry(const uint8_t* data, uint32_t data_size, uint32_t& offset, IdxtEntry& entry) {
+        uint32_t start_offset = offset;
+
+        if (offset >= data_size) {
+            return false;
+        }
+
+        // 1. 读取控制字节（根据TAGX头中的control_byte_count）
+        entry.control_bytes.clear();
+        for (uint32_t i = 0; i < m_index_info.tagx_header.control_byte_count && offset < data_size; ++i) {
+            entry.control_bytes.push_back(data[offset++]);
+        }
+
+        // 2. 根据TAG表解析标签值
+        entry.tag_values.clear();
+        size_t control_byte_index = 0;
+
+        for (const auto& tag_entry : m_index_info.tag_table) {
+            if (control_byte_index >= entry.control_bytes.size()) {
+                break;
+            }
+
+            uint8_t control_byte = entry.control_bytes[control_byte_index];
+
+            // 检查位掩码：控制字节中的相应位是否设置
+            if (control_byte & tag_entry.bit_mask) {
+                std::vector<uint32_t> values;
+
+                // 读取指定数量的32位值
+                for (uint8_t v = 0; v < tag_entry.value_count; ++v) {
+                    if (offset + 4 > data_size) {
+                        return false;
+                    }
+
+                    uint32_t value = (data[offset] << 24) |
+                        (data[offset + 1] << 16) |
+                        (data[offset + 2] << 8) |
+                        (data[offset + 3]);
+                    offset += 4;
+                    values.push_back(value);
+                }
+
+                entry.tag_values[tag_entry.tag] = values;
+            }
+
+            // 检查是否结束这个控制字节的处理
+            if (tag_entry.end_flag == 0x01) {
+                control_byte_index++;
+            }
+        }
+
+        // 3. 读取索引文本（长度 + 数据）
+        if (offset < data_size) {
+            // 读取文本长度（前向编码的可变宽度整数）
+            uint32_t text_length = readForwardVarWidthInt(data, data_size, offset);
+
+            // 读取文本数据
+            if (offset + text_length <= data_size) {
+                entry.text.assign(reinterpret_cast<const char*>(data + offset), text_length);
+                offset += text_length;
+            }
+            else {
+                return false; // 数据不足
+            }
+        }
+
+        entry.start_offset = start_offset;
+        entry.length = offset - start_offset;
+
+        return true;
+    }
+
+    // 解析IDXT部分
+    bool MobiBook::parseIdxtSection() {
+        if (!m_index_info.has_index) {
+            return true; // 没有索引不是错误
+        }
+
+        const IndxHeader& indx = m_index_info.indx_header;
+        const RecordInfo& record = m_record_info_list[m_index_info.index_record_number];
+
+        // 计算IDXT的实际偏移量
+        m_index_info.idxt_data_offset = record.data_offset + indx.idxt_offset;
+
+        if (m_index_info.idxt_data_offset >= m_file_data.size()) {
+            std::cout << "ERROR: IDXT offset out of range" << std::endl;
+            return false;
+        }
+
+        // 计算IDXT部分的大小
+        uint32_t next_section_offset = 0;
+
+        // 优先使用ORDT偏移
+        if (indx.ordt_offset > 0) {
+            next_section_offset = record.data_offset + indx.ordt_offset;
+        }
+        // 其次使用LIGT偏移
+        else if (indx.ligt_offset > 0) {
+            next_section_offset = record.data_offset + indx.ligt_offset;
+        }
+        // 否则使用记录的结束位置
+        else {
+            next_section_offset = record.data_offset + getRecordLength(m_index_info.index_record_number);
+        }
+
+        if (next_section_offset <= m_index_info.idxt_data_offset) {
+            std::cout << "ERROR: Invalid IDXT section range" << std::endl;
+            return false;
+        }
+
+        uint32_t idxt_size = next_section_offset - m_index_info.idxt_data_offset;
+        const uint8_t* idxt_data = m_file_data.data() + m_index_info.idxt_data_offset;
+
+        std::cout << "\n=== IDXT Section ===" << std::endl;
+        std::cout << "Data offset: 0x" << std::hex << m_index_info.idxt_data_offset << std::dec << std::endl;
+        std::cout << "Section size: " << idxt_size << " bytes" << std::endl;
+        std::cout << "Expected entries: " << indx.total_index_count << std::endl;
+
+        // 解析所有条目
+        uint32_t offset = 0;
+        m_index_info.idxt_entries.clear();
+
+        while (offset < idxt_size && m_index_info.idxt_entries.size() < indx.total_index_count) {
+            IdxtEntry entry;
+
+            if (!parseIdxtEntry(idxt_data, idxt_size, offset, entry)) {
+                std::cout << "Warning: Failed to parse entry " << m_index_info.idxt_entries.size() << std::endl;
+                break;
+            }
+
+            m_index_info.idxt_entries.push_back(entry);
+
+            // 检查是否遇到可能的结束标记
+            if (offset + 4 <= idxt_size) {
+                // 检查是否全为0（可能的填充）
+                bool all_zero = true;
+                for (uint32_t i = 0; i < 4; ++i) {
+                    if (idxt_data[offset + i] != 0) {
+                        all_zero = false;
+                        break;
+                    }
+                }
+                if (all_zero) {
+                    offset += 4; // 跳过填充
+                    break;
+                }
+            }
+        }
+
+        m_index_info.has_idxt = !m_index_info.idxt_entries.empty();
+
+        std::cout << "Parsed " << m_index_info.idxt_entries.size() << " entries" << std::endl;
+
+        return true;
+    }
+
+    // 打印IDXT信息
+    void MobiBook::printIdxtSection() const {
+        if (!m_index_info.has_idxt || m_index_info.idxt_entries.empty()) {
+            return;
+        }
+
+        std::cout << "\n--- IDXT Entries ---" << std::endl;
+
+        // 显示前几个条目
+        size_t entries_to_show = std::min<size_t>(5, m_index_info.idxt_entries.size());
+
+        for (size_t i = 0; i < entries_to_show; ++i) {
+            const IdxtEntry& entry = m_index_info.idxt_entries[i];
+
+            std::cout << "\nEntry " << i << " (offset: 0x" << std::hex << entry.start_offset
+                << ", length: " << std::dec << entry.length << " bytes):" << std::endl;
+
+            // 显示控制字节
+            if (!entry.control_bytes.empty()) {
+                std::cout << "  Control bytes: ";
+                for (size_t j = 0; j < entry.control_bytes.size(); ++j) {
+                    std::cout << "0x" << std::hex << std::setw(2) << std::setfill('0')
+                        << static_cast<int>(entry.control_bytes[j]) << " ";
+                }
+                std::cout << std::dec << std::endl;
+            }
+
+            // 显示标签值
+            if (!entry.tag_values.empty()) {
+                std::cout << "  Tag values:" << std::endl;
+                for (const auto& [tag, values] : entry.tag_values) {
+                    std::cout << "    Tag 0x" << std::hex << static_cast<int>(tag) << std::dec << ": ";
+                    for (size_t j = 0; j < values.size(); ++j) {
+                        std::cout << "0x" << std::hex << values[j] << std::dec;
+                        if (j < values.size() - 1) std::cout << ", ";
+                    }
+                    std::cout << std::endl;
+                }
+            }
+
+            // 显示文本（截断过长的文本）
+            if (!entry.text.empty()) {
+                std::string display_text = entry.text;
+                if (display_text.length() > 50) {
+                    display_text = display_text.substr(0, 47) + "...";
+                }
+                std::cout << "  Text: \"" << display_text << "\"" << std::endl;
+            }
+        }
+
+        if (m_index_info.idxt_entries.size() > entries_to_show) {
+            std::cout << "\n... and " << (m_index_info.idxt_entries.size() - entries_to_show)
+                << " more entries" << std::endl;
+        }
     }
 } // namespace mobi
