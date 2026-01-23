@@ -3,7 +3,7 @@
 [一个简单的 EPUB 阅读器]
 
 ## 开发说明
-使用AI辅助开发（当贝AI，Kimi K2, DeepSeek，问小白等），人工调试加优化功能，估计可能存在许多问题，暂时懒优化了
+使用AI辅助开发（当贝AI，Kimi K2, DeepSeekV3/R1，问小白, DeepSeekV3.2），人工调试加优化功能，估计可能存在许多问题，暂时懒优化了
 
 ## 📌 功能
 - EPUB 阅读器
@@ -87,7 +87,8 @@
 
 
 ## 许可证
-The core project is licensed under **MIT License**.  
 See [LICENSE](LICENSE) for details.
 
 Third-party library licenses are listed in [NOTICE](NOTICE).
+
+*最后更新时间:2026-01-23*
