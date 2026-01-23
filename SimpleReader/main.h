@@ -107,6 +107,7 @@ using namespace Gdiplus;
 #include "ReadingRecorder.h"
 #include "EPUBBook.h"
 #include "MOBIBook.h"
+#include "DJVUBook.h"
 #include "Book.h"
 
 

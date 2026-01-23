@@ -186,6 +186,42 @@ namespace mobi {
         uint8_t byte3;                 // 固定值: 10 (0x0a) - LF
     };
 
+    // A SRCS record is a record whose content is a zip archive of all source files (i.e., .opf, .ncx, .htm, .jpg, ...) given to the command and puts it in the generated MOBI file. 
+    struct SrcsRecord
+    {
+        char identifier[4];            // "SRCS"
+        uint32_t unknown1;             // fixed value(?): 0x00000010
+        uint32_t unknown2;             // fixed value(?): 0x0000002f
+        uint32_t unknown3;             // fixed value(?): 0x00000001
+        // zip	The zip archive continues to the end of this record
+    };
+
+    // A CMET record is a record whose content is the output of the compilation operation, and perhaps extra info. 
+    struct CmetRecord
+    {
+        char identifier[4];            // "CMET"
+        uint32_t unknown1;             // 	fixed value(?): 0x0000000C
+        uint32_t text_length;          // 	(big endian)
+        // 	variable	text	compilation output text, line endings are CRLF
+        // 	variable	?	unknown data to the end of the record
+    };
+
+    struct AudiRecord
+    {
+        char identifier[4];            // "AUDI"
+        uint32_t unknown1;             // 	unkown value
+        uint32_t unknown2;             // 	unkown value
+        // media	The media data continues to the end of this record
+    };
+
+    struct VideRecord
+    {
+        char identifier[4];            // "VIDE"
+        uint32_t unknown1;             // 	unkown value
+        uint32_t unknown2;             // 	unkown value
+        // media	The media data continues to the end of this record
+    };
+
     // INDX 头结构（索引元数据）
     struct IndxHeader {
         char identifier[4];            // "INDX"
@@ -488,6 +524,16 @@ namespace mobi {
         MobiHeader m_mobi_header;
         PalmDocHeader m_palm_doc_header;
         ExthHeader m_exth_header;
+        
+        
+        std::string m_full_name;
+        std::vector<IndxHeader> m_indx_list;
+        std::vector<TagxHeader> m_tagx_list;
+        FlisRecord m_flis_record;
+        FcisRecord m_fcis_record;
+        EofRecord m_eof_record;
+        SrcsRecord m_srcs_record;
+
       
         // 内容记录
         std::vector<RecordInfo> m_record_info_list;
@@ -503,70 +549,26 @@ namespace mobi {
         uint32_t m_mobi_header_offset = 0;
         uint32_t m_exth_header_offset = 0;
 
-        struct ParsedIndexEntry {
-            std::vector<uint8_t> control_bytes;
-            std::map<uint8_t, std::vector<uint32_t>> tag_values;
-            std::string text;
-        };
 
-        // 标签表条目
-        struct TagTableEntry {
-            uint8_t tag;                    // 标签
-            uint8_t value_count;            // 值数量
-            uint8_t bit_mask;               // 位掩码
-            uint8_t end_flag;               // 结束标志（0x01表示结束）
-        };
 
-        // IDXT 相关结构
-        struct IdxtEntry {
-            std::vector<uint8_t> control_bytes;           // 控制字节
-            std::map<uint8_t, std::vector<uint32_t>> tag_values; // 标签值（标签 -> 值列表）
-            std::string text;                             // 索引文本
-            uint32_t start_offset;                        // 条目在IDXT中的起始偏移
-            uint32_t length;                              // 条目总长度
-        };
 
-        // 更新 IndexInfo 结构体，添加IDXT信息
-        struct IndexInfo {
-            bool has_index = false;
-            uint32_t index_record_number = 0;
-            IndxHeader indx_header;
-            TagxHeader tagx_header;
-            std::vector<TagTableEntry> tag_table;
-            std::vector<uint8_t> control_bytes;
 
-            // 新增IDXT信息
-            std::vector<IdxtEntry> idxt_entries;
-            bool has_idxt = false;
-            uint32_t idxt_data_offset = 0;
-        };
+
 
         uint32_t readForwardVarWidthInt(const uint8_t* data, uint32_t data_size, uint32_t& offset);
 
-        bool parseIdxtEntry(const uint8_t* data, uint32_t data_size, uint32_t& offset, IdxtEntry& entry);
 
-        // 私有方法声明
-        bool parseIdxtSection();  // 新增：解析IDXT部分
-        void parseIdxtEntries(const uint8_t* data, uint32_t data_length, uint32_t& offset);
         std::vector<uint8_t> readVariableWidthInteger(const uint8_t* data, uint32_t& offset, bool forward_encoded) const;
         uint32_t decodeVariableWidthInteger(const std::vector<uint8_t>& bytes) const;
-        MobiBook::ParsedIndexEntry parseIndexEntry(const IdxtEntry& entry) const;
-        std::string decodeIndexEntry(const IdxtEntry& entry) const;
-        void printIdxtSection() const;  // 新增：打印IDXT部分
 
-        IndexInfo m_index_info;
 
-        // 私有方法声明
-        bool parseIndexRecords();  // 新增：解析索引记录
-        void printIndexRecords() const;  // 新增：打印索引记录
-        bool parseIndxHeader(uint32_t offset);  // 解析INDX头
-        bool parseTagxHeader(uint32_t offset, uint32_t indx_header_length);  // 解析TAGX头
-        void parseTagTable(uint32_t offset, uint32_t length);  // 解析标签表
+
+
 
         // 字节序转换函数声明
         static IndxHeader swapIndxHeader(const IndxHeader& header);
         static TagxHeader swapTagxHeader(const TagxHeader& header);
-        static TagTableEntry swapTagTableEntry(const TagTableEntry& entry);
+
 
         // 辅助函数
         std::string getIndexTypeName(uint32_t type) const;
@@ -668,11 +670,6 @@ namespace mobi {
         uint32_t getRecordLength(uint32_t record_index) const;
 
         uint32_t readBackwardVarWidthInt(const uint8_t* data, uint32_t data_size, uint32_t& offset);
-
-        bool hasIndex() const { return m_index_info.has_index; }
-        uint32_t getIndexType() const { return m_index_info.indx_header.index_type; }
-        uint32_t getIndexRecordCount() const { return m_index_info.indx_header.index_record_count; }
-        uint32_t getTotalIndexCount() const { return m_index_info.indx_header.total_index_count; }
 
 
     public:

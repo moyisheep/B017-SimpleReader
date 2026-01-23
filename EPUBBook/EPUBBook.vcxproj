@@ -87,11 +87,13 @@
   <ItemGroup>
     <ClCompile Include="EPUBBook.cpp" />
     <ClCompile Include="MOBIBook.cpp" />
+    <ClCompile Include="DJVUBook.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EPUBBook.h" />
     <ClInclude Include="MOBIBook.h" />
     <ClInclude Include="Book.h" />
+    <ClInclude Include="DJVUBook.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -19,6 +19,9 @@
     <Filter Include="MOBI">
       <UniqueIdentifier>{f9390146-f7fa-4cd1-b3f2-9f6230493517}</UniqueIdentifier>
     </Filter>
+    <Filter Include="DJVU">
+      <UniqueIdentifier>{0d1a76c5-7738-4d5d-b638-3dc86714458e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="EPUBBook.cpp">
@@ -26,6 +29,9 @@
     </ClCompile>
     <ClCompile Include="MOBIBook.cpp">
       <Filter>MOBI</Filter>
+    </ClCompile>
+    <ClCompile Include="DJVUBook.cpp">
+      <Filter>DJVU</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -37,6 +43,9 @@
     </ClInclude>
     <ClInclude Include="MOBIBook.h">
       <Filter>MOBI</Filter>
+    </ClInclude>
+    <ClInclude Include="DJVUBook.h">
+      <Filter>DJVU</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

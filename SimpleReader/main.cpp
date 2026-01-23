@@ -2076,6 +2076,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             {
                 g_book = std::make_shared<mobi::MobiBook>();
             }
+            else if (std::wstring(ext) == std::wstring(L".djvu"))
+            {
+                g_book = std::make_shared<DjVuBook>();
+            }
             else
             {
                 SetStatus(STATUSBAR_INFO, L"不是有效的 epub 文件");
