@@ -2076,10 +2076,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             {
                 g_book = std::make_shared<mobi::MobiBook>();
             }
-            else if (std::wstring(ext) == std::wstring(L".djvu"))
-            {
-                g_book = std::make_shared<DjVuBook>();
-            }
+            //else if (std::wstring(ext) == std::wstring(L".djvu"))
+            //{
+            //    g_book = std::make_shared<DjVuBook>();
+            //}
             else
             {
                 SetStatus(STATUSBAR_INFO, L"不是有效的 epub 文件");
@@ -6696,7 +6696,7 @@ bool VirtualDoc::load_by_id(int spine_id, bool isPushBack)
 
   
         std::string html = m_book->get_string(href);
-        std::cout << html << std::endl;
+        //std::cout << html << std::endl;
 
         if (html.empty()) return false;
 

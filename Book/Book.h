@@ -1,4 +1,8 @@
 #pragma once
+#include <unordered_map>
+#include <string>
+#include <vector>
+
 // -------------- 新增数据结构 --------------
 struct OCFItem {
     std::string id, href, media_type, properties;
@@ -17,7 +21,7 @@ struct OCFPackage {
     std::vector<OCFItem>   manifest;
     std::vector<OCFRef>    spine;
     std::vector<OCFNavPoint> toc;
-    std::map<std::string, std::string> meta;
+    std::unordered_map<std::string, std::string> meta;
     std::string toc_path;
 };
 

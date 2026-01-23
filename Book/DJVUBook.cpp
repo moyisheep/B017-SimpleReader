@@ -181,7 +181,7 @@ bool DjVuBook::parse_djvu_file(const std::string & path) {
     char header[4];
     file.read(header, 4);
     std::string file_type(header, 4);
-
+    file.read(header, 4);
     if (file_type != "AT&T" && file_type != "FORM" && file_type != "DJVM" && file_type != "DJVU") {
         // 可能没有IFF头，直接按单页DjVu处理
         file.seekg(0, std::ios::beg);

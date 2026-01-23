@@ -288,7 +288,7 @@ namespace mobi {
     };
 
     // ==================== TextEncoding 枚举 ====================
-    enum TextEncoding  {
+    enum TextEncoding {
         // 标准编码
         ENCODING_LATIN1 = 1,        // ISO-8859-1 (Latin-1)
         ENCODING_UCS2 = 2,        // UCS-2 (UCS-2 Big Endian)
@@ -346,7 +346,7 @@ namespace mobi {
     };
 
     // ==================== Locale 枚举 ====================
-    enum Locale  {
+    enum Locale {
         // 英语
         LOCALE_EN_US = 0x0409,          // English (United States)
         LOCALE_EN_GB = 0x0809,          // English (United Kingdom)
@@ -524,8 +524,8 @@ namespace mobi {
         MobiHeader m_mobi_header;
         PalmDocHeader m_palm_doc_header;
         ExthHeader m_exth_header;
-        
-        
+
+
         std::string m_full_name;
         std::vector<IndxHeader> m_indx_list;
         std::vector<TagxHeader> m_tagx_list;
@@ -534,13 +534,13 @@ namespace mobi {
         EofRecord m_eof_record;
         SrcsRecord m_srcs_record;
 
-      
+
         // 内容记录
         std::vector<RecordInfo> m_record_info_list;
         std::map<uint32_t, std::string> m_exth_records;
         std::vector<std::vector<uint8_t>> content_records_;
         std::vector<std::vector<uint8_t>> image_records_;
-        
+
         // OCF包信息
         OCFPackage m_ocf_package;
 
@@ -618,7 +618,7 @@ namespace mobi {
 
         std::string convertPalmTime(uint32_t palm_time) const;
 
-   
+
 
         void printPDBHeader() const;
 
@@ -697,8 +697,8 @@ namespace mobi {
         // Mobi特有方法
         bool isLoaded() const { return is_loaded_; }
         size_t getFileSize() const { return m_file_data.size(); }
-        std::string getPublisher()  { return getExthRecord(EXTH_PUBLISHER); }
-        std::string getISBN()  { return getExthRecord(EXTH_ISBN); }
+        std::string getPublisher() { return getExthRecord(EXTH_PUBLISHER); }
+        std::string getISBN() { return getExthRecord(EXTH_ISBN); }
 
     private:
         bool readFile(const std::string& path);

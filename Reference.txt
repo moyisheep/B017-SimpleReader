@@ -2,3 +2,8 @@ mobi
 
 - https://wiki.mobileread.com/wiki/PDB
 - https://wiki.mobileread.com/wiki/MOBI
+
+
+djvu
+
+- https://docs.fileformat.com/image/djvu/

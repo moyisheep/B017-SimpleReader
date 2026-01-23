@@ -42,8 +42,8 @@
     <CopyFileToFolders Include="res\global.css" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\EPUBBook\EPUBBook.vcxproj">
-      <Project>{72281c37-f044-49a3-85b9-a7667ebb76d9}</Project>
+    <ProjectReference Include="..\Book\Book.vcxproj">
+      <Project>{fc95ea2e-dfbc-47af-8278-17da907ff669}</Project>
     </ProjectReference>
     <ProjectReference Include="..\MML2SVG\MML2SVG.vcxproj">
       <Project>{f6b0a70c-ff06-4c45-9b92-56d1e46bf5b7}</Project>
@@ -112,7 +112,7 @@
       <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>Default</ConformanceMode>
-      <AdditionalIncludeDirectories>E:\文件夹集合\B-编程\Projects\B015 Simple Markdown\SimpleMarkdown\litehtml\include;$(SolutionDir)EPUBBook;$(SolutionDir)ReadingRecorder;$(SolutionDir)MML2SVG;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>E:\文件夹集合\B-编程\Projects\B015 Simple Markdown\SimpleMarkdown\litehtml\include;$(SolutionDir)Book;$(SolutionDir)ReadingRecorder;$(SolutionDir)MML2SVG;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>

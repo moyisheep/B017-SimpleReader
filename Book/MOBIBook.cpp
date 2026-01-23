@@ -139,13 +139,13 @@ namespace mobi {
         }
 
         const PDBHeader* header = reinterpret_cast<const PDBHeader*>(m_file_data.data());
-        if(!header)
+        if (!header)
         {
             return false;
         }
 
         m_pdb_header = swapPDBHeader(*header);
-         //检查是否为PDB格式
+        //检查是否为PDB格式
         if (std::string(header->type, 4) != "BOOK" &&
             std::string(header->type, 4) != "TEXt" &&
             std::string(header->type, 4) != "MOBI") {
@@ -160,7 +160,7 @@ namespace mobi {
             return false;
         }
 
-     
+
         uint32_t num_records = m_pdb_header.num_records;
 
         // 记录索引从PDB头之后开始
@@ -372,7 +372,7 @@ namespace mobi {
         }
         return "";
     };
-    void MobiBook::setupOCFPackage() 
+    void MobiBook::setupOCFPackage()
     {
         m_ocf_package.rootfile = book_path_;
         m_ocf_package.opf_dir = current_dir_;
@@ -415,7 +415,7 @@ namespace mobi {
             OCFNavPoint nav;
             nav.label = "Chapter " + std::to_string(i + 1);
             nav.href = href;
-            nav.order =  0;
+            nav.order = 0;
             m_ocf_package.toc.push_back(nav);
         }
 
@@ -454,7 +454,7 @@ namespace mobi {
         m_ocf_package.toc_path = "toc.ncx";
     }
 
-   
+
 
     bool MobiBook::parseExthRecords(uint32_t start_offset, uint32_t data_length, uint32_t record_count) {
         if (start_offset + data_length > m_file_data.size()) {
@@ -470,7 +470,7 @@ namespace mobi {
                 m_file_data.data() + current_offset);
 
             auto record = swapExthRecord(*raw_record);
-         
+
 
             if (record.length < 8) {
                 break;
@@ -486,7 +486,7 @@ namespace mobi {
             }
 
             std::cout << std::endl;
-        
+
             current_offset += record.length;
             records_parsed++;
         }
@@ -494,7 +494,7 @@ namespace mobi {
         return records_parsed == record_count;
     }
 
-// 解析函数（只解析，不打印）
+    // 解析函数（只解析，不打印）
     bool MobiBook::parseRecord0() {
         if (m_record_info_list.empty()) {
             std::cerr << "record info list is empty" << std::endl;
@@ -715,7 +715,7 @@ namespace mobi {
 
     // ==================== Book接口实现 ====================
 
-    std::vector<uint8_t> MobiBook::get_binary(std::string base_url, std::string url) 
+    std::vector<uint8_t> MobiBook::get_binary(std::string base_url, std::string url)
     {
         std::vector<uint8_t> result;
         // 移除可能的查询参数和片段标识符
@@ -740,7 +740,7 @@ namespace mobi {
 
                 if (index < content_records_.size()) {
                     // 获取对应的HTML内容
-                    return content_records_[index];            
+                    return content_records_[index];
                 }
 
             }
@@ -774,10 +774,10 @@ namespace mobi {
                 return {};
             }
         }
- 
+
         return result;
     }
-        
+
 
     std::string MobiBook::get_string(const std::string& path) {
         auto binary = get_binary("", path);
@@ -806,10 +806,10 @@ namespace mobi {
 
         m_ocf_package = OCFPackage();
 
-       
-         m_palm_doc_header_offset = 0;
-         m_mobi_header_offset = 0;
-         m_exth_header_offset = 0;
+
+        m_palm_doc_header_offset = 0;
+        m_mobi_header_offset = 0;
+        m_exth_header_offset = 0;
         is_loaded_ = false;
     }
 
@@ -1598,9 +1598,9 @@ namespace mobi {
         printHexDecField("Unique ID:", m_mobi_header.unique_id, label_width);
         printHexDecField("File Version:", m_mobi_header.file_version, label_width);
 
-      
-       printField("Full Name:", getFullName(), label_width);
-   
+
+        printField("Full Name:", getFullName(), label_width);
+
 
         // 本地化信息
         std::cout << std::endl;
@@ -1788,7 +1788,7 @@ namespace mobi {
             }
         }
     }
-    
+
     std::string MobiBook::getTypeDescription(const std::string& type) const {
         if (type == "BOOK") return "(Generic Book)";
         if (type == "TEXt") return "(Plain Text)";
@@ -2194,10 +2194,10 @@ namespace mobi {
     }
 
     // ==================== formatExthValue 函数 ====================
-    std::string MobiBook::formatExthValue(uint32_t type, const std::string & data) const 
+    std::string MobiBook::formatExthValue(uint32_t type, const std::string& data) const
     {
         // 特殊处理某些类型的值
-        switch (type) 
+        switch (type)
         {
         case EXTH_LANGUAGE:
             if (data.length() >= 2) {
