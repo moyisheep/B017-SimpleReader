@@ -1,6 +1,6 @@
-﻿# Simple EPUB Reader
+﻿# Simple Reader
 
-[一个简单的 EPUB 阅读器]
+一个简单的阅读器， 支持 EPUB
 
 ## 开发说明
 使用AI辅助开发（当贝AI，Kimi K2, DeepSeekV3/R1，问小白, DeepSeekV3.2），人工调试加优化功能，估计可能存在许多问题，暂时懒优化了
@@ -91,4 +91,4 @@ See [LICENSE](LICENSE) for details.
 
 Third-party library licenses are listed in [NOTICE](NOTICE).
 
-*最后更新时间:2026-01-23*
+*最后更新时间: 2026-01-23*
