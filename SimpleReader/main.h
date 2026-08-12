@@ -89,6 +89,7 @@
 #include "HomePage.h"
 #include "Tooltip.h"
 #include "MainWindow.h"
+#include "FontDialog.h"
 
 using namespace Gdiplus;
 

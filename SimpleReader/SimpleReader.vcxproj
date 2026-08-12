@@ -14,6 +14,7 @@
     <ClCompile Include="AppBootstrap.cpp" />
     <ClCompile Include="AppSettings.cpp" />
     <ClCompile Include="AppStates.cpp" />
+    <ClCompile Include="FontDialog.cpp" />
     <ClCompile Include="FontPanel.cpp" />
     <ClCompile Include="HomePage.cpp" />
     <ClCompile Include="ImageView.cpp" />
@@ -21,6 +22,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="MainWindow.cpp" />
+    <ClCompile Include="MemoryFontLoader.cpp" />
     <ClCompile Include="ScrollBar.cpp" />
     <ClCompile Include="SimpleContainer.cpp" />
     <ClCompile Include="Timer.cpp" />
@@ -41,6 +43,7 @@
     <ClInclude Include="AppSettings.h" />
     <ClInclude Include="AppStates.h" />
     <ClInclude Include="Constants.h" />
+    <ClInclude Include="FontDialog.h" />
     <ClInclude Include="FontPanel.h" />
     <ClInclude Include="HomePage.h" />
     <ClInclude Include="ImageView.h" />
@@ -48,6 +51,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClInclude>
     <ClInclude Include="MainWindow.h" />
+    <ClInclude Include="MemoryFontLoader.h" />
     <ClInclude Include="resource.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClInclude>

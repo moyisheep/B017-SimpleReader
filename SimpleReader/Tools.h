@@ -8,6 +8,9 @@
 #define NOMINMAX
 #include <Windows.h>
 #include <ShlObj.h>
+#include <dwrite.h>
+#include <wrl/client.h>
+using Microsoft::WRL::ComPtr;
 
 #include <litehtml.h>
 #include <gumbo.h>
@@ -107,4 +110,11 @@ std::string get_document_html(litehtml::document::ptr doc);
 void save_document_html(litehtml::document::ptr doc);
  bool ends_with(const std::string& str, const std::string& suffix);
  bool is_image_url(const char* url);
+ std::wstring GetMainFontNameFromTextLayout(ComPtr<IDWriteTextLayout> pTextLayout);
+ std::string GetFontNameFromTextFormat(ComPtr<IDWriteTextFormat> textFormat);
+ void inject_global_css(std::string& html);
+ void inject_css(std::string& html);
+ void EnableClearType();
+ void DbgPrint(const char* fmt, ...);
+  bool is_word_boundary(wchar_t ch);
 static const char* B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";

@@ -20,6 +20,8 @@
     <ClInclude Include="WindowBase.h" />
     <ClInclude Include="AppStates.h" />
     <ClInclude Include="FontPanel.h" />
+    <ClInclude Include="MemoryFontLoader.h" />
+    <ClInclude Include="FontDialog.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\app.ico">
@@ -62,6 +64,8 @@
     <ClCompile Include="MainWindow.cpp" />
     <ClCompile Include="AppStates.cpp" />
     <ClCompile Include="FontPanel.cpp" />
+    <ClCompile Include="MemoryFontLoader.cpp" />
+    <ClCompile Include="FontDialog.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="resource.rc">

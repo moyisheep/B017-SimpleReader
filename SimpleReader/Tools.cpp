@@ -1199,3 +1199,120 @@ void save_document_html(litehtml::document::ptr doc) {
         ends_with(u, ".jpeg") ||
         ends_with(u, ".gif");
 }
+
+
+ std::wstring GetMainFontNameFromTextLayout(
+     ComPtr<IDWriteTextLayout> pTextLayout
+
+ ) {
+     //Timer timer("    GetMainFontNameFromTextLayout");
+     std::wstring fontName = L"";
+     if (pTextLayout == nullptr) {
+         return fontName;
+     }
+
+     HRESULT hr = S_OK;
+     WCHAR fontFamilyName[100];
+     UINT32 fontFamilyNameLength = 0;
+
+     // 获取第一个字符的字体名称
+     hr = pTextLayout->GetFontFamilyNameLength(0, &fontFamilyNameLength);
+     if (FAILED(hr) || fontFamilyNameLength == 0) {
+         return fontName;
+     }
+
+     hr = pTextLayout->GetFontFamilyName(
+         0,
+         fontFamilyName,
+         fontFamilyNameLength + 1
+     );
+
+     if (SUCCEEDED(hr)) {
+         fontName = fontFamilyName;
+     }
+
+     return fontName;
+ }
+
+ std::string GetFontNameFromTextFormat(ComPtr<IDWriteTextFormat> textFormat) {
+     if (!textFormat) return "";
+
+     // 使用足够大的缓冲区
+     wchar_t buffer[128];
+     HRESULT hr = textFormat->GetFontFamilyName(buffer, ARRAYSIZE(buffer));
+
+     if (SUCCEEDED(hr)) {
+         // 找到第一个 null 字符
+         size_t len = 0;
+         while (len < ARRAYSIZE(buffer) && buffer[len] != L'\0') {
+             len++;
+         }
+
+         std::wstring fontName(buffer, len);
+         return w2a(fontName);
+     }
+
+     return "";
+ }
+
+
+
+
+
+  void inject_global_css(std::string& html)
+ {
+     fs::path file = exe_dir() / "res" / "global.css";
+
+     std::string css = read_file(file);
+     if (css.empty()) return;
+
+     std::ostringstream style;
+     style << "<style>\n" << css << "</style>\n";
+
+     const std::string& block = style.str();
+     size_t pos = html.find("</head>");
+     if (pos != std::string::npos)
+         html.insert(pos, block);
+     else
+         html.insert(0, "<head>" + block + "</head>");
+
+ }
+
+  void inject_css(std::string& html)
+ {
+     std::ostringstream style;
+     style << "<style>\n"
+         << ":root,body,p,li,div,h1,h2,h3,h4,h5,h6,span, ul{line-height:" << g_cfg.line_height << ";}\n"
+         << "</style>\n";
+
+     const std::string& block = style.str();
+     size_t pos = html.find("</head>");
+     if (pos != std::string::npos)
+         html.insert(pos, block);
+     else
+         html.insert(0, "<head>" + block + "</head>");
+
+ }
+
+ void EnableClearType()
+ {
+     BOOL ct = FALSE;
+     SystemParametersInfoW(SPI_GETCLEARTYPE, 0, &ct, 0);
+     if (!ct)
+         SystemParametersInfoW(SPI_SETCLEARTYPE, TRUE, 0, SPIF_UPDATEINIFILE);
+ }
+
+ // 方便打印任意字符串
+  void DbgPrint(const char* fmt, ...) {
+     char buf[512];
+     va_list args;
+     va_start(args, fmt);
+     vsnprintf(buf, sizeof(buf), fmt, args);
+     va_end(args);
+     OutputDebugStringA(buf);
+ }
+
+   bool is_word_boundary(wchar_t ch)
+  {
+      return iswspace(ch) || iswpunct(ch) || ch == L'\r' || ch == L'\n';
+  }
