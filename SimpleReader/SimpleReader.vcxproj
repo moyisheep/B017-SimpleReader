@@ -11,10 +11,24 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AppBootstrap.cpp" />
+    <ClCompile Include="AppSettings.cpp" />
+    <ClCompile Include="AppStates.cpp" />
+    <ClCompile Include="FontPanel.cpp" />
+    <ClCompile Include="HomePage.cpp" />
+    <ClCompile Include="ImageView.cpp" />
     <ClCompile Include="main.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="MainWindow.cpp" />
+    <ClCompile Include="ScrollBar.cpp" />
+    <ClCompile Include="SimpleContainer.cpp" />
     <ClCompile Include="Timer.cpp" />
+    <ClCompile Include="TocPanel.cpp" />
+    <ClCompile Include="Tools.cpp" />
+    <ClCompile Include="Tooltip.cpp" />
+    <ClCompile Include="ViewWindow.cpp" />
+    <ClCompile Include="VirtualDoc.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="resource.rc">
@@ -23,13 +37,29 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AppBootstrap.h" />
+    <ClInclude Include="AppSettings.h" />
+    <ClInclude Include="AppStates.h" />
+    <ClInclude Include="Constants.h" />
+    <ClInclude Include="FontPanel.h" />
+    <ClInclude Include="HomePage.h" />
+    <ClInclude Include="ImageView.h" />
     <ClInclude Include="main.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClInclude>
+    <ClInclude Include="MainWindow.h" />
     <ClInclude Include="resource.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClInclude>
+    <ClInclude Include="ScrollBar.h" />
+    <ClInclude Include="SimpleContainer.h" />
     <ClInclude Include="Timer.h" />
+    <ClInclude Include="TocPanel.h" />
+    <ClInclude Include="Tools.h" />
+    <ClInclude Include="Tooltip.h" />
+    <ClInclude Include="ViewWindow.h" />
+    <ClInclude Include="VirtualDoc.h" />
+    <ClInclude Include="WindowBase.h" />
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="res\homepage.html" />
@@ -112,15 +142,16 @@
       <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>Default</ConformanceMode>
-      <AdditionalIncludeDirectories>E:\文件夹集合\B-编程\Projects\B015 Simple Markdown\SimpleMarkdown\litehtml\include;$(SolutionDir)Book;$(SolutionDir)ReadingRecorder;$(SolutionDir)MML2SVG;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\3rdParty\litehtml\include;$(SolutionDir)Book;$(SolutionDir)ReadingRecorder;$(SolutionDir)MML2SVG;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>E:\文件夹集合\B-编程\Projects\B015 Simple Markdown\SimpleMarkdown\x64\Release\LIB;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\3rdParty\litehtml\build\RelWithDebInfo;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>litehtml.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalManifestDependencies>
       </AdditionalManifestDependencies>

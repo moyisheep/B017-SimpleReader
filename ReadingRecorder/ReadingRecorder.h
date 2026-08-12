@@ -10,7 +10,7 @@
 #include <sqlite3.h>
 
 struct BookRecord {
-    int64_t id = -1;                       // Êı¾İ¿âÖ÷¼ü£»-1 ±íÊ¾Î´ÕÒµ½
+    int64_t id = -1;                       // æ•°æ®åº“ä¸»é”®ï¼›-1 è¡¨ç¤ºæœªæ‰¾åˆ°
     std::string path;
     std::string title;
     std::string author;
@@ -21,8 +21,8 @@ struct BookRecord {
     int         fontSize = 0;
     float       lineHeightMul = 0.0f;
     int         docWidth = 0;
-    int         totalTime = 0;        // ÀÛ¼ÆÔÄ¶ÁÃëÊı
-    int64_t     lastOpenTimestamp = 0;        // Î¢Ãë
+    int         totalTime = 0;        // ç´¯è®¡é˜…è¯»ç§’æ•°
+    int64_t     lastOpenTimestamp = 0;        // å¾®ç§’
     bool        enableCSS = true;
     bool        enableGlobalCSS = true;
     bool        enableCustomFont = false;
@@ -57,10 +57,10 @@ public:
     ReadingRecorder(std::filesystem::path dbPath);
     ~ReadingRecorder();
 
-    void openBook(const std::string absolutePath); // ·µ»Ø¼ÇÂ¼£¨¶Á»ò½¨£©
+    void openBook(const std::string absolutePath); // è¿”å›è®°å½•ï¼ˆè¯»æˆ–å»ºï¼‰
     void flush();
     void flushSettingRecord();
-    // Ò»´ÎĞÔĞ´»Ø
+    // ä¸€æ¬¡æ€§å†™å›
     void flushBookRecord();
     void flushTimeRecord();
     int64_t getTotalTime();

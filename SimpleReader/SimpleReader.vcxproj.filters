@@ -1,15 +1,25 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClInclude Include="main.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="resource.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="Timer.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
+    <ClInclude Include="SimpleContainer.h" />
+    <ClInclude Include="main.h" />
+    <ClInclude Include="resource.h" />
+    <ClInclude Include="Timer.h" />
+    <ClInclude Include="AppSettings.h" />
+    <ClInclude Include="AppBootstrap.h" />
+    <ClInclude Include="Tools.h" />
+    <ClInclude Include="Constants.h" />
+    <ClInclude Include="ScrollBar.h" />
+    <ClInclude Include="TocPanel.h" />
+    <ClInclude Include="VirtualDoc.h" />
+    <ClInclude Include="ViewWindow.h" />
+    <ClInclude Include="ImageView.h" />
+    <ClInclude Include="HomePage.h" />
+    <ClInclude Include="Tooltip.h" />
+    <ClInclude Include="MainWindow.h" />
+    <ClInclude Include="WindowBase.h" />
+    <ClInclude Include="AppStates.h" />
+    <ClInclude Include="FontPanel.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\app.ico">
@@ -28,12 +38,6 @@
     </CopyFileToFolders>
   </ItemGroup>
   <ItemGroup>
-    <Filter Include="头文件">
-      <UniqueIdentifier>{e870b615-7196-4f29-9637-4dfca3112b3e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="源文件">
-      <UniqueIdentifier>{5d0c4b09-df0b-4b7a-8886-e3572afb8984}</UniqueIdentifier>
-    </Filter>
     <Filter Include="资源文件">
       <UniqueIdentifier>{cd096fd4-9108-483c-a6f7-5c6791b01621}</UniqueIdentifier>
     </Filter>
@@ -42,12 +46,22 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="Timer.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
+    <ClCompile Include="SimpleContainer.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="Timer.cpp" />
+    <ClCompile Include="AppSettings.cpp" />
+    <ClCompile Include="AppBootstrap.cpp" />
+    <ClCompile Include="Tools.cpp" />
+    <ClCompile Include="ScrollBar.cpp" />
+    <ClCompile Include="TocPanel.cpp" />
+    <ClCompile Include="VirtualDoc.cpp" />
+    <ClCompile Include="ViewWindow.cpp" />
+    <ClCompile Include="ImageView.cpp" />
+    <ClCompile Include="HomePage.cpp" />
+    <ClCompile Include="Tooltip.cpp" />
+    <ClCompile Include="MainWindow.cpp" />
+    <ClCompile Include="AppStates.cpp" />
+    <ClCompile Include="FontPanel.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="resource.rc">

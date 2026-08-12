@@ -7,7 +7,7 @@
 #include <iomanip>
 #include <zlib.h>
 
-// DjVuÄÚ²¿Êı¾İ½á¹¹
+// DjVuå†…éƒ¨æ•°æ®ç»“æ„
 struct DjVuPage {
     std::string id;
     uint32_t width;
@@ -46,14 +46,14 @@ struct DjVuBook::Internal {
     std::string language;
     std::string version;
 
-    // DjVuÌØ¶¨Êı¾İ
+    // DjVuç‰¹å®šæ•°æ®
     std::vector<DjVuPage> pages;
     std::vector<DjVuSharedDict> shared_dicts;
     std::map<int, std::vector<DjVuAnnotation>> annotations;
     std::vector<std::string> chunk_order;
     std::map<std::string, std::vector<uint8_t>> chunk_data;
 
-    // ÎÄ¼şÆ«ÒÆĞÅÏ¢
+    // æ–‡ä»¶åç§»ä¿¡æ¯
     std::map<std::string, uint64_t> chunk_offsets;
     std::map<std::string, uint32_t> chunk_sizes;
 
@@ -93,7 +93,7 @@ bool DjVuBook::load(const std::string & book_path) {
 
     impl->book_path = book_path;
 
-    // ÉèÖÃµ±Ç°Ä¿Â¼
+    // è®¾ç½®å½“å‰ç›®å½•
     size_t last_slash = book_path.find_last_of("/\\");
     if (last_slash != std::string::npos) {
         impl->current_dir = book_path.substr(0, last_slash + 1);
@@ -102,40 +102,40 @@ bool DjVuBook::load(const std::string & book_path) {
         impl->current_dir = "./";
     }
 
-    // ½âÎöDjVuÎÄ¼ş
+    // è§£æDjVuæ–‡ä»¶
     if (!parse_djvu_file(book_path)) {
         return false;
     }
 
-    // ¹¹½¨OCF°ü½á¹¹
+    // æ„å»ºOCFåŒ…ç»“æ„
     impl->package.version = impl->version;
     impl->package.rootfile = book_path;
     impl->package.opf_dir = impl->current_dir;
 
-    // Ìí¼ÓÖ÷ÎÄµµµ½manifest
+    // æ·»åŠ ä¸»æ–‡æ¡£åˆ°manifest
     OCFItem main_item;
     main_item.id = "djvu_main";
     main_item.href = book_path.substr(last_slash + 1);
     main_item.media_type = "image/vnd.djvu";
     impl->package.manifest.push_back(main_item);
 
-    // Ìí¼ÓÔªÊı¾İ
+    // æ·»åŠ å…ƒæ•°æ®
     impl->package.meta["dc:title"] = impl->title;
     impl->package.meta["dc:creator"] = impl->author;
     impl->package.meta["dc:publisher"] = impl->publisher;
     impl->package.meta["dc:date"] = impl->date;
     impl->package.meta["dc:language"] = impl->language;
 
-    // ¹¹½¨spineºÍÒ³Ãæmanifest
+    // æ„å»ºspineå’Œé¡µé¢manifest
     for (size_t i = 0; i < impl->pages.size(); i++) {
-        // Ìí¼Óµ½manifest
+        // æ·»åŠ åˆ°manifest
         OCFItem page_item;
         page_item.id = "page_" + std::to_string(i + 1);
         page_item.href = "#page=" + std::to_string(i + 1);
         page_item.media_type = "image/vnd.djvu";
         impl->package.manifest.push_back(page_item);
 
-        // Ìí¼Óµ½spine
+        // æ·»åŠ åˆ°spine
         OCFRef ref;
         ref.idref = page_item.id;
         ref.href = page_item.href;
@@ -143,11 +143,11 @@ bool DjVuBook::load(const std::string & book_path) {
         impl->spine.push_back(ref);
         impl->package.spine.push_back(ref);
 
-        // Ìí¼Óµ½Ä¿Â¼
+        // æ·»åŠ åˆ°ç›®å½•
         OCFNavPoint nav_point;
         nav_point.label = "Page " + std::to_string(i + 1);
         if (!impl->pages[i].text.empty()) {
-            // Ê¹ÓÃÎÄ±¾Ç°50¸ö×Ö·û×÷Îª±êÇ©
+            // ä½¿ç”¨æ–‡æœ¬å‰50ä¸ªå­—ç¬¦ä½œä¸ºæ ‡ç­¾
             std::string preview = impl->pages[i].text.substr(0, 50);
             if (preview.length() == 50) preview += "...";
             nav_point.label = preview;
@@ -168,40 +168,40 @@ bool DjVuBook::parse_djvu_file(const std::string & path) {
         return false;
     }
 
-    // ¼ì²éÎÄ¼ş´óĞ¡
+    // æ£€æŸ¥æ–‡ä»¶å¤§å°
     file.seekg(0, std::ios::end);
     uint64_t file_size = file.tellg();
     file.seekg(0, std::ios::beg);
 
-    if (file_size < 12) { // ×îĞ¡IFFÎÄ¼şÍ·´óĞ¡
+    if (file_size < 12) { // æœ€å°IFFæ–‡ä»¶å¤´å¤§å°
         return false;
     }
 
-    // ¶ÁÈ¡IFFÎÄ¼ş±êÊ¶
+    // è¯»å–IFFæ–‡ä»¶æ ‡è¯†
     char header[4];
     file.read(header, 4);
     std::string file_type(header, 4);
     file.read(header, 4);
     if (file_type != "AT&T" && file_type != "FORM" && file_type != "DJVM" && file_type != "DJVU") {
-        // ¿ÉÄÜÃ»ÓĞIFFÍ·£¬Ö±½Ó°´µ¥Ò³DjVu´¦Àí
+        // å¯èƒ½æ²¡æœ‰IFFå¤´ï¼Œç›´æ¥æŒ‰å•é¡µDjVuå¤„ç†
         file.seekg(0, std::ios::beg);
         return parse_djvu_chunk(file, static_cast<uint32_t>(file_size));
     }
 
-    // ¶ÁÈ¡ÎÄ¼ş´óĞ¡
+    // è¯»å–æ–‡ä»¶å¤§å°
     uint32_t total_size = read_uint32(file);
 
-    // ¶ÁÈ¡¸ñÊ½ÀàĞÍ
+    // è¯»å–æ ¼å¼ç±»å‹
     file.read(header, 4);
     std::string format(header, 4);
 
     if (format == "DJVM") {
-        // ¶àÒ³DjVuÎÄµµ
+        // å¤šé¡µDjVuæ–‡æ¡£
         impl->version = "DJVM/1.0";
         return parse_form_chunk(file, total_size - 4);
     }
     else if (format == "DJVU") {
-        // µ¥Ò³DjVuÎÄµµ
+        // å•é¡µDjVuæ–‡æ¡£
         impl->version = "DJVU/1.0";
         return parse_djvu_chunk(file, total_size - 4);
     }
@@ -225,12 +225,12 @@ bool DjVuBook::parse_form_chunk(std::ifstream & file, uint32_t size) {
         impl->chunk_sizes[id] = chunk_size;
 
         if (id == "INCL") {
-            // °üº¬µÄ×ÓÎÄµµ
+            // åŒ…å«çš„å­æ–‡æ¡£
             std::string doc_id = read_string(file);
             uint32_t offset = read_uint32(file);
             uint32_t length = read_uint32(file);
 
-            // ¼ÇÂ¼×ÓÎÄµµĞÅÏ¢
+            // è®°å½•å­æ–‡æ¡£ä¿¡æ¯
             uint64_t save_pos = file.tellg();
             file.seekg(offset, std::ios::beg);
 
@@ -247,7 +247,7 @@ bool DjVuBook::parse_form_chunk(std::ifstream & file, uint32_t size) {
             file.seekg(save_pos, std::ios::beg);
         }
         else if (id == "DJVI") {
-            // ¹²Ïí×Öµä
+            // å…±äº«å­—å…¸
             parse_form_chunk(file, chunk_size);
         }
         else if (id == "INFO") {
@@ -275,11 +275,11 @@ bool DjVuBook::parse_form_chunk(std::ifstream & file, uint32_t size) {
             parse_metadata(file);
         }
         else {
-            // Ìø¹ıÎ´Öª¿é
+            // è·³è¿‡æœªçŸ¥å—
             file.seekg(chunk_size, std::ios::cur);
         }
 
-        // ¶ÔÆëµ½Å¼Êı±ß½ç
+        // å¯¹é½åˆ°å¶æ•°è¾¹ç•Œ
         if (chunk_size % 2 != 0) {
             file.seekg(1, std::ios::cur);
         }
@@ -305,7 +305,7 @@ bool DjVuBook::parse_info_chunk(std::ifstream & file, uint32_t size) {
         page.compression = "BITONAL";
     }
 
-    // ¼ÇÂ¼Ò³ÃæĞÅÏ¢
+    // è®°å½•é¡µé¢ä¿¡æ¯
     page.id = "page_" + std::to_string(impl->pages.size() + 1);
     impl->pages.push_back(page);
 
@@ -341,40 +341,40 @@ bool DjVuBook::parse_djvu_chunk(std::ifstream & file, uint32_t size) {
             }
         }
         else if (id == "BG44" || id == "BG2K") {
-            // ±³¾°²ã
+            // èƒŒæ™¯å±‚
             std::vector<uint8_t> data = read_bytes(file, chunk_size);
             page.data.insert(page.data.end(), data.begin(), data.end());
         }
         else if (id == "FG44" || id == "FG2K") {
-            // Ç°¾°²ã
+            // å‰æ™¯å±‚
             std::vector<uint8_t> data = read_bytes(file, chunk_size);
             page.data.insert(page.data.end(), data.begin(), data.end());
         }
         else if (id == "Sjbz" || id == "JB2") {
-            // JB2±àÂëÊı¾İ
+            // JB2ç¼–ç æ•°æ®
             std::vector<uint8_t> data = read_bytes(file, chunk_size);
             page.data.insert(page.data.end(), data.begin(), data.end());
         }
         else if (id == "TXTa" || id == "TXTz") {
-            // ÎÄ±¾²ã
+            // æ–‡æœ¬å±‚
             std::vector<uint8_t> data = read_bytes(file, chunk_size);
             page.text = extract_text_from_chunk(data);
         }
         else if (id == "ANTa" || id == "ANTz") {
-            // ×¢ÊÍ²ã
+            // æ³¨é‡Šå±‚
             std::vector<uint8_t> data = read_bytes(file, chunk_size);
-            // ¼òµ¥ÌáÈ¡ÎÄ±¾×¢ÊÍ
+            // ç®€å•æå–æ–‡æœ¬æ³¨é‡Š
             std::string text(reinterpret_cast<char*>(data.data()),
                 std::min<size_t>(data.size(), 1000));
             if (!page.text.empty()) page.text += "\n";
             page.text += text;
         }
         else {
-            // Ìø¹ıÆäËû¿é
+            // è·³è¿‡å…¶ä»–å—
             file.seekg(chunk_size, std::ios::cur);
         }
 
-        // ¶ÔÆëµ½Å¼Êı±ß½ç
+        // å¯¹é½åˆ°å¶æ•°è¾¹ç•Œ
         if (chunk_size % 2 != 0) {
             file.seekg(1, std::ios::cur);
         }
@@ -412,7 +412,7 @@ bool DjVuBook::parse_fg44_chunk(std::ifstream & file, uint32_t size) {
 }
 
 bool DjVuBook::parse_djbz_chunk(std::ifstream & file, uint32_t size) {
-    // ¹²Ïí×Öµä£¬Í¨³£ÓÃÓÚJB2Ñ¹Ëõ
+    // å…±äº«å­—å…¸ï¼Œé€šå¸¸ç”¨äºJB2å‹ç¼©
     DjVuSharedDict dict;
     dict.id = "dict_" + std::to_string(impl->shared_dicts.size() + 1);
     dict.data = read_bytes(file, size);
@@ -425,11 +425,11 @@ bool DjVuBook::parse_ant_chunk(std::ifstream & file, uint32_t size) {
 
     std::vector<uint8_t> data = read_bytes(file, size);
 
-    // ¼òµ¥½âÎö×¢ÊÍ
+    // ç®€å•è§£ææ³¨é‡Š
     std::string annotation(reinterpret_cast<char*>(data.data()),
         std::min<size_t>(data.size(), 1000));
 
-    // ²éÕÒÎÄ±¾×¢ÊÍ
+    // æŸ¥æ‰¾æ–‡æœ¬æ³¨é‡Š
     size_t text_pos = annotation.find("text");
     if (text_pos != std::string::npos) {
         size_t start = annotation.find('"', text_pos);
@@ -454,15 +454,15 @@ bool DjVuBook::parse_txta_chunk(std::ifstream & file, uint32_t size) {
 
 bool DjVuBook::parse_metadata(std::ifstream & file) {
     try {
-        // ¶ÁÈ¡ÔªÊı¾İ³¤¶È
+        // è¯»å–å…ƒæ•°æ®é•¿åº¦
         uint32_t meta_size = read_uint32(file);
         if (meta_size == 0) return false;
 
-        // ¶ÁÈ¡ÔªÊı¾İÄÚÈİ
+        // è¯»å–å…ƒæ•°æ®å†…å®¹
         std::vector<uint8_t> meta_data = read_bytes(file, meta_size);
         std::string metadata(reinterpret_cast<char*>(meta_data.data()), meta_data.size());
 
-        // ¼òµ¥½âÎöÔªÊı¾İ
+        // ç®€å•è§£æå…ƒæ•°æ®
         size_t title_pos = metadata.find("<dc:title>");
         if (title_pos != std::string::npos) {
             size_t title_end = metadata.find("</dc:title>", title_pos);
@@ -516,11 +516,11 @@ std::string DjVuBook::extract_text_from_chunk(const std::vector<uint8_t>&data) {
 
     std::string result;
 
-    // ¼ì²éÊÇ·ñÊÇÑ¹ËõÎÄ±¾(TXTz)
+    // æ£€æŸ¥æ˜¯å¦æ˜¯å‹ç¼©æ–‡æœ¬(TXTz)
     if (data.size() > 4 && std::string(reinterpret_cast<const char*>(data.data()), 4) == "TXTz") {
-        // ¼òµ¥µÄÎÄ±¾ÌáÈ¡ - Ìø¹ıÇ°4¸ö×Ö½ÚµÄ±êÊ¶
+        // ç®€å•çš„æ–‡æœ¬æå– - è·³è¿‡å‰4ä¸ªå­—èŠ‚çš„æ ‡è¯†
         for (size_t i = 4; i < data.size(); i++) {
-            if (data[i] >= 32 && data[i] <= 126) { // ¿É´òÓ¡ASCII×Ö·û
+            if (data[i] >= 32 && data[i] <= 126) { // å¯æ‰“å°ASCIIå­—ç¬¦
                 result += static_cast<char>(data[i]);
             }
             else if (data[i] == '\n' || data[i] == '\r' || data[i] == '\t') {
@@ -529,9 +529,9 @@ std::string DjVuBook::extract_text_from_chunk(const std::vector<uint8_t>&data) {
         }
     }
     else {
-        // Ö±½ÓÎÄ±¾(TXTa)
+        // ç›´æ¥æ–‡æœ¬(TXTa)
         for (uint8_t byte : data) {
-            if (byte >= 32 && byte <= 126) { // ¿É´òÓ¡ASCII×Ö·û
+            if (byte >= 32 && byte <= 126) { // å¯æ‰“å°ASCIIå­—ç¬¦
                 result += static_cast<char>(byte);
             }
             else if (byte == '\n' || byte == '\r' || byte == '\t') {
@@ -540,7 +540,7 @@ std::string DjVuBook::extract_text_from_chunk(const std::vector<uint8_t>&data) {
         }
     }
 
-    // ÇåÀí¶àÓà¿Õ¸ñ
+    // æ¸…ç†å¤šä½™ç©ºæ ¼
     std::string cleaned;
     bool last_was_space = false;
     for (char c : result) {
@@ -562,18 +562,18 @@ std::string DjVuBook::extract_text_from_chunk(const std::vector<uint8_t>&data) {
 std::vector<uint8_t> DjVuBook::get_binary(std::string base_url, std::string url) {
     std::vector<uint8_t> result;
 
-    // Èç¹ûÊÇÒ³ÃæÇëÇó
+    // å¦‚æœæ˜¯é¡µé¢è¯·æ±‚
     if (url.find("#page=") == 0) {
         std::string page_num_str = url.substr(6);
         try {
             int page_num = std::stoi(page_num_str) - 1;
             if (page_num >= 0 && page_num < static_cast<int>(impl->pages.size())) {
-                // ·µ»ØÒ³ÃæÊı¾İ»òÕ¼Î»·û
+                // è¿”å›é¡µé¢æ•°æ®æˆ–å ä½ç¬¦
                 if (!impl->pages[page_num].data.empty()) {
                     return impl->pages[page_num].data;
                 }
                 else {
-                    // Éú³É¼òµ¥Õ¼Î»·ûÍ¼ÏñÊı¾İ
+                    // ç”Ÿæˆç®€å•å ä½ç¬¦å›¾åƒæ•°æ®
                     std::string placeholder = "P1\n# DjVu Page " + std::to_string(page_num + 1) + "\n";
                     placeholder += std::to_string(impl->pages[page_num].width) + " " +
                         std::to_string(impl->pages[page_num].height) + "\n";
@@ -582,21 +582,21 @@ std::vector<uint8_t> DjVuBook::get_binary(std::string base_url, std::string url)
             }
         }
         catch (...) {
-            // ×ª»»Ê§°Ü
+            // è½¬æ¢å¤±è´¥
         }
         return result;
     }
 
-    // ³¢ÊÔ¶ÁÈ¡ÎÄ¼ş
+    // å°è¯•è¯»å–æ–‡ä»¶
     std::string full_path = resolve_path(base_url, url);
 
-    // ¼ì²éÊÇ·ñÔÚ»º´æÖĞ
+    // æ£€æŸ¥æ˜¯å¦åœ¨ç¼“å­˜ä¸­
     auto it = impl->binary_cache.find(full_path);
     if (it != impl->binary_cache.end()) {
         return it->second;
     }
 
-    // ¶ÁÈ¡ÎÄ¼ş
+    // è¯»å–æ–‡ä»¶
     std::ifstream file(full_path, std::ios::binary);
     if (file) {
         file.seekg(0, std::ios::end);
@@ -606,7 +606,7 @@ std::vector<uint8_t> DjVuBook::get_binary(std::string base_url, std::string url)
         result.resize(size);
         file.read(reinterpret_cast<char*>(result.data()), size);
 
-        // »º´æ½á¹û
+        // ç¼“å­˜ç»“æœ
         impl->binary_cache[full_path] = result;
     }
 
@@ -616,7 +616,7 @@ std::vector<uint8_t> DjVuBook::get_binary(std::string base_url, std::string url)
 std::string DjVuBook::get_string(const std::string & path) {
     std::string result;
 
-    // Èç¹ûÊÇÒ³ÃæÎÄ±¾ÄÚÈİÇëÇó
+    // å¦‚æœæ˜¯é¡µé¢æ–‡æœ¬å†…å®¹è¯·æ±‚
     if (path.find("#page=") == 0) {
         std::string page_num_str = path.substr(6);
         try {
@@ -631,12 +631,12 @@ std::string DjVuBook::get_string(const std::string & path) {
             }
         }
         catch (...) {
-            // ×ª»»Ê§°Ü
+            // è½¬æ¢å¤±è´¥
         }
         return "Page content not available";
     }
 
-    // ³¢ÊÔ¶ÁÈ¡ÎÄ±¾ÎÄ¼ş
+    // å°è¯•è¯»å–æ–‡æœ¬æ–‡ä»¶
     std::ifstream file(path);
     if (file) {
         std::stringstream buffer;
@@ -695,7 +695,7 @@ bool DjVuBook::has_script() {
 }
 
 bool DjVuBook::has_font() {
-    // ¼ì²éÊÇ·ñÓĞ¹²Ïí×Öµä
+    // æ£€æŸ¥æ˜¯å¦æœ‰å…±äº«å­—å…¸
     return !impl->shared_dicts.empty();
 }
 
@@ -735,11 +735,11 @@ std::string DjVuBook::resolve_path(std::string base_url, std::string href) {
     return base_dir + href;
 }
 
-// ¸¨Öú¶ÁÈ¡º¯Êı
+// è¾…åŠ©è¯»å–å‡½æ•°
 uint32_t DjVuBook::read_uint32(std::ifstream & file) {
     uint32_t value = 0;
     file.read(reinterpret_cast<char*>(&value), 4);
-    // ×ª»»Îª´ó¶ËĞò
+    // è½¬æ¢ä¸ºå¤§ç«¯åº
     return ((value & 0xFF) << 24) | ((value & 0xFF00) << 8) |
         ((value & 0xFF0000) >> 8) | ((value & 0xFF000000) >> 24);
 }
@@ -747,7 +747,7 @@ uint32_t DjVuBook::read_uint32(std::ifstream & file) {
 uint16_t DjVuBook::read_uint16(std::ifstream & file) {
     uint16_t value = 0;
     file.read(reinterpret_cast<char*>(&value), 2);
-    // ×ª»»Îª´ó¶ËĞò
+    // è½¬æ¢ä¸ºå¤§ç«¯åº
     return ((value & 0xFF) << 8) | ((value & 0xFF00) >> 8);
 }
 

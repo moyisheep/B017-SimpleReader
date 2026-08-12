@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-// -------------- 新增数据结构 --------------
+// -------------- 鏂板鏁版嵁缁撴瀯 --------------
 struct OCFItem {
     std::string id, href, media_type, properties;
 };
@@ -15,8 +15,8 @@ struct OCFNavPoint {
     int order = 0;
 };
 struct OCFPackage {
-    std::string rootfile;                // OPF 绝对路径
-    std::string opf_dir;                 // 目录，带 '/'
+    std::string rootfile;                // OPF 缁濆璺緞
+    std::string opf_dir;                 // 鐩綍锛屽甫 '/'
     std::string version;
     std::vector<OCFItem>   manifest;
     std::vector<OCFRef>    spine;

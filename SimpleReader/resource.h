@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
-// Microsoft Visual C++ иЗЁи╣д╟Э╨╛нд╪Ч║ё
-// ╧╘ resource.rc й╧сц
+// Microsoft Visual C++ Г■÷Ф┬░Г └Е▄┘Е░╚Ф√┤Д╩╤Ц─┌
+// Д╬⌡ resource.rc Д╫©Г■╗
 
 #define IDR_MENU_MAIN                   101
 
@@ -29,7 +29,7 @@
 #define IDM_TOGGLE_SCROLLBAR_WINDOW     40008
 #define IDM_TOGGLE_MENUBAR_WINDOW       40009
 #define IDM_TOGGLE_HOVER_PREVIEW        40010
-#define ID_EPUB_RELOAD  40011   // хнрБ╡╩сКожсп╡к╣╔/©ь╪ЧЁЕм╩╣дуШйЩ
+#define ID_EPUB_RELOAD  40011   // Д╩╩Ф└▐Д╦█Д╦▌Г▌╟Ф°┴Х▐°Е█∙/Ф▌╖Д╩╤Е├╡Г╙│Г └Ф∙╢Ф∙╟
 #define ID_FONT_BIGGER          40012
 #define ID_FONT_SMALLER         40013
 #define ID_FONT_RESET           40014

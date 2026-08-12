@@ -6,7 +6,7 @@ static int64_t nowUs() {
 }
 
 
-/* ---------- ¹¹Ôì/Îö¹¹ ---------- */
+/* ---------- æ„é€ /ææ„ ---------- */
 ReadingRecorder::ReadingRecorder(std::filesystem::path dbPath)
 {
     m_book_record = {};
@@ -22,7 +22,7 @@ ReadingRecorder::~ReadingRecorder()
     if (m_dbSetting) sqlite3_close(m_dbSetting);
 }
 
-/* ---------- ³õÊ¼»¯Êı¾İ¿â ---------- */
+/* ---------- åˆå§‹åŒ–æ•°æ®åº“ ---------- */
 void ReadingRecorder::initDB(std::filesystem::path dbPath) {
     namespace fs = std::filesystem;
   
@@ -147,7 +147,7 @@ bool ReadingRecorder::loadSettings() {
     sqlite3_finalize(stmt);
     return true;
 }
-/* ---------- ´ò¿ªÊé ---------- */
+/* ---------- æ‰“å¼€ä¹¦ ---------- */
 void ReadingRecorder::openBook(const std::string absolutePath) {
     m_book_record = {};
     m_time_frag = {};
@@ -160,7 +160,7 @@ void ReadingRecorder::openBook(const std::string absolutePath) {
     sqlite3_bind_text(stmt, 1, absolutePath.c_str(), -1, SQLITE_STATIC);
 
     if (sqlite3_step(stmt) == SQLITE_ROW) {
-        // ÒÑ´æÔÚ
+        // å·²å­˜åœ¨
         rec.id = sqlite3_column_int64(stmt, 0);
         auto colText = [](sqlite3_stmt* s, int idx) -> std::string {
             const char* p = reinterpret_cast<const char*>(sqlite3_column_text(s, idx));
@@ -183,7 +183,7 @@ void ReadingRecorder::openBook(const std::string absolutePath) {
         rec.fontName = colText(stmt, 17);
     }
     else {
-        // ĞÂÊé£ºÓÃµ±Ç° g_book ×´Ì¬²åÈë
+        // æ–°ä¹¦ï¼šç”¨å½“å‰ g_book çŠ¶æ€æ’å…¥
         const char* insert = R"(
             INSERT INTO books(path, first_open_us, last_open_us)
             VALUES(?, ?, ?);
@@ -199,7 +199,7 @@ void ReadingRecorder::openBook(const std::string absolutePath) {
     }
     sqlite3_finalize(stmt);
 
-    // ¸üĞÂ´ò¿ª´ÎÊı & ×îºó´ò¿ªÊ±¼ä
+    // æ›´æ–°æ‰“å¼€æ¬¡æ•° & æœ€åæ‰“å¼€æ—¶é—´
     const char* update = "UPDATE books SET open_count=open_count+1, last_open_us=? WHERE id=?;";
     sqlite3_prepare_v2(m_dbBook, update, -1, &stmt, nullptr);
     sqlite3_bind_int64(stmt, 1, nowUs());
@@ -221,16 +221,16 @@ int64_t ReadingRecorder::getTotalTime()
             totalUs = sqlite3_column_int64(stmt, 0);
     }
     sqlite3_finalize(stmt);
-    return totalUs / 1'000'000;   // ·µ»ØÃë
+    return totalUs / 1'000'000;   // è¿”å›ç§’
 }
 int64_t ReadingRecorder::getBookTotalTime() const
 {
 
     return m_book_record.totalTime;
 }
-/* ---------- Ğ´Èë ---------- */
+/* ---------- å†™å…¥ ---------- */
 void ReadingRecorder::flush() {
-    if (m_book_record.id < 0) return;   // ÎŞĞ§¼ÇÂ¼
+    if (m_book_record.id < 0) return;   // æ— æ•ˆè®°å½•
 
     flushBookRecord();
     flushTimeRecord();
@@ -357,16 +357,16 @@ void ReadingRecorder::flushTimeRecord()
 {
     if (m_time_frag.empty()) return;
 
-    /* 0. ÏÈ°Ñ»º´æÄÃ³öÀ´£¬·ÀÖ¹ flush ÆÚ¼äÓÖ±»Ğ´Èë */
+    /* 0. å…ˆæŠŠç¼“å­˜æ‹¿å‡ºæ¥ï¼Œé˜²æ­¢ flush æœŸé—´åˆè¢«å†™å…¥ */
     std::vector<timeFragment> batch = std::move(m_time_frag);
-    m_time_frag.clear();                 // Á¢¼´Çå¿ÕÔ­»º´æ
+    m_time_frag.clear();                 // ç«‹å³æ¸…ç©ºåŸç¼“å­˜
 
-    /* 1. °´Ê±¼äÉıĞò */
+    /* 1. æŒ‰æ—¶é—´å‡åº */
     std::sort(batch.begin(), batch.end(),
         [](const timeFragment& a, const timeFragment& b)
         { return a.timestamp < b.timestamp; });
 
-    /* 2. ÊÂÎñ¿ªÊ¼ */
+    /* 2. äº‹åŠ¡å¼€å§‹ */
     char* err = nullptr;
     if (sqlite3_exec(m_dbTime, "BEGIN;", nullptr, nullptr, &err) != SQLITE_OK)
     {
@@ -379,7 +379,7 @@ void ReadingRecorder::flushTimeRecord()
 
     for (const timeFragment& frag : batch)
     {
-        /* 3. ²éÑ¯×î½üÒ»Ìõ */
+        /* 3. æŸ¥è¯¢æœ€è¿‘ä¸€æ¡ */
         const char* sqlSel = R"(
             SELECT id, end_time, duration
             FROM reading_time
@@ -466,7 +466,7 @@ void ReadingRecorder::flushTimeRecord()
         }
     }
 
-    /* 4. Ìá½»ÊÂÎñ */
+    /* 4. æäº¤äº‹åŠ¡ */
     if (sqlite3_exec(m_dbTime, "COMMIT;", nullptr, nullptr, &err) != SQLITE_OK)
     {
         LogPrint(("COMMIT failed: " + std::string(err) + "\n").c_str());

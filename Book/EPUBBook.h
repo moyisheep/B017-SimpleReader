@@ -40,14 +40,14 @@ namespace std {
 }
 
 
-// ---------- EPUB Áã½âÑ¹ ----------
+// ---------- EPUB é›¶è§£å‹ ----------
 class EPUBBook: public Book 
 {
 public:
 
 
 
-    // -------------- EPUBBook ÄÚ²¿ĞÂÔö³ÉÔ± --------------
+    // -------------- EPUBBook å†…éƒ¨æ–°å¢æˆå‘˜ --------------
 
     bool load(const std::string& epub_path) override;
     std::vector<uint8_t> get_binary(std::string base_url, std::string url) override;
@@ -87,7 +87,7 @@ public:
     EPUBBook() noexcept {}
     ~EPUBBook();
 private:
-    OCFPackage m_ocf_pkg;                     // ½âÎö½á¹û
+    OCFPackage m_ocf_pkg;                     // è§£æç»“æœ
     std::string m_current_book_path = "";
     std::string m_current_html_path = "";
     mz_zip_archive zip = {};
@@ -102,18 +102,18 @@ private:
     bool is_xhtml(const std::string& file_path);
 
 
-    void parse_ocf(void);                       // Ö÷½âÎöÈë¿Ú
-    void parse_opf(void);   // ½âÎö OPF
-    void parse_toc(void);                        // ½âÎö TOC
+    void parse_ocf(void);                       // ä¸»è§£æå…¥å£
+    void parse_opf(void);   // è§£æ OPF
+    void parse_toc(void);                        // è§£æ TOC
 
     static std::string extract_text(const tinyxml2::XMLElement* a);
-    // µİ¹é½âÎö EPUB3-Nav <ol>
+    // é€’å½’è§£æ EPUB3-Nav <ol>
     void parse_nav_list(tinyxml2::XMLElement* ol, int level,
         const std::string& opf_dir,
         std::vector<OCFNavPoint>& out);
 
 
-    // µİ¹é½âÎö NCX <navPoint>
+    // é€’å½’è§£æ NCX <navPoint>
     void parse_ncx_points(tinyxml2::XMLElement* navPoint, int level,
         const std::string& opf_dir,
         std::vector<OCFNavPoint>& out);

@@ -1,11 +1,11 @@
 #include "EPUBBook.h"
 namespace fs = std::filesystem;
-// ---------- ¹¤¾ß ----------
+// ---------- å·¥å…· ----------
 //static std::string w2a(const std::wstring& s)
 //{
 //    if (s.empty()) return {};
 //    int len = WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, nullptr, 0, nullptr, nullptr);
-//    std::string out(len - 1, 0);                 // È¥µôÄ©Î² '\0'
+//    std::string out(len - 1, 0);                 // å»æ‰æœ«å°¾ '\0'
 //    WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, &out[0], len, nullptr, nullptr);
 //    return out;
 //}
@@ -14,7 +14,7 @@ namespace fs = std::filesystem;
 //{
 //    if (s.empty()) return {};
 //    int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, nullptr, 0);
-//    std::wstring out(len - 1, 0);                // È¥µôÄ©Î² '\0'
+//    std::wstring out(len - 1, 0);                // å»æ‰æœ«å°¾ '\0'
 //    MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, &out[0], len);
 //    return out;
 //}
@@ -25,15 +25,15 @@ bool EPUBBook::is_xhtml(const std::string& file_path)
 
     std::string ext = file_path.substr(dot + 1);
 
-    // 1. Ğ¡Ğ´
+    // 1. å°å†™
     std::transform(ext.begin(), ext.end(), ext.begin(), ::towlower);
 
-    // 2. È¥µô¿ØÖÆ×Ö·û
+    // 2. å»æ‰æ§åˆ¶å­—ç¬¦
     ext.erase(std::remove_if(ext.begin(), ext.end(),
         [](wchar_t c) { return c < 32 || c > 126; }),
         ext.end());
 
-    // 3. ±È½Ï
+    // 3. æ¯”è¾ƒ
     return ext == "xhtml" || ext == "html";
 }
 
@@ -62,10 +62,10 @@ void EPUBBook::parse_ncx_points(tinyxml2::XMLElement* navPoint, int level,
         np.href = con && con->Attribute("src") ? con->Attribute("src") : "";
         if (!np.href.empty())
             np.href = resolve_path(fs::path(m_ocf_pkg.toc_path).parent_path().generic_string(), np.href);
-        np.order = level;               // ²ã¼¶Éî¶È
+        np.order = level;               // å±‚çº§æ·±åº¦
         out.emplace_back(std::move(np));
 
-        // µİ¹é×Ó <navPoint>
+        // é€’å½’å­ <navPoint>
         parse_ncx_points(pt->FirstChildElement("navPoint"), level + 1, opf_dir, out);
     }
 }
@@ -85,10 +85,10 @@ void EPUBBook::parse_nav_list(tinyxml2::XMLElement* ol, int level,
         np.href = a->Attribute("href") ? a->Attribute("href") : "";
         if (!np.href.empty())
             np.href = resolve_path(fs::path(m_ocf_pkg.toc_path).parent_path().generic_string(), np.href);
-        np.order = level;               // ²ã¼¶Éî¶È
+        np.order = level;               // å±‚çº§æ·±åº¦
         out.emplace_back(std::move(np));
 
-        // µİ¹é×Ó <ol>
+        // é€’å½’å­ <ol>
         if (auto* sub = li->FirstChildElement("ol"))
             parse_nav_list(sub, level + 1, opf_dir, out);
     }
@@ -98,12 +98,12 @@ std::string EPUBBook::extract_text(const tinyxml2::XMLElement* a)
 {
     if (!a) return "";
 
-    // 1. ÄÃµ½ <a> µÄÍêÕû XML ×Ö·û´®
+    // 1. æ‹¿åˆ° <a> çš„å®Œæ•´ XML å­—ç¬¦ä¸²
     tinyxml2::XMLPrinter printer;
     a->Accept(&printer);
     std::string xml = printer.CStr();   // "<a ...><span ...>I</span>: The Meadow</a>"
 
-    // 2. È¥µô×îÍâ²ã <a ...> ºÍ </a>
+    // 2. å»æ‰æœ€å¤–å±‚ <a ...> å’Œ </a>
     size_t start = xml.find('>') + 1;
     size_t end = xml.rfind('<');
     if (start == std::string::npos || end == std::string::npos || end <= start)
@@ -111,7 +111,7 @@ std::string EPUBBook::extract_text(const tinyxml2::XMLElement* a)
 
     std::string inner = xml.substr(start, end - start);   // "<span ...>I</span>: The Meadow"
 
-    // 3. ¼òµ¥°şµôËùÓĞ±êÇ©£¨ÕıÔò»òÊÖĞ´£©
+    // 3. ç®€å•å‰¥æ‰æ‰€æœ‰æ ‡ç­¾ï¼ˆæ­£åˆ™æˆ–æ‰‹å†™ï¼‰
     std::regex tag_re("<[^>]*>");
     std::string plain = std::regex_replace(inner, tag_re, "");
 
@@ -148,10 +148,10 @@ void EPUBBook::clear()
 
 std::string EPUBBook::get_chapter_name_by_id(int spine_id)
 {
-    // ´Ó¸ø¶¨ spine_id ¿ªÊ¼£¬ÒÀ´Îµİ¼õ²éÕÒ
+    // ä»ç»™å®š spine_id å¼€å§‹ï¼Œä¾æ¬¡é€’å‡æŸ¥æ‰¾
     for (int id = spine_id; id >= 0; --id)
     {
-        // 1. È¡³ö spine ¶ÔÓ¦µÄ ref
+        // 1. å–å‡º spine å¯¹åº”çš„ ref
         if (id >= static_cast<int>(m_ocf_pkg.spine.size()))
             continue;
 
@@ -161,12 +161,12 @@ std::string EPUBBook::get_chapter_name_by_id(int spine_id)
         if (href.empty())
             continue;
 
-        // 3. È¥µôÃªµã
+        // 3. å»æ‰é”šç‚¹
         size_t pos = href.find('#');
         if (pos != std::string::npos)
             href = href.substr(0, pos);
 
-        // 4. Óë toc ÖĞµÄ href±È¶Ô£¨Í¬ÑùÈ¥µôÃªµã£©
+        // 4. ä¸ toc ä¸­çš„ hrefæ¯”å¯¹ï¼ˆåŒæ ·å»æ‰é”šç‚¹ï¼‰
         for (const auto& nav : m_ocf_pkg.toc)
         {
             std::string nav_href = nav.href;
@@ -179,7 +179,7 @@ std::string EPUBBook::get_chapter_name_by_id(int spine_id)
         }
     }
 
-    // ±éÀúµ½ id=0 ÈÔÎ´ÕÒµ½
+    // éå†åˆ° id=0 ä»æœªæ‰¾åˆ°
     return "";
 }
 
@@ -301,50 +301,50 @@ bool EPUBBook::load(const std::string& epub_path)
 {
 
 
-    mz_zip_reader_end(&zip);           // 1. ÏÈ¹Ø±Õ¾É zip
+    mz_zip_reader_end(&zip);           // 1. å…ˆå…³é—­æ—§ zip
     memset(&zip, 0, sizeof(zip));
     if (!mz_zip_reader_init_file(&zip, epub_path.c_str(), 0)) {
         //mz_zip_error err = mz_zip_get_last_error(&zip);
         //std::string err_msg;
 
         //switch (err) {
-        //case MZ_ZIP_NO_ERROR: err_msg = "ÎŞ´íÎó"; break;
-        //case MZ_ZIP_UNDEFINED_ERROR: err_msg = "Î´¶¨Òå´íÎó"; break;
-        //case MZ_ZIP_TOO_MANY_FILES: err_msg = "ÎÄ¼şÌ«¶à"; break;
-        //case MZ_ZIP_FILE_TOO_LARGE: err_msg = "ÎÄ¼şÌ«´ó"; break;
-        //case MZ_ZIP_UNSUPPORTED_METHOD: err_msg = "²»Ö§³ÖµÄÑ¹Ëõ·½·¨"; break;
-        //case MZ_ZIP_UNSUPPORTED_ENCRYPTION: err_msg = "²»Ö§³ÖµÄ¼ÓÃÜ"; break;
-        //case MZ_ZIP_UNSUPPORTED_FEATURE: err_msg = "²»Ö§³ÖµÄ¹¦ÄÜ"; break;
-        //case MZ_ZIP_FAILED_FINDING_CENTRAL_DIR: err_msg = "ÕÒ²»µ½ÖĞÑëÄ¿Â¼"; break;
-        //case MZ_ZIP_NOT_AN_ARCHIVE: err_msg = "²»ÊÇZIPÎÄ¼ş"; break;
-        //case MZ_ZIP_INVALID_HEADER_OR_CORRUPTED: err_msg = "ÎŞĞ§Í·»òÎÄ¼şËğ»µ"; break;
-        //case MZ_ZIP_UNSUPPORTED_MULTIDISK: err_msg = "²»Ö§³Ö¶à´ÅÅÌ¹éµµ"; break;
-        //case MZ_ZIP_DECOMPRESSION_FAILED: err_msg = "½âÑ¹Ê§°Ü"; break;
-        //case MZ_ZIP_COMPRESSION_FAILED: err_msg = "Ñ¹ËõÊ§°Ü"; break;
-        //case MZ_ZIP_UNEXPECTED_DECOMPRESSED_SIZE: err_msg = "½âÑ¹´óĞ¡²»·û"; break;
-        //case MZ_ZIP_CRC_CHECK_FAILED: err_msg = "CRCĞ£ÑéÊ§°Ü"; break;
-        //case MZ_ZIP_UNSUPPORTED_CDIR_SIZE: err_msg = "²»Ö§³ÖµÄÖĞÑëÄ¿Â¼´óĞ¡"; break;
-        //case MZ_ZIP_ALLOC_FAILED: err_msg = "ÄÚ´æ·ÖÅäÊ§°Ü"; break;
-        //case MZ_ZIP_FILE_OPEN_FAILED: err_msg = "ÎÄ¼ş´ò¿ªÊ§°Ü"; break;
-        //case MZ_ZIP_FILE_CREATE_FAILED: err_msg = "ÎÄ¼ş´´½¨Ê§°Ü"; break;
-        //case MZ_ZIP_FILE_WRITE_FAILED: err_msg = "ÎÄ¼şĞ´ÈëÊ§°Ü"; break;
-        //case MZ_ZIP_FILE_READ_FAILED: err_msg = "ÎÄ¼ş¶ÁÈ¡Ê§°Ü"; break;
-        //case MZ_ZIP_FILE_CLOSE_FAILED: err_msg = "ÎÄ¼ş¹Ø±ÕÊ§°Ü"; break;
-        //case MZ_ZIP_FILE_SEEK_FAILED: err_msg = "ÎÄ¼şÑ°Ö·Ê§°Ü"; break;
-        //case MZ_ZIP_FILE_STAT_FAILED: err_msg = "ÎÄ¼ş×´Ì¬»ñÈ¡Ê§°Ü"; break;
-        //case MZ_ZIP_INVALID_PARAMETER: err_msg = "ÎŞĞ§²ÎÊı"; break;
-        //case MZ_ZIP_INVALID_FILENAME: err_msg = "ÎŞĞ§ÎÄ¼şÃû"; break;
-        //case MZ_ZIP_BUF_TOO_SMALL: err_msg = "»º³åÇøÌ«Ğ¡"; break;
-        //case MZ_ZIP_INTERNAL_ERROR: err_msg = "ÄÚ²¿´íÎó"; break;
-        //case MZ_ZIP_FILE_NOT_FOUND: err_msg = "ÎÄ¼şÎ´ÕÒµ½"; break;
-        //case MZ_ZIP_ARCHIVE_TOO_LARGE: err_msg = "¹éµµÎÄ¼şÌ«´ó"; break;
-        //case MZ_ZIP_VALIDATION_FAILED: err_msg = "ÑéÖ¤Ê§°Ü"; break;
-        //case MZ_ZIP_WRITE_CALLBACK_FAILED: err_msg = "Ğ´Èë»Øµ÷Ê§°Ü"; break;
-        //default: err_msg = "Î´Öª´íÎó";
+        //case MZ_ZIP_NO_ERROR: err_msg = "æ— é”™è¯¯"; break;
+        //case MZ_ZIP_UNDEFINED_ERROR: err_msg = "æœªå®šä¹‰é”™è¯¯"; break;
+        //case MZ_ZIP_TOO_MANY_FILES: err_msg = "æ–‡ä»¶å¤ªå¤š"; break;
+        //case MZ_ZIP_FILE_TOO_LARGE: err_msg = "æ–‡ä»¶å¤ªå¤§"; break;
+        //case MZ_ZIP_UNSUPPORTED_METHOD: err_msg = "ä¸æ”¯æŒçš„å‹ç¼©æ–¹æ³•"; break;
+        //case MZ_ZIP_UNSUPPORTED_ENCRYPTION: err_msg = "ä¸æ”¯æŒçš„åŠ å¯†"; break;
+        //case MZ_ZIP_UNSUPPORTED_FEATURE: err_msg = "ä¸æ”¯æŒçš„åŠŸèƒ½"; break;
+        //case MZ_ZIP_FAILED_FINDING_CENTRAL_DIR: err_msg = "æ‰¾ä¸åˆ°ä¸­å¤®ç›®å½•"; break;
+        //case MZ_ZIP_NOT_AN_ARCHIVE: err_msg = "ä¸æ˜¯ZIPæ–‡ä»¶"; break;
+        //case MZ_ZIP_INVALID_HEADER_OR_CORRUPTED: err_msg = "æ— æ•ˆå¤´æˆ–æ–‡ä»¶æŸå"; break;
+        //case MZ_ZIP_UNSUPPORTED_MULTIDISK: err_msg = "ä¸æ”¯æŒå¤šç£ç›˜å½’æ¡£"; break;
+        //case MZ_ZIP_DECOMPRESSION_FAILED: err_msg = "è§£å‹å¤±è´¥"; break;
+        //case MZ_ZIP_COMPRESSION_FAILED: err_msg = "å‹ç¼©å¤±è´¥"; break;
+        //case MZ_ZIP_UNEXPECTED_DECOMPRESSED_SIZE: err_msg = "è§£å‹å¤§å°ä¸ç¬¦"; break;
+        //case MZ_ZIP_CRC_CHECK_FAILED: err_msg = "CRCæ ¡éªŒå¤±è´¥"; break;
+        //case MZ_ZIP_UNSUPPORTED_CDIR_SIZE: err_msg = "ä¸æ”¯æŒçš„ä¸­å¤®ç›®å½•å¤§å°"; break;
+        //case MZ_ZIP_ALLOC_FAILED: err_msg = "å†…å­˜åˆ†é…å¤±è´¥"; break;
+        //case MZ_ZIP_FILE_OPEN_FAILED: err_msg = "æ–‡ä»¶æ‰“å¼€å¤±è´¥"; break;
+        //case MZ_ZIP_FILE_CREATE_FAILED: err_msg = "æ–‡ä»¶åˆ›å»ºå¤±è´¥"; break;
+        //case MZ_ZIP_FILE_WRITE_FAILED: err_msg = "æ–‡ä»¶å†™å…¥å¤±è´¥"; break;
+        //case MZ_ZIP_FILE_READ_FAILED: err_msg = "æ–‡ä»¶è¯»å–å¤±è´¥"; break;
+        //case MZ_ZIP_FILE_CLOSE_FAILED: err_msg = "æ–‡ä»¶å…³é—­å¤±è´¥"; break;
+        //case MZ_ZIP_FILE_SEEK_FAILED: err_msg = "æ–‡ä»¶å¯»å€å¤±è´¥"; break;
+        //case MZ_ZIP_FILE_STAT_FAILED: err_msg = "æ–‡ä»¶çŠ¶æ€è·å–å¤±è´¥"; break;
+        //case MZ_ZIP_INVALID_PARAMETER: err_msg = "æ— æ•ˆå‚æ•°"; break;
+        //case MZ_ZIP_INVALID_FILENAME: err_msg = "æ— æ•ˆæ–‡ä»¶å"; break;
+        //case MZ_ZIP_BUF_TOO_SMALL: err_msg = "ç¼“å†²åŒºå¤ªå°"; break;
+        //case MZ_ZIP_INTERNAL_ERROR: err_msg = "å†…éƒ¨é”™è¯¯"; break;
+        //case MZ_ZIP_FILE_NOT_FOUND: err_msg = "æ–‡ä»¶æœªæ‰¾åˆ°"; break;
+        //case MZ_ZIP_ARCHIVE_TOO_LARGE: err_msg = "å½’æ¡£æ–‡ä»¶å¤ªå¤§"; break;
+        //case MZ_ZIP_VALIDATION_FAILED: err_msg = "éªŒè¯å¤±è´¥"; break;
+        //case MZ_ZIP_WRITE_CALLBACK_FAILED: err_msg = "å†™å…¥å›è°ƒå¤±è´¥"; break;
+        //default: err_msg = "æœªçŸ¥é”™è¯¯";
         //}
 
-        //std::string txt = "[EPUBBook] zip ´ò¿ªÊ§°Ü: ´íÎóÂë " + std::to_string(err) +
-        //    " (" + err_msg + "), ÎÄ¼ş: " + epub_path + "\n";
+        //std::string txt = "[EPUBBook] zip æ‰“å¼€å¤±è´¥: é”™è¯¯ç  " + std::to_string(err) +
+        //    " (" + err_msg + "), æ–‡ä»¶: " + epub_path + "\n";
         //OutputDebugStringA(txt.c_str());
 
         return false;
@@ -379,12 +379,12 @@ std::string EPUBBook::url_decode(const std::string& in) {
 
     for (size_t i = 0; i < in.size(); ++i) {
         if (in[i] == '%' && i + 2 < in.size()) {
-            // ¿ìËÙÊ®Áù½øÖÆ×ª»»
+            // å¿«é€Ÿåå…­è¿›åˆ¶è½¬æ¢
             auto hexToChar = [](char c) -> int {
                 if (c >= '0' && c <= '9') return c - '0';
                 if (c >= 'A' && c <= 'F') return c - 'A' + 10;
                 if (c >= 'a' && c <= 'f') return c - 'a' + 10;
-                return -1; // ÎŞĞ§×Ö·û
+                return -1; // æ— æ•ˆå­—ç¬¦
             };
 
             int high = hexToChar(in[i + 1]);
@@ -416,9 +416,9 @@ std::string EPUBBook::get_book_path()
     return m_current_book_path;
 }
 
-// -------------- ÊµÏÖ£¨Ö±½ÓÕ³µ½ EPUBBook Ä©Î²¼´¿É£© --------------
+// -------------- å®ç°ï¼ˆç›´æ¥ç²˜åˆ° EPUBBook æœ«å°¾å³å¯ï¼‰ --------------
 void EPUBBook::parse_ocf() {
-    m_ocf_pkg = {};  // Çå¿Õ
+    m_ocf_pkg = {};  // æ¸…ç©º
     auto container = read_zip("META-INF/container.xml");
     if (container.empty()) return;
 
@@ -445,7 +445,7 @@ void EPUBBook::parse_opf() {
     tinyxml2::XMLDocument doc;
     if (doc.Parse(xml.c_str(), xml.size()) != tinyxml2::XML_SUCCESS) return;
 
-    // »ñÈ¡EPUB°æ±¾ºÅ
+    // è·å–EPUBç‰ˆæœ¬å·
     auto* pkg = doc.RootElement();
     if (pkg) {
         m_ocf_pkg.version = pkg->Attribute("version") ? pkg->Attribute("version") : "";
@@ -465,7 +465,7 @@ void EPUBBook::parse_opf() {
         item.properties = it->Attribute("properties") ? it->Attribute("properties") : "";
 
 
-        // Ö»ÔÚ href ·Ç¿ÕÊ±Æ´¾ø¶ÔÂ·¾¶
+        // åªåœ¨ href éç©ºæ—¶æ‹¼ç»å¯¹è·¯å¾„
         if (!item.href.empty())
             item.href = resolve_path(m_ocf_pkg.opf_dir, item.href);
 
@@ -476,18 +476,18 @@ void EPUBBook::parse_opf() {
     auto* spine = doc.RootElement()
         ? doc.RootElement()->FirstChildElement("spine")
         : nullptr;
-    // ÏÈ°Ñ manifest ×ö³É id -> href µÄÓ³Éä
+    // å…ˆæŠŠ manifest åšæˆ id -> href çš„æ˜ å°„
     std::unordered_map<std::string, std::string> id2href;
     for (const auto& m : m_ocf_pkg.manifest)
         id2href[m.id] = m.href;
 
-    // ÔÙ½âÎö spine
+    // å†è§£æ spine
     for (auto* it = spine ? spine->FirstChildElement("itemref") : nullptr;
         it; it = it->NextSiblingElement("itemref")) {
 
         OCFRef ref;
         ref.idref = it->Attribute("idref") ? it->Attribute("idref") : "";
-        ref.href = id2href[ref.idref];   // Ö±½ÓÌî½øÈ¥
+        ref.href = id2href[ref.idref];   // ç›´æ¥å¡«è¿›å»
         ref.linear = it->Attribute("linear") ? it->Attribute("linear") : "yes";
         m_ocf_pkg.spine.emplace_back(std::move(ref));
     }
@@ -554,7 +554,7 @@ void EPUBBook::parse_toc()
             if (type && std::string(type) == "toc")
             {
                 parse_nav_list(nav->FirstChildElement("ol"), 0, opf_dir, m_ocf_pkg.toc);
-                break;   // ÕÒµ½¾ÍÍ£
+                break;   // æ‰¾åˆ°å°±åœ
             }
         }
     }

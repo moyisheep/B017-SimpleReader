@@ -5,20 +5,21 @@
 
 #include <Windows.h>
 
+
 class Timer {
 public:
-    // ¹¹Ôìº¯Êı¿ªÊ¼¼ÆÊ±
+    // æ„é€ å‡½æ•°å¼€å§‹è®¡æ—¶
     Timer(const std::string& name = "Timer");
 
 
-    // Îö¹¹º¯Êı½áÊø¼ÆÊ±²¢Êä³ö½á¹û
+    // ææ„å‡½æ•°ç»“æŸè®¡æ—¶å¹¶è¾“å‡ºç»“æœ
     ~Timer();
 
-    // ½ûÖ¹¿½±´ºÍ¸³Öµ
+    // ç¦æ­¢æ‹·è´å’Œèµ‹å€¼
     Timer(const Timer&) = delete;
     Timer& operator=(const Timer&) = delete;
 
-    // ¿ÉÒÔÒÆ¶¯¹¹Ôì
+    // å¯ä»¥ç§»åŠ¨æ„é€ 
     Timer(Timer&&) = default;
     Timer& operator=(Timer&&) = default;
 

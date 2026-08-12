@@ -5,7 +5,7 @@ static std::string w2a(const std::wstring& s)
 {
     if (s.empty()) return {};
     int len = WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, nullptr, 0, nullptr, nullptr);
-    std::string out(len - 1, 0);                 // È¥µôÄ©Î² '\0'
+    std::string out(len - 1, 0);                 // å»æ‰æœ«å°¾ '\0'
     WideCharToMultiByte(CP_UTF8, 0, s.c_str(), -1, &out[0], len, nullptr, nullptr);
     return out;
 }
@@ -14,7 +14,7 @@ static std::wstring a2w(const std::string& s)
 {
     if (s.empty()) return {};
     int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, nullptr, 0);
-    std::wstring out(len - 1, 0);                // È¥µôÄ©Î² '\0'
+    std::wstring out(len - 1, 0);                // å»æ‰æœ«å°¾ '\0'
     MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, &out[0], len);
     return out;
 }
@@ -23,23 +23,23 @@ static std::wstring a2w(const std::string& s)
 using namespace tinyxml2;
 
 
-/* ---------- ÄÚ²¿ÊµÏÖ ---------- */
+/* ---------- å†…éƒ¨å®ç° ---------- */
 class MathML2SVG::Impl {
 public:
-    /* ÑùÊ½½á¹¹Ìå ¡ª¡ª Ö»ÔÚ Impl ÄÚ²¿¿É¼û */
+    /* æ ·å¼ç»“æ„ä½“ â€”â€” åªåœ¨ Impl å†…éƒ¨å¯è§ */
 
 
-    /* ²ßÂÔ±í */
+    /* ç­–ç•¥è¡¨ */
     using RenderFn = std::function<std::string(const tinyxml2::XMLElement*, const Style&)>;
     using AttrFn = void(*)(const class tinyxml2::XMLAttribute*, class Style&);
 
     std::unordered_map<std::string, RenderFn> tagRender;
     std::unordered_map<std::string, AttrFn>   attrApply;
     std::mutex                                mtx;
-    bool m_usePath = true;   // Íâ²¿¿É¸Ä
+    bool m_usePath = true;   // å¤–éƒ¨å¯æ”¹
     Impl() { registerAll(); }
 
-    /* Ïß³Ì°²È«×¢²á */
+    /* çº¿ç¨‹å®‰å…¨æ³¨å†Œ */
     void registerTag(const std::string& tag, RenderFn fn) {
         std::lock_guard<std::mutex> lock(mtx);
         tagRender[tag] = std::move(fn);
@@ -54,7 +54,7 @@ public:
         return std::regex_replace(svg, re, "");
     }
 
-    /* Ö÷×ª»» */
+    /* ä¸»è½¬æ¢ */
     std::string convert(const std::string& mathml) {
         tinyxml2::XMLDocument doc;
         if (doc.Parse(mathml.c_str()) != XML_SUCCESS)
@@ -87,7 +87,7 @@ private:
     static std::string xmlEscape(std::string_view raw)
     {
         std::string out;
-        out.reserve(raw.size() + 16);          // Ğ¡ÓÅ»¯
+        out.reserve(raw.size() + 16);          // å°ä¼˜åŒ–
         for (char c : raw)
         {
             switch (c)
@@ -106,7 +106,7 @@ private:
         std::wstring out;
         if (!e) return out;
 
-        // Éî¶ÈÓÅÏÈÊÕ¼¯ËùÓĞÎÄ±¾½Úµã
+        // æ·±åº¦ä¼˜å…ˆæ”¶é›†æ‰€æœ‰æ–‡æœ¬èŠ‚ç‚¹
         if (const char* txt = e->GetText())
             out += a2w(txt);
 
@@ -117,24 +117,24 @@ private:
         return out;
     }
 
-    /* ---------- ¹¤¾ßº¯Êı ---------- */
+    /* ---------- å·¥å…·å‡½æ•° ---------- */
     static std::string textRender(const tinyxml2::XMLElement* e, const Style& st)
     {
         std::string txt = e->GetText() ? e->GetText() : "";
         for (size_t pos = 0;
             (pos = txt.find("&nbsp;", pos)) != std::string::npos; )
         {
-            txt.replace(pos, 6, " ");   // ÆÕÍ¨¿Õ¸ñ U+0020
-            ++pos;                      // ¼ÌĞøÏòºóÕÒ
+            txt.replace(pos, 6, " ");   // æ™®é€šç©ºæ ¼ U+0020
+            ++pos;                      // ç»§ç»­å‘åæ‰¾
         }
 
         std::wstring wtxt = a2w(txt);
 
-        // 1. ¾«È·²âÁ¿
+        // 1. ç²¾ç¡®æµ‹é‡
         auto si = FreeTypeTextMeasurer::instance().measure(
             wtxt, st.fontFamily, std::stof(st.fontSize));
 
-        // 2. Éú³ÉÂã <text>£¨Ïà¶ÔÓÚ»ùÏßÔ­µã£©
+        // 2. ç”Ÿæˆè£¸ <text>ï¼ˆç›¸å¯¹äºåŸºçº¿åŸç‚¹ï¼‰
         std::ostringstream os;
         os << "<text x=\"0\" y=\"" << 0 << "\""
             << " font-size=\"" << st.fontSize
@@ -143,7 +143,7 @@ private:
             << xmlEscape(txt)
             << "</text>";
 
-        // 3. ÓÃ <g> °üÒ»²ã£¬°Ñ³ß´ç·ÅÔÚ g µÄ data-* ÉÏ
+        // 3. ç”¨ <g> åŒ…ä¸€å±‚ï¼ŒæŠŠå°ºå¯¸æ”¾åœ¨ g çš„ data-* ä¸Š
         std::ostringstream finalOSS;
         finalOSS << "<g data-w=\"" << si.width
             << "\" data-asc=\"" << si.ascent
@@ -159,7 +159,7 @@ private:
         const char* v = e->Attribute(name);
         if (!v) return defVal;
         std::string s = v;
-        // È¥µôµ¥Î»£¬Ö»±£ÁôÊı×Ö
+        // å»æ‰å•ä½ï¼Œåªä¿ç•™æ•°å­—
         if (s.back() == 'e' || s.back() == 'm') s.pop_back();
         if (s.empty()) return defVal;
         return std::stod(s);
@@ -208,7 +208,7 @@ private:
         }
         totalW += dx * (parts.size() - 1);
 
-        /* Æ´ SVG£ºËùÓĞ×ÓÔªËØ y=0 ¶ÔÆë */
+        /* æ‹¼ SVGï¼šæ‰€æœ‰å­å…ƒç´  y=0 å¯¹é½ */
         std::ostringstream os;
         os << "<g class=\"" << tag_name << "\" data-w=\"" << totalW
             << "\" data-asc=\"" << asc
@@ -241,7 +241,7 @@ private:
         totalH += dy * (parts.size() - 1);
         asc = totalH * 0.5;
         des = -(totalH - asc);
-        /* Æ´ SVG£ºËùÓĞ×ÓÔªËØ y=0 ¶ÔÆë */
+        /* æ‹¼ SVGï¼šæ‰€æœ‰å­å…ƒç´  y=0 å¯¹é½ */
         std::ostringstream os;
         os << "<g class=\"" << tag_name << "\" data-w=\"" << width
             << "\" data-asc=\"" << asc
@@ -259,51 +259,51 @@ private:
     }
 
 
-    /* ---------- µİ¹éäÖÈ¾ ---------- */
+    /* ---------- é€’å½’æ¸²æŸ“ ---------- */
     std::string renderElement(const XMLElement* e, Style st) {
         //DbgPrint("[renderElement] <%s>\n", e->Name());
-        /* 1. ´¦ÀíÊôĞÔ */
+        /* 1. å¤„ç†å±æ€§ */
         for (const XMLAttribute* a = e->FirstAttribute(); a; a = a->Next()) {
             auto it = attrApply.find(a->Name());
             if (it != attrApply.end()) it->second(a, st);
         }
 
-        /* 2. Èç¹ûÊÇÎÄ±¾Àà½Úµã£¬Ö±½ÓäÖÈ¾£¬²»ÔÙµİ¹é×ÓÔªËØ */
+        /* 2. å¦‚æœæ˜¯æ–‡æœ¬ç±»èŠ‚ç‚¹ï¼Œç›´æ¥æ¸²æŸ“ï¼Œä¸å†é€’å½’å­å…ƒç´  */
         const char* tag = e->Name();
         if (!strcmp(tag, "mtext") || !strcmp(tag, "mo") || !strcmp(tag, "mi") || !strcmp(tag, "mn")) {
             return textRender(e, st);
         }
 
-        /* 3. ÈİÆ÷½Úµã£ºµİ¹é×ÓÔªËØ */
+        /* 3. å®¹å™¨èŠ‚ç‚¹ï¼šé€’å½’å­å…ƒç´  */
         std::vector<std::string> children;
         for (const XMLElement* c = e->FirstChildElement(); c; c = c->NextSiblingElement()) {
             children.push_back(renderElement(c, st));
         }
 
-        /* 4. ²éÕÒÊÇ·ñÓĞ×¢²áµÄäÖÈ¾Æ÷£¨Èç mfrac¡¢msup µÈ£© */
+        /* 4. æŸ¥æ‰¾æ˜¯å¦æœ‰æ³¨å†Œçš„æ¸²æŸ“å™¨ï¼ˆå¦‚ mfracã€msup ç­‰ï¼‰ */
         auto it = tagRender.find(tag);
         if (it != tagRender.end()) {
             return it->second(e, st);
         }
 
-        /* 5. Ä¬ÈÏË®Æ½ÅÅÁĞ×Ó½Úµã */
+        /* 5. é»˜è®¤æ°´å¹³æ’åˆ—å­èŠ‚ç‚¹ */
         return hbox(children, 2.0, "math");
     }
-    /* ---------- ×¢²á±í ---------- */
+    /* ---------- æ³¨å†Œè¡¨ ---------- */
     void registerAll() {
-        /* ¼ÇºÅÀà */
+        /* è®°å·ç±» */
         registerTag("mi", textRender);
         registerTag("mn", textRender);
         registerTag("mo", textRender);
         registerTag("ms", textRender);
         registerTag("mtext", textRender);
 
-        /* ²¼¾ÖÀà */
+        /* å¸ƒå±€ç±» */
         registerTag("mrow",
             [this](const tinyxml2::XMLElement* e, const Style& st) -> std::string
             {
                 std::vector<std::string> boxes;
-                /* 1. äÖÈ¾ËùÓĞ×ÓÔªËØ²¢ÊÕ¼¯³ß´ç */
+                /* 1. æ¸²æŸ“æ‰€æœ‰å­å…ƒç´ å¹¶æ”¶é›†å°ºå¯¸ */
                 for (const XMLElement* c = e->FirstChildElement(); c; c = c->NextSiblingElement())
                 {
                     boxes.push_back(renderElement(c, st));
@@ -313,13 +313,13 @@ private:
         registerTag("mfrac",
             [this](const tinyxml2::XMLElement* e, const Style& st) -> std::string
             {
-                /* ---------- 1. ×ÓÔªËØ ---------- */
+                /* ---------- 1. å­å…ƒç´  ---------- */
                 std::vector<std::string> kids;
                 for (const XMLElement* c = e->FirstChildElement(); c; c = c->NextSiblingElement())
                     kids.push_back(renderElement(c, st));
                 if (kids.size() != 2) return "<!-- mfrac needs 2 children -->";
 
-                /* ---------- 2. ½âÎöÊôĞÔ ---------- */
+                /* ---------- 2. è§£æå±æ€§ ---------- */
                 double thickness = 1.0;
                 const char* lt = e->Attribute("linethickness");
                 if (lt) {
@@ -339,7 +339,7 @@ private:
                 std::string numAlign = e->Attribute("numalign") ? e->Attribute("numalign") : "center";
                 std::string denAlign = e->Attribute("denomalign") ? e->Attribute("denomalign") : "center";
 
-                /* ---------- 3. ¾«È·ºĞ³ß´ç ---------- */
+                /* ---------- 3. ç²¾ç¡®ç›’å°ºå¯¸ ---------- */
                 double numW = extractWidth(kids[0]);
                 double numAsc = extractAscent(kids[0]);
                 double numDesc = extractDescent(kids[0]);
@@ -348,20 +348,20 @@ private:
                 double denAsc = extractAscent(kids[1]);
                 double denDesc = extractDescent(kids[1]);
 
-                /* ---------- 4. TeX ²ÎÊı ---------- */
+                /* ---------- 4. TeX å‚æ•° ---------- */
                 double em = std::stof(st.fontSize);
                 double y_shift = 0.3 * em;
                 double rule = thickness;
                 double gap = 0.3 * em;
 
-                /* ---------- 5. ´¹Ö±¾àÀë£¨·ÖÊıÏß y = 0£© ---------- */
+                /* ---------- 5. å‚ç›´è·ç¦»ï¼ˆåˆ†æ•°çº¿ y = 0ï¼‰ ---------- */
 
 
-                double ascent = (numAsc - numDesc) + gap + rule / 2.0 + y_shift;   // ·Ö×Ó×îÉÏÑØµ½·ÖÊıÏß
-                double descent = -((denAsc - denDesc) + gap + rule / 2.0) + y_shift;   // ·ÖÊıÏßµ½·ÖÄ¸×îÏÂÑØ
+                double ascent = (numAsc - numDesc) + gap + rule / 2.0 + y_shift;   // åˆ†å­æœ€ä¸Šæ²¿åˆ°åˆ†æ•°çº¿
+                double descent = -((denAsc - denDesc) + gap + rule / 2.0) + y_shift;   // åˆ†æ•°çº¿åˆ°åˆ†æ¯æœ€ä¸‹æ²¿
 
 
-                /* ---------- 6. Ë®Æ½¶ÔÆë ---------- */
+                /* ---------- 6. æ°´å¹³å¯¹é½ ---------- */
                 double ruleW = std::max(numW, denW);
                 auto offset = [](double w, double ruleW, const std::string& align)
                 {
@@ -372,12 +372,12 @@ private:
                 double numX = offset(numW, ruleW, numAlign);
                 double denX = offset(denW, ruleW, denAlign);
 
-                /* ---------- 7. ·Ö×Ó¡¢·ÖÄ¸Ïà¶ÔÓÚ·ÖÊıÏß y = 0 µÄ y ---------- */
+                /* ---------- 7. åˆ†å­ã€åˆ†æ¯ç›¸å¯¹äºåˆ†æ•°çº¿ y = 0 çš„ y ---------- */
                 double lineY = -y_shift;
-                double numY = -(-numDesc + rule * 0.5 + gap + y_shift);   // ·Ö×Ó»ùÏß
-                double denY = (rule * 0.5 + denAsc + gap - y_shift);  // ·ÖÄ¸»ùÏß
+                double numY = -(-numDesc + rule * 0.5 + gap + y_shift);   // åˆ†å­åŸºçº¿
+                double denY = (rule * 0.5 + denAsc + gap - y_shift);  // åˆ†æ¯åŸºçº¿
 
-                /* ---------- 8. ×é×° ---------- */
+                /* ---------- 8. ç»„è£… ---------- */
                 std::ostringstream oss;
                 oss << "<g class=\"mfrac\" data-w=\"" << ruleW
                     << "\" data-asc=\"" << ascent
@@ -397,13 +397,13 @@ private:
                     kids.push_back(renderElement(c, st));
                 if (kids.size() != 2) return "<!-- msup needs 2 children -->";
 
-                /* ---------- 1. Ö÷Ìå³ß´ç ---------- */
+                /* ---------- 1. ä¸»ä½“å°ºå¯¸ ---------- */
                 double baseW = extractWidth(kids[0]);
                 double baseAsc = extractAscent(kids[0]);
                 double baseDes = extractDescent(kids[0]);
 
 
-                /* ---------- 2. ÉÏ±êÔ­Ê¼³ß´ç ---------- */
+                /* ---------- 2. ä¸Šæ ‡åŸå§‹å°ºå¯¸ ---------- */
                 double supW0 = extractWidth(kids[1]);
                 double supAsc0 = extractAscent(kids[1]);
                 double supDes0 = extractDescent(kids[1]);
@@ -411,31 +411,31 @@ private:
 
                 double em = std::stod(st.fontSize);
                 double y_shift = 0.5 * em;
-                /* ---------- 3. Ëõ·Åºó³ß´ç ---------- */
+                /* ---------- 3. ç¼©æ”¾åå°ºå¯¸ ---------- */
                 const double scale = 0.7;
                 double supW = supW0 * scale;
                 double supAsc = supAsc0 * scale;
                 double supDes = supDes0 * scale;
 
-                /* ---------- 4. ÉÏ±êÎ»ÖÃ ---------- */
+                /* ---------- 4. ä¸Šæ ‡ä½ç½® ---------- */
 
-                double supX = baseW;                               // ÓÒÉÏ½Ç
-                /* ²¹³¥Ëõ·Åµ¼ÖÂµÄ»ùÏßÆ«ÒÆ£ºÏÈÆ½ÒÆ -supBase0*scale£¬ÔÙÕûÌå·Åµ½ gap ÉÏ·½ */
+                double supX = baseW;                               // å³ä¸Šè§’
+                /* è¡¥å¿ç¼©æ”¾å¯¼è‡´çš„åŸºçº¿åç§»ï¼šå…ˆå¹³ç§» -supBase0*scaleï¼Œå†æ•´ä½“æ”¾åˆ° gap ä¸Šæ–¹ */
                 double supY = -(baseAsc - supDes);
 
-                /* ---------- 5. ÕûÌåºĞ ---------- */
+                /* ---------- 5. æ•´ä½“ç›’ ---------- */
                 double totalW = baseW + supW;
-                double totalAsc = baseAsc + (supAsc - supDes);   // ×îÉÏÑØ
-                double totalDes = baseDes;                           // ×îÏÂÑØ
+                double totalAsc = baseAsc + (supAsc - supDes);   // æœ€ä¸Šæ²¿
+                double totalDes = baseDes;                           // æœ€ä¸‹æ²¿
 
-                /* ---------- 6. ×é×° ---------- */
+                /* ---------- 6. ç»„è£… ---------- */
                 std::ostringstream oss;
                 oss << "<g class=\"msup\" data-w=\"" << totalW
                     << "\" data-asc=\"" << totalAsc
                     << "\" data-desc=\"" << totalDes << "\">"
-                    << kids[0]                                         // Ö÷Ìå£ºÒÑÎ»ÓÚ baseBaseline
+                    << kids[0]                                         // ä¸»ä½“ï¼šå·²ä½äº baseBaseline
                     << "<g transform=\"translate(" << supX << "," << supY << ") scale(" << scale << ")\">"
-                    << kids[1]                                         // ÉÏ±ê£ºÏà¶ÔÎ»ÒÆ
+                    << kids[1]                                         // ä¸Šæ ‡ï¼šç›¸å¯¹ä½ç§»
                     << "</g>"
                     << "</g>";
                 return oss.str();
@@ -447,45 +447,45 @@ private:
                     kids.push_back(renderElement(c, st));
                 if (kids.size() < 2) return kids.empty() ? "" : kids[0];
 
-                /* ---------- 1. Ö÷Ìå³ß´ç ---------- */
+                /* ---------- 1. ä¸»ä½“å°ºå¯¸ ---------- */
                 double baseW = extractWidth(kids[0]);
                 double baseAsc = extractAscent(kids[0]);
                 double baseDes = extractDescent(kids[0]);
 
 
-                /* ---------- 2. ÏÂ±êÔ­Ê¼³ß´ç ---------- */
+                /* ---------- 2. ä¸‹æ ‡åŸå§‹å°ºå¯¸ ---------- */
                 double subW0 = extractWidth(kids[1]);
                 double subAsc0 = extractAscent(kids[1]);
                 double subDes0 = extractDescent(kids[1]);
 
 
-                /* ---------- 3. Ëõ·Åºó³ß´ç ---------- */
+                /* ---------- 3. ç¼©æ”¾åå°ºå¯¸ ---------- */
                 const double scale = 0.7;
 
-                //const double drop = 0.25 * baseDes;         // ÏÂ±ê»ùÏßÏà¶ÔÖ÷Ìå»ùÏßµÄÏÂÒÆÁ¿
+                //const double drop = 0.25 * baseDes;         // ä¸‹æ ‡åŸºçº¿ç›¸å¯¹ä¸»ä½“åŸºçº¿çš„ä¸‹ç§»é‡
 
                 double subW = subW0 * scale;
                 double subAsc = subAsc0 * scale;
                 double subDes = subDes0 * scale;
 
-                /* ---------- 4. ÏÂ±êÎ»ÖÃ ---------- */
-                double subX = baseW;                     // ÓÒÏÂ½Ç
-                /* ²¹³¥Ëõ·Åµ¼ÖÂµÄ»ùÏßÆ«ÒÆ£ºÏÈÆ½ÒÆ -subBaseline0*scale£¬ÔÙÕûÌåÏÂÒÆ drop */
+                /* ---------- 4. ä¸‹æ ‡ä½ç½® ---------- */
+                double subX = baseW;                     // å³ä¸‹è§’
+                /* è¡¥å¿ç¼©æ”¾å¯¼è‡´çš„åŸºçº¿åç§»ï¼šå…ˆå¹³ç§» -subBaseline0*scaleï¼Œå†æ•´ä½“ä¸‹ç§» drop */
                 double subY = subAsc - baseDes;
 
-                /* ---------- 5. ÕûÌåºĞ³ß´ç ---------- */
+                /* ---------- 5. æ•´ä½“ç›’å°ºå¯¸ ---------- */
                 double totalW = subX + subW;
-                double totalAsc = baseAsc;                     // ×îÉÏÑØ
-                double totalDes = baseDes - (subAsc - subDes); // ×îÏÂÑØ
+                double totalAsc = baseAsc;                     // æœ€ä¸Šæ²¿
+                double totalDes = baseDes - (subAsc - subDes); // æœ€ä¸‹æ²¿
 
-                /* ---------- 6. ×é×° ---------- */
+                /* ---------- 6. ç»„è£… ---------- */
                 std::ostringstream os;
                 os << "<g class=\"msub\" data-w=\"" << totalW
                     << "\" data-asc=\"" << totalAsc
                     << "\" data-desc=\"" << totalDes << "\">"
-                    << kids[0]                                  // Ö÷Ìå£º»ùÏß y = 0
+                    << kids[0]                                  // ä¸»ä½“ï¼šåŸºçº¿ y = 0
                     << "<g transform=\"translate(" << subX << "," << subY << ") scale(" << scale << ")\">"
-                    << kids[1]                                  // ÏÂ±ê£ºÒÑ²¹³¥»ùÏß
+                    << kids[1]                                  // ä¸‹æ ‡ï¼šå·²è¡¥å¿åŸºçº¿
                     << "</g>"
                     << "</g>";
                 return os.str();
@@ -498,24 +498,24 @@ private:
                     kids.push_back(renderElement(c, st));
                 if (kids.size() < 3) return kids.empty() ? "" : kids[0];
 
-                /* ---------- 1. Ö÷Ìå³ß´ç ---------- */
+                /* ---------- 1. ä¸»ä½“å°ºå¯¸ ---------- */
                 double baseW = extractWidth(kids[0]);
                 double baseAsc = extractAscent(kids[0]);
                 double baseDes = extractDescent(kids[0]);
 
 
-                /* ---------- 2. ÉÏ±êÔ­Ê¼³ß´ç ---------- */
+                /* ---------- 2. ä¸Šæ ‡åŸå§‹å°ºå¯¸ ---------- */
                 double supW0 = extractWidth(kids[1]);
                 double supAsc0 = extractAscent(kids[1]);
                 double supDes0 = extractDescent(kids[1]);
 
-                /* ---------- 3. ÏÂ±êÔ­Ê¼³ß´ç ---------- */
+                /* ---------- 3. ä¸‹æ ‡åŸå§‹å°ºå¯¸ ---------- */
                 double subW0 = extractWidth(kids[2]);
                 double subAsc0 = extractAscent(kids[2]);
                 double subDes0 = extractDescent(kids[2]);
 
 
-                /* ---------- 4. Ëõ·Åºó³ß´ç ---------- */
+                /* ---------- 4. ç¼©æ”¾åå°ºå¯¸ ---------- */
                 const double scale = 0.7;
 
 
@@ -527,32 +527,32 @@ private:
                 double subAsc = subAsc0 * scale;
                 double subDes = subDes0 * scale;
 
-                /* ---------- 5. ÉÏ±êÎ»ÖÃ ---------- */
+                /* ---------- 5. ä¸Šæ ‡ä½ç½® ---------- */
                 double supX = baseW;
-                /* ²¹³¥Ëõ·Åµ¼ÖÂµÄ»ùÏßÆ«ÒÆ£ºÏÈÆ½ÒÆ -supBase0*scale£¬ÔÙÕûÌå·Åµ½ shiftUp ÉÏ·½ */
+                /* è¡¥å¿ç¼©æ”¾å¯¼è‡´çš„åŸºçº¿åç§»ï¼šå…ˆå¹³ç§» -supBase0*scaleï¼Œå†æ•´ä½“æ”¾åˆ° shiftUp ä¸Šæ–¹ */
                 double supY = baseAsc - supDes;
 
-                /* ---------- 6. ÏÂ±êÎ»ÖÃ ---------- */
+                /* ---------- 6. ä¸‹æ ‡ä½ç½® ---------- */
                 double subX = baseW;
-                /* ²¹³¥Ëõ·Åµ¼ÖÂµÄ»ùÏßÆ«ÒÆ£ºÏÈÆ½ÒÆ -subBase0*scale£¬ÔÙÕûÌå·Åµ½ shiftDown ÏÂ·½ */
+                /* è¡¥å¿ç¼©æ”¾å¯¼è‡´çš„åŸºçº¿åç§»ï¼šå…ˆå¹³ç§» -subBase0*scaleï¼Œå†æ•´ä½“æ”¾åˆ° shiftDown ä¸‹æ–¹ */
                 double subY = -(supAsc - baseDes);
 
-                /* ---------- 7. ÕûÌåºĞ³ß´ç ---------- */
+                /* ---------- 7. æ•´ä½“ç›’å°ºå¯¸ ---------- */
                 double totalW = std::max(baseW, supX + std::max(supW, subW));
-                double totalAsc = baseAsc + (supAsc - supDes);   // ×îÉÏÑØ
-                double totalDes = baseDes - (supAsc - supDes); // ×îÏÂÑØ
+                double totalAsc = baseAsc + (supAsc - supDes);   // æœ€ä¸Šæ²¿
+                double totalDes = baseDes - (supAsc - supDes); // æœ€ä¸‹æ²¿
 
-                /* ---------- 8. ×é×° ---------- */
+                /* ---------- 8. ç»„è£… ---------- */
                 std::ostringstream os;
                 os << "<g class=\"msubsup\" data-w=\"" << totalW
                     << "\" data-asc=\"" << totalAsc
                     << "\" data-desc=\"" << totalDes << "\">"
-                    << kids[0]                                   // Ö÷Ìå£º»ùÏß y = 0
+                    << kids[0]                                   // ä¸»ä½“ï¼šåŸºçº¿ y = 0
                     << "<g transform=\"translate(" << supX << "," << supY << ") scale(" << scale << ")\">"
-                    << kids[1]                                   // ÉÏ±ê£ºÒÑ²¹³¥»ùÏß
+                    << kids[1]                                   // ä¸Šæ ‡ï¼šå·²è¡¥å¿åŸºçº¿
                     << "</g>"
                     << "<g transform=\"translate(" << subX << "," << subY << ") scale(" << scale << ")\">"
-                    << kids[2]                                   // ÏÂ±ê£ºÒÑ²¹³¥»ùÏß
+                    << kids[2]                                   // ä¸‹æ ‡ï¼šå·²è¡¥å¿åŸºçº¿
                     << "</g>"
                     << "</g>";
                 return os.str();
@@ -560,34 +560,34 @@ private:
         registerTag("msqrt",
             [this](const XMLElement* e, const Style& st) -> std::string
             {
-                /* ---------- 1. ÊÕ¼¯×ÓÔªËØ ---------- */
+                /* ---------- 1. æ”¶é›†å­å…ƒç´  ---------- */
                 std::vector<std::string> kids;
                 for (const XMLElement* c = e->FirstChildElement(); c; c = c->NextSiblingElement())
                     kids.push_back(renderElement(c, st));
                 if (kids.empty()) return "<!-- msqrt needs at least 1 child -->";
 
-                /* ---------- 2. Ë®Æ½Æ´½Ó×ÓÔªËØ ---------- */
+                /* ---------- 2. æ°´å¹³æ‹¼æ¥å­å…ƒç´  ---------- */
                 std::string inner = hbox(kids);
 
-                /* ---------- 3. ÄÚÈİ³ß´ç ---------- */
+                /* ---------- 3. å†…å®¹å°ºå¯¸ ---------- */
                 double em = std::stof(st.fontSize);
-                double rule = 1.0;                       // Ïßºñ
-                double gap = 0.2 * em;                // ¸ùºÅÓëÄÚÈİ¼äÏ¶
-                double hook = 0.4 * em;                // ×ó²àĞ¡¹´¿í¶È
+                double rule = 1.0;                       // çº¿åš
+                double gap = 0.2 * em;                // æ ¹å·ä¸å†…å®¹é—´éš™
+                double hook = 0.4 * em;                // å·¦ä¾§å°å‹¾å®½åº¦
 
                 double contW = extractWidth(inner);
                 double contAsc = extractAscent(inner);
                 double contDes = extractDescent(inner);
 
-                /* ---------- 4. ¸ùºÅºĞ¸ß£¨ÒÔÄÚÈİ»ùÏßÎª 0£© ---------- */
-                double boxAsc = contAsc + gap + rule;           // ÄÚÈİ¶¥²¿µ½»ùÏß
-                double boxDes = contDes;           // »ùÏßµ½ÄÚÈİµ×²¿
+                /* ---------- 4. æ ¹å·ç›’é«˜ï¼ˆä»¥å†…å®¹åŸºçº¿ä¸º 0ï¼‰ ---------- */
+                double boxAsc = contAsc + gap + rule;           // å†…å®¹é¡¶éƒ¨åˆ°åŸºçº¿
+                double boxDes = contDes;           // åŸºçº¿åˆ°å†…å®¹åº•éƒ¨
 
 
-                /* ---------- 5. ¸ùºÅÂ·¾¶£¨Ïà¶ÔÓÚÄÚÈİ»ùÏß£© ---------- */
-                double left = hook;                     // ¸ùºÅ×ó²à¹´Æğµã
-                double right = left + contW + gap;       // ¸ùºÅºáÏßÖÕµã
-                double barY = -(contAsc + gap);                  // ºáÏß y ×ø±ê£¨¸ºÖµ£¬ÔÚ»ùÏßÉÏ·½£©
+                /* ---------- 5. æ ¹å·è·¯å¾„ï¼ˆç›¸å¯¹äºå†…å®¹åŸºçº¿ï¼‰ ---------- */
+                double left = hook;                     // æ ¹å·å·¦ä¾§å‹¾èµ·ç‚¹
+                double right = left + contW + gap;       // æ ¹å·æ¨ªçº¿ç»ˆç‚¹
+                double barY = -(contAsc + gap);                  // æ¨ªçº¿ y åæ ‡ï¼ˆè´Ÿå€¼ï¼Œåœ¨åŸºçº¿ä¸Šæ–¹ï¼‰
 
                 std::ostringstream path;
                 path << "M" << 0 << "," << -contAsc * 0.5
@@ -595,14 +595,14 @@ private:
                     << "L" << (left) << "," << barY
                     << "L" << right << "," << barY;
 
-                /* ---------- 6. ×é×° ---------- */
+                /* ---------- 6. ç»„è£… ---------- */
                 std::ostringstream oss;
                 oss << "<g class=\"msqrt\" data-w=\"" << (right + rule)
                     << "\" data-asc=\"" << boxAsc
                     << "\" data-desc=\"" << boxDes << "\">";
                 oss << "<path d=\"" << path.str()
                     << "\" stroke=\"black\" fill=\"none\" stroke-width=\"" << rule << "\"/>";
-                oss << "<g transform=\"translate(" << left + gap << ",0)\">"   // ÄÚÈİ»ùÏß y = 0
+                oss << "<g transform=\"translate(" << left + gap << ",0)\">"   // å†…å®¹åŸºçº¿ y = 0
                     << inner << "</g>";
                 oss << "</g>";
                 return oss.str();
@@ -610,69 +610,69 @@ private:
         registerTag("mroot",
             [this](const XMLElement* e, const Style& st) -> std::string
             {
-                /* ---------- 1. ÊÕ¼¯×ÓÔªËØ ---------- */
+                /* ---------- 1. æ”¶é›†å­å…ƒç´  ---------- */
                 std::vector<std::string> kids;
                 for (const XMLElement* c = e->FirstChildElement(); c; c = c->NextSiblingElement())
                     kids.push_back(renderElement(c, st));
                 if (kids.size() != 2) return "<!-- mroot needs exactly 2 children -->";
 
-                /* ---------- 2. ±»¿ª·½ÄÚÈİ³ß´ç£¨»ùÏß = 0£© ---------- */
+                /* ---------- 2. è¢«å¼€æ–¹å†…å®¹å°ºå¯¸ï¼ˆåŸºçº¿ = 0ï¼‰ ---------- */
                 double innerW = extractWidth(kids[0]);
                 double innerAsc = extractAscent(kids[0]);
                 double innerDes = extractDescent(kids[0]);
 
-                /* ---------- 3. Ö¸ÊıÔ­Ê¼³ß´ç ---------- */
+                /* ---------- 3. æŒ‡æ•°åŸå§‹å°ºå¯¸ ---------- */
                 double idxW0 = extractWidth(kids[1]);
                 double idxAsc0 = extractAscent(kids[1]);
                 double idxDes0 = extractDescent(kids[1]);
                 double idxBase0 = 0;
 
-                /* ---------- 4. Ëõ·ÅºóÖ¸Êı³ß´ç ---------- */
+                /* ---------- 4. ç¼©æ”¾åæŒ‡æ•°å°ºå¯¸ ---------- */
                 const double scale = 0.7;
                 double idxW = idxW0 * scale;
                 double idxAsc = idxAsc0 * scale;
                 double idxDes = idxDes0 * scale;
 
-                /* ---------- 5. ¸ùºÅ¼¸ºÎ²ÎÊı ---------- */
-                const double pad = 2.0;   // ÄÚ±ß¾à
-                const double bar = 1.2;   // ºáÏß³¬³öÏµÊı
-                const double vgap = 2.0;   // ºáÏßÓëÄÚÈİ¶¥²¿¼ä¾à
-                const double tick = 6.0;   // ¹´ÏßË®Æ½¶Î
-                const double idxGap = 1.0;  // Ö¸ÊıÓë¹´Ïß¿ÕÏ¶
+                /* ---------- 5. æ ¹å·å‡ ä½•å‚æ•° ---------- */
+                const double pad = 2.0;   // å†…è¾¹è·
+                const double bar = 1.2;   // æ¨ªçº¿è¶…å‡ºç³»æ•°
+                const double vgap = 2.0;   // æ¨ªçº¿ä¸å†…å®¹é¡¶éƒ¨é—´è·
+                const double tick = 6.0;   // å‹¾çº¿æ°´å¹³æ®µ
+                const double idxGap = 1.0;  // æŒ‡æ•°ä¸å‹¾çº¿ç©ºéš™
 
-                /* ---------- 6. ÕûÌåºĞ³ß´ç£¨ÒÔ±»¿ª·½ÄÚÈİ»ùÏßÎª 0£© ---------- */
-                double bodyAsc = innerAsc + vgap + pad;   // ±»¿ª·½ÄÚÈİ¶¥²¿µ½»ùÏß
-                double bodyDes = innerDes + pad;          // ±»¿ª·½ÄÚÈİµ×²¿µ½»ùÏß
+                /* ---------- 6. æ•´ä½“ç›’å°ºå¯¸ï¼ˆä»¥è¢«å¼€æ–¹å†…å®¹åŸºçº¿ä¸º 0ï¼‰ ---------- */
+                double bodyAsc = innerAsc + vgap + pad;   // è¢«å¼€æ–¹å†…å®¹é¡¶éƒ¨åˆ°åŸºçº¿
+                double bodyDes = innerDes + pad;          // è¢«å¼€æ–¹å†…å®¹åº•éƒ¨åˆ°åŸºçº¿
                 double totalH = bodyAsc + bodyDes;
                 double totalW = tick + innerW * bar + pad * 2;
 
-                /* ---------- 7. Ö¸ÊıÎ»ÖÃ£¨»ùÏß¶ÔÆëÕûÌå»ùÏß£© ---------- */
-                double idxX = -idxW - idxGap;   // Ö¸Êı×óÉÏ½Ç x
-                /* ²¹³¥Ëõ·Åµ¼ÖÂµÄ»ùÏßÆ«ÒÆ£ºÏÈÆ½ÒÆ -idxBase0*scale£¬ÔÙÕûÌå·Åµ½¹´Ïß×ó²à */
+                /* ---------- 7. æŒ‡æ•°ä½ç½®ï¼ˆåŸºçº¿å¯¹é½æ•´ä½“åŸºçº¿ï¼‰ ---------- */
+                double idxX = -idxW - idxGap;   // æŒ‡æ•°å·¦ä¸Šè§’ x
+                /* è¡¥å¿ç¼©æ”¾å¯¼è‡´çš„åŸºçº¿åç§»ï¼šå…ˆå¹³ç§» -idxBase0*scaleï¼Œå†æ•´ä½“æ”¾åˆ°å‹¾çº¿å·¦ä¾§ */
                 double idxY = -idxAsc - idxBase0 * scale;
 
-                /* ---------- 8. ×é×° ---------- */
+                /* ---------- 8. ç»„è£… ---------- */
                 std::ostringstream oss;
                 oss << "<g class=\"mroot\" data-w=\"" << totalW
                     << "\" data-h=\"" << totalH
                     << "\" data-asc=\"" << bodyAsc
                     << "\" data-desc=\"" << bodyDes
                     << "\" data-baseline=\"0\">"
-                    /* Ö¸Êı£º»ùÏß¶ÔÆëÕûÌå»ùÏß£¨y = 0£© */
+                    /* æŒ‡æ•°ï¼šåŸºçº¿å¯¹é½æ•´ä½“åŸºçº¿ï¼ˆy = 0ï¼‰ */
                     << "<g transform=\"translate(" << idxX << "," << idxY << ") scale(" << scale << ")\">"
                     << kids[1] << "</g>"
-                    /* ¸ùºÅ¹´Ïß + ºáÏß£¨Ïà¶ÔÓÚ»ùÏß£© */
+                    /* æ ¹å·å‹¾çº¿ + æ¨ªçº¿ï¼ˆç›¸å¯¹äºåŸºçº¿ï¼‰ */
                     << "<path d=\"M0," << bodyAsc
                     << " L" << tick << "," << -vgap
                     << " L" << tick + innerW * bar << "," << -vgap
                     << "\" stroke=\"black\" fill=\"none\" stroke-width=\"1\"/>"
-                    /* ±»¿ª·½ÄÚÈİ£º×óÉÏ½Ç¶ÔÆë¹´ÏßÓÒ²à£¬»ùÏß±£³Ö y = 0 */
+                    /* è¢«å¼€æ–¹å†…å®¹ï¼šå·¦ä¸Šè§’å¯¹é½å‹¾çº¿å³ä¾§ï¼ŒåŸºçº¿ä¿æŒ y = 0 */
                     << "<g transform=\"translate(" << tick << ",0)\">"
                     << kids[0] << "</g>"
                     << "</g>";
                 return oss.str();
             });
-        /* ÊôĞÔ */
+        /* å±æ€§ */
         registerAttr("mathcolor", [](const XMLAttribute* a, Style& st) {
             st.fill = a->Value();
             });
@@ -706,13 +706,13 @@ private:
             [this](const XMLElement* e, const Style& st) -> std::string {
                 std::ostringstream oss;
                 for (const XMLElement* c = e->FirstChildElement("mtd"); c; c = c->NextSiblingElement("mtd"))
-                    oss << renderElement(c, st);   // Ã¿¸ö <mtd> ÒÑ×Ô´ø metrics
+                    oss << renderElement(c, st);   // æ¯ä¸ª <mtd> å·²è‡ªå¸¦ metrics
                 return oss.str();
             });
         registerTag("mtable",
             [this](const XMLElement* e, const Style& st) -> std::string
             {
-                /* ---------- 1. ½âÎöÊôĞÔ ---------- */
+                /* ---------- 1. è§£æå±æ€§ ---------- */
                 const double defaultGap = 8.0;
                 std::vector<double> colGap = { defaultGap };
                 std::vector<double> rowGap = { defaultGap };
@@ -729,8 +729,8 @@ private:
                 parseList(e->Attribute("columnspacing"), colGap, defaultGap);
                 parseList(e->Attribute("rowspacing"), rowGap, defaultGap);
 
-                /* ---------- 2. ÊÕ¼¯ËùÓĞµ¥Ôª¸ñ ---------- */
-                std::vector<std::vector<std::string>> grid;   // Ã¿ĞĞÃ¿ÁĞµÄ SVG Æ¬¶Î
+                /* ---------- 2. æ”¶é›†æ‰€æœ‰å•å…ƒæ ¼ ---------- */
+                std::vector<std::vector<std::string>> grid;   // æ¯è¡Œæ¯åˆ—çš„ SVG ç‰‡æ®µ
                 std::vector<std::vector<double>> wGrid, hGrid;
                 size_t rows = 0, cols = 0;
 
@@ -743,7 +743,7 @@ private:
                     auto& rowH = hGrid.back();
 
                     for (const XMLElement* c = r->FirstChildElement("mtd"); c; c = c->NextSiblingElement("mtd")) {
-                        std::string cell = renderElement(c, st);   // ÒÑ´ø data-w / data-asc / data-desc
+                        std::string cell = renderElement(c, st);   // å·²å¸¦ data-w / data-asc / data-desc
                         rowCells.push_back(cell);
                         rowW.push_back(extractWidth(cell));
                         rowH.push_back(extractAscent(cell) - extractDescent(cell));
@@ -753,7 +753,7 @@ private:
                 }
                 if (rows == 0) return "<!-- empty mtable -->";
 
-                /* ---------- 3. Í³Ò»ÁĞ¿í¡¢ĞĞ¸ß ---------- */
+                /* ---------- 3. ç»Ÿä¸€åˆ—å®½ã€è¡Œé«˜ ---------- */
                 std::vector<double> colW(cols, 0.0);
                 std::vector<double> rowH(rows, 0.0);
 
@@ -768,7 +768,7 @@ private:
                     rowH[r] = h;
                 }
 
-                /* ---------- 4. ÕûÌå³ß´ç ---------- */
+                /* ---------- 4. æ•´ä½“å°ºå¯¸ ---------- */
                 double totalW = std::accumulate(colW.begin(), colW.end(), 0.0)
                     + (cols ? (cols - 1) * colGap[0] : 0.0);
                 double totalH = std::accumulate(rowH.begin(), rowH.end(), 0.0)
@@ -777,7 +777,7 @@ private:
                 double asc = totalH * 0.5;
                 double des = -(totalH - asc);
 
-                /* ---------- 5. ¾ø¶Ô×ø±ê°Ú·Å ---------- */
+                /* ---------- 5. ç»å¯¹åæ ‡æ‘†æ”¾ ---------- */
                 std::ostringstream os;
                 os << "<g class=\"mtable\" data-w=\"" << totalW
                     << "\" data-asc=\"" << asc
@@ -787,7 +787,7 @@ private:
                 for (size_t r = 0; r < rows; ++r) {
                     double x = 0.0;
                     for (size_t c = 0; c < grid[r].size(); ++c) {
-                        double dy = (rowH[r] - hGrid[r][c]) * 0.5;   // ´¹Ö±¾ÓÖĞ
+                        double dy = (rowH[r] - hGrid[r][c]) * 0.5;   // å‚ç›´å±…ä¸­
                         os << "<g transform=\"translate(" << x << "," << (y + dy + extractAscent(grid[r][c])) << ")\">"
                             << grid[r][c]
                             << "</g>";
@@ -809,12 +809,12 @@ private:
 
                 if (cells.empty()) return "<!-- empty mlabeledtr -->";
 
-                /* ÁĞ¼ä¾à */
+                /* åˆ—é—´è· */
                 double colGap = 4.0;
                 if (const char* gap = e->Attribute("columnspacing"))
                     colGap = std::stod(gap);
 
-                /* ÓÃ hbox ºáÏòÅÅ²¼£¬µ«ÊÖ¶¯¼ÆËã»ùÏß¶ÔÆë */
+                /* ç”¨ hbox æ¨ªå‘æ’å¸ƒï¼Œä½†æ‰‹åŠ¨è®¡ç®—åŸºçº¿å¯¹é½ */
                 double totalW = 0;
                 double maxAsc = 0;
                 double maxDes = 0;
@@ -835,7 +835,7 @@ private:
                 double x = 0;
                 for (const auto& cell : cells) {
                     double dx = x;
-                    /* ´¹Ö±°´»ùÏß¶ÔÆë£ºµ¥Ôª¸ñÄÚ²¿»ùÏß 0 ¡ú ĞĞ»ùÏß 0 */
+                    /* å‚ç›´æŒ‰åŸºçº¿å¯¹é½ï¼šå•å…ƒæ ¼å†…éƒ¨åŸºçº¿ 0 â†’ è¡ŒåŸºçº¿ 0 */
                     double dy = maxAsc - extractAscent(cell);
                     oss << "<g transform=\"translate(" << dx << "," << dy << ")\">"
                         << cell << "</g>";
@@ -847,13 +847,13 @@ private:
         registerTag("mmultiscripts",
             [this](const XMLElement* e, const Style& st) -> std::string
             {
-                /* ---------- 1. ÊÕ¼¯½Úµã ---------- */
+                /* ---------- 1. æ”¶é›†èŠ‚ç‚¹ ---------- */
                 std::vector<const XMLElement*> nodes;
                 for (const XMLElement* c = e->FirstChildElement(); c; c = c->NextSiblingElement())
                     nodes.push_back(c);
                 if (nodes.empty()) return "";
 
-                /* ---------- 2. ·ÖÇø ---------- */
+                /* ---------- 2. åˆ†åŒº ---------- */
                 size_t split = nodes.size();
                 for (size_t i = 0; i < nodes.size(); ++i)
                     if (std::string(nodes[i]->Name()) == "mprescripts") { split = i; break; }
@@ -862,20 +862,20 @@ private:
                 std::vector<const XMLElement*> postNodes(nodes.begin() + 1, nodes.begin() + split);   // post: sub1 sup1 sub2 sup2 ...
                 std::vector<const XMLElement*> preNodes(nodes.begin() + split + 1, nodes.end());      // pre : sup1 sub1 sup2 sub2 ...
 
-                /* ---------- 3. Ö÷×Ö·û ---------- */
+                /* ---------- 3. ä¸»å­—ç¬¦ ---------- */
                 std::string baseSVG = renderElement(baseNode, st);
                 double baseW = extractWidth(baseSVG);
                 double baseAsc = extractAscent(baseSVG);
                 double baseDes = extractDescent(baseSVG);
 
-                /* ---------- 4. ³£Á¿ ---------- */
+                /* ---------- 4. å¸¸é‡ ---------- */
                 const double scale = 0.7;
                 const double kern = 1.0;
                 const double supGap = 1.5;
                 const double subGap = 1.0;
                 const double pairGap = 1.0;
 
-                /* ---------- 5. ¹¤¾ß£ºÒ»´ÎĞÔäÖÈ¾²¢»º´æ³ß´ç ---------- */
+                /* ---------- 5. å·¥å…·ï¼šä¸€æ¬¡æ€§æ¸²æŸ“å¹¶ç¼“å­˜å°ºå¯¸ ---------- */
                 struct ScriptRec {
                     std::string svg;
                     double w, asc, des;   // asc>0, des<0
@@ -888,7 +888,7 @@ private:
                     std::string raw = renderElement(el, st);
                     double w = extractWidth(raw) * scale;
                     double asc = extractAscent(raw) * scale;
-                    double des = extractDescent(raw) * scale;   // ¸ºÖµ
+                    double des = extractDescent(raw) * scale;   // è´Ÿå€¼
 
                     std::ostringstream os;
                     os << "<g data-w=\"" << w
@@ -900,12 +900,12 @@ private:
                     return { os.str(), w, asc, des };
                 };
 
-                /* ---------- 6. ÊÕ¼¯ÁĞ ---------- */
+                /* ---------- 6. æ”¶é›†åˆ— ---------- */
                 std::vector<ScriptRec> preSub, preSup, postSub, postSup;
                 double preW = 0;
                 double postW = 0;
 
-                /* pre Çø¶Î£ºsup1 sub1 sup2 sub2 ... */
+                /* pre åŒºæ®µï¼šsup1 sub1 sup2 sub2 ... */
                 for (size_t i = 0; i + 1 < preNodes.size(); i += 2)
                 {
                     ScriptRec sup = makeRec(preNodes[i]);
@@ -916,7 +916,7 @@ private:
                 }
                 if (!preSup.empty()) preW -= pairGap;
 
-                /* post Çø¶Î£ºsub1 sup1 sub2 sup2 ... */
+                /* post åŒºæ®µï¼šsub1 sup1 sub2 sup2 ... */
                 for (size_t i = 0; i + 1 < postNodes.size(); i += 2)
                 {
                     ScriptRec sub = makeRec(postNodes[i]);
@@ -927,7 +927,7 @@ private:
                 }
                 if (!postSub.empty()) postW -= pairGap;
 
-                /* ---------- 7. ÕûÌåºĞ³ß´ç ---------- */
+                /* ---------- 7. æ•´ä½“ç›’å°ºå¯¸ ---------- */
                 double totalW = preW + kern + baseW + kern + postW;
 
                 double maxSup = baseAsc;
@@ -942,7 +942,7 @@ private:
                 for (const auto& r : postSub) update(r);
                 for (const auto& r : postSup) update(r);
 
-                /* ---------- 8. ×é×° ---------- */
+                /* ---------- 8. ç»„è£… ---------- */
                 std::ostringstream oss;
                 oss << "<g class=\"mmultiscripts\" data-w=\"" << totalW
                     << "\" data-asc=\"" << maxSup
@@ -950,7 +950,7 @@ private:
 
                 double x = 0;
 
-                /* pre ÁĞ£¨´ÓÓÒÏò×óÅÅ£© */
+                /* pre åˆ—ï¼ˆä»å³å‘å·¦æ’ï¼‰ */
                 for (int i = (int)preSup.size() - 1; i >= 0; --i)
                 {
                     const ScriptRec& sup = preSup[i];
@@ -958,7 +958,7 @@ private:
                     double w = std::max(sup.w, sub.w);
 
                     double ySup = (supGap - sup.des);
-                    double ySub = -(subGap + sub.asc);   // sub.des ¸ºÖµ
+                    double ySub = -(subGap + sub.asc);   // sub.des è´Ÿå€¼
                     oss << "<g transform=\"translate(" << x << ",0)\">"
                         << "<g transform=\"translate(0," << ySup << ")\">" << sup.svg << "</g>"
                         << "<g transform=\"translate(0," << ySub << ")\">" << sub.svg << "</g>"
@@ -966,11 +966,11 @@ private:
                     x += w + pairGap;
                 }
 
-                /* Ö÷×Ö·û */
+                /* ä¸»å­—ç¬¦ */
                 oss << "<g transform=\"translate(" << x << ",0)\">" << baseSVG << "</g>";
                 x += baseW + kern;
 
-                /* post ÁĞ£¨´Ó×óÏòÓÒÅÅ£© */
+                /* post åˆ—ï¼ˆä»å·¦å‘å³æ’ï¼‰ */
                 for (size_t i = 0; i < postSub.size(); ++i)
                 {
                     const ScriptRec& sub = postSub[i];
@@ -1013,16 +1013,16 @@ private:
                 double subDes = extractDescent(sub) * scale;
 
 
-                /* ---------- ÕûÌåºĞ³ß´ç£¨ÒÔÖ÷×Ö·û»ùÏßÎª 0£© ---------- */
+                /* ---------- æ•´ä½“ç›’å°ºå¯¸ï¼ˆä»¥ä¸»å­—ç¬¦åŸºçº¿ä¸º 0ï¼‰ ---------- */
                 double totalW = std::max(baseW, subW);
                 double baseX = (totalW - baseW) / 2.0;
                 double subX = (totalW - subW) / 2.0;
 
-                /* ÏÂ±êÎ»ÖÃ£ºÖ÷×Ö·ûµ×²¿ + ¼äÏ¶£¬ÔÙ²¹³¥ÏÂ±ê×ÔÉí»ùÏß */
+                /* ä¸‹æ ‡ä½ç½®ï¼šä¸»å­—ç¬¦åº•éƒ¨ + é—´éš™ï¼Œå†è¡¥å¿ä¸‹æ ‡è‡ªèº«åŸºçº¿ */
                 double subY = (subAsc + gap - baseDes);
 
-                double totalAsc = baseAsc;                       // ×îÉÏÑØ
-                double totalDes = baseDes - gap - (subAsc - subDes); // ×îÏÂÑØ
+                double totalAsc = baseAsc;                       // æœ€ä¸Šæ²¿
+                double totalDes = baseDes - gap - (subAsc - subDes); // æœ€ä¸‹æ²¿
 
 
                 std::ostringstream oss;
@@ -1050,37 +1050,37 @@ private:
                 const std::string& sub = kids[1];
                 const std::string& sup = kids[2];
 
-                /* Ö÷×Ö·û */
+                /* ä¸»å­—ç¬¦ */
                 double baseW = extractWidth(base);
                 double baseAsc = extractAscent(base);
                 double baseDes = extractDescent(base);
 
-                /* ÏÂ±ê */
+                /* ä¸‹æ ‡ */
                 double subW = extractWidth(sub) * scale;
                 double subAsc = extractAscent(sub) * scale;
                 double subDes = extractDescent(sub) * scale;
 
 
-                /* ÉÏ±ê */
+                /* ä¸Šæ ‡ */
                 double supW = extractWidth(sup) * scale;
                 double supAsc = extractAscent(sup) * scale;
                 double supDes = extractDescent(sup) * scale;
 
 
-                /* ---------- ÕûÌåºĞ³ß´ç£¨ÒÔÖ÷×Ö·û»ùÏßÎª 0£© ---------- */
+                /* ---------- æ•´ä½“ç›’å°ºå¯¸ï¼ˆä»¥ä¸»å­—ç¬¦åŸºçº¿ä¸º 0ï¼‰ ---------- */
                 double totalW = std::max({ baseW, subW, supW });
                 double baseX = (totalW - baseW) / 2.0;
                 double subX = (totalW - subW) / 2.0;
                 double supX = (totalW - supW) / 2.0;
 
-                /* ÉÏ±êÎ»ÖÃ£ºÖ÷×Ö·û¶¥²¿ÉÏ·½ gap£¬ÔÙ²¹³¥ÉÏ±ê×ÔÉí»ùÏß */
+                /* ä¸Šæ ‡ä½ç½®ï¼šä¸»å­—ç¬¦é¡¶éƒ¨ä¸Šæ–¹ gapï¼Œå†è¡¥å¿ä¸Šæ ‡è‡ªèº«åŸºçº¿ */
                 double supY = -(-supDes + baseAsc + gap);
 
-                /* ÏÂ±êÎ»ÖÃ£ºÖ÷×Ö·ûµ×²¿ÏÂ·½ gap£¬ÔÙ²¹³¥ÏÂ±ê×ÔÉí»ùÏß */
+                /* ä¸‹æ ‡ä½ç½®ï¼šä¸»å­—ç¬¦åº•éƒ¨ä¸‹æ–¹ gapï¼Œå†è¡¥å¿ä¸‹æ ‡è‡ªèº«åŸºçº¿ */
                 double subY = (subAsc + gap - baseDes);
 
-                double totalAsc = baseAsc + gap + (supAsc - supDes); // ×îÉÏÑØ
-                double totalDes = baseDes - gap - (subAsc - subDes); // ×îÏÂÑØ
+                double totalAsc = baseAsc + gap + (supAsc - supDes); // æœ€ä¸Šæ²¿
+                double totalDes = baseDes - gap - (subAsc - subDes); // æœ€ä¸‹æ²¿
                 double totalH = totalAsc + totalDes;
 
                 std::ostringstream oss;
@@ -1094,8 +1094,8 @@ private:
                 return oss.str();
             });
         // ------------------------------------------------------------------
-// 1. mover  (ÉÏ»®Ïß / ÏÂ»®Ïß / ÉÏÏÂ¼ıÍ·)
-// Óï·¨: <mover> base overscript </mover>
+// 1. mover  (ä¸Šåˆ’çº¿ / ä¸‹åˆ’çº¿ / ä¸Šä¸‹ç®­å¤´)
+// è¯­æ³•: <mover> base overscript </mover>
 // ------------------------------------------------------------------
         registerTag("mover",
             [this](const XMLElement* e, const Style& st) -> std::string
@@ -1111,32 +1111,32 @@ private:
                 const std::string& base = kids[0];
                 const std::string& over = kids[1];
 
-                /* Ö÷×Ö·û */
+                /* ä¸»å­—ç¬¦ */
                 double baseW = extractWidth(base);
                 double baseAsc = extractAscent(base);
                 double baseDes = extractDescent(base);
 
-                /* ÉÏ±êÔ­Ê¼³ß´ç */
+                /* ä¸Šæ ‡åŸå§‹å°ºå¯¸ */
                 double overW0 = extractWidth(over);
                 double overAsc0 = extractAscent(over);
                 double overDes0 = extractDescent(over);
 
 
-                /* Ëõ·Åºó³ß´ç */
+                /* ç¼©æ”¾åå°ºå¯¸ */
                 double overW = overW0 * scale;
                 double overAsc = overAsc0 * scale;
                 double overDes = overDes0 * scale;
 
-                /* ---------- ÕûÌåºĞ³ß´ç£¨ÒÔÖ÷×Ö·û»ùÏßÎª 0£© ---------- */
+                /* ---------- æ•´ä½“ç›’å°ºå¯¸ï¼ˆä»¥ä¸»å­—ç¬¦åŸºçº¿ä¸º 0ï¼‰ ---------- */
                 double totalW = std::max(baseW, overW);
-                double baseX = 0;                      // Ö÷×Ö·û×óÉÏ½Ç x
-                double overX = (totalW - overW) / 2.0;   // ÉÏ±ê¾ÓÖĞ
+                double baseX = 0;                      // ä¸»å­—ç¬¦å·¦ä¸Šè§’ x
+                double overX = (totalW - overW) / 2.0;   // ä¸Šæ ‡å±…ä¸­
 
-                /* ÉÏ±êÎ»ÖÃ£ºÖ÷×Ö·û¶¥²¿ÉÏ·½ gap£¬ÔÙ²¹³¥ÉÏ±ê×ÔÉí»ùÏß */
+                /* ä¸Šæ ‡ä½ç½®ï¼šä¸»å­—ç¬¦é¡¶éƒ¨ä¸Šæ–¹ gapï¼Œå†è¡¥å¿ä¸Šæ ‡è‡ªèº«åŸºçº¿ */
                 double overY = -(-overDes + baseAsc + gap);
 
-                double totalAsc = baseAsc + gap + (overAsc - overDes); // ×îÉÏÑØ
-                double totalDes = baseDes;                           // ×îÏÂÑØ
+                double totalAsc = baseAsc + gap + (overAsc - overDes); // æœ€ä¸Šæ²¿
+                double totalDes = baseDes;                           // æœ€ä¸‹æ²¿
                 double totalH = totalAsc + totalDes;
 
                 std::ostringstream oss;
@@ -1144,18 +1144,18 @@ private:
                     << "\" data-asc=\"" << totalAsc
                     << "\" data-desc=\"" << totalDes
                     << "\">";
-                /* Ö÷×Ö·û£º»ùÏß y=0 */
+                /* ä¸»å­—ç¬¦ï¼šåŸºçº¿ y=0 */
                 oss << "<g transform=\"translate(" << baseX << ",0)\">" << base << "</g>";
-                /* ÉÏ±ê£º»ùÏß²¹³¥ºó°Ú·Å */
+                /* ä¸Šæ ‡ï¼šåŸºçº¿è¡¥å¿åæ‘†æ”¾ */
                 oss << "<g transform=\"translate(" << overX << "," << overY << ") scale(" << scale << ")\">"
                     << over << "</g>";
                 oss << "</g>";
                 return oss.str();
             });
         // ------------------------------------------------------------------
-// 2. mpadded  (ÈË¹¤ÉèÖÃ¿í¶È/¸ß¶È/Éî¶È)
-// Óï·¨: <mpadded width="..." height="..." depth="..."> child </mpadded>
-// µ¥Î»£ºem£¬¿ÉÊ¡ÂÔ·ûºÅ
+// 2. mpadded  (äººå·¥è®¾ç½®å®½åº¦/é«˜åº¦/æ·±åº¦)
+// è¯­æ³•: <mpadded width="..." height="..." depth="..."> child </mpadded>
+// å•ä½ï¼šemï¼Œå¯çœç•¥ç¬¦å·
 // ------------------------------------------------------------------
         registerTag("mpadded",
             [this](const XMLElement* e, const Style& st) -> std::string
@@ -1166,18 +1166,18 @@ private:
                 std::string inner = renderElement(child, st);
                 double em = std::stof(st.fontSize);
 
-                /* ½âÎöÊôĞÔ£¬È±Ê¡ÓÃ×ÓÔªËØ×ÔÉí³ß´ç */
+                /* è§£æå±æ€§ï¼Œç¼ºçœç”¨å­å…ƒç´ è‡ªèº«å°ºå¯¸ */
                 double w = getDimAttr(e, "width", extractWidth(inner) / em) * em;
                 double asc = getDimAttr(e, "height", extractAscent(inner) / em) * em;
                 double des = getDimAttr(e, "depth", extractDescent(inner) / em) * em;
 
-                /* ×ÓÔªËØ»ùÏßµ½ºĞÉÏÏÂÑØµÄ¾àÀë */
+                /* å­å…ƒç´ åŸºçº¿åˆ°ç›’ä¸Šä¸‹æ²¿çš„è·ç¦» */
                 double innerAsc = extractAscent(inner);
                 double innerDes = extractDescent(inner);
 
-                /* ¾ÓÖĞ·ÅÖÃ£ºË®Æ½¾ÓÖĞ£¬´¹Ö±°´»ùÏß¶ÔÆë */
+                /* å±…ä¸­æ”¾ç½®ï¼šæ°´å¹³å±…ä¸­ï¼Œå‚ç›´æŒ‰åŸºçº¿å¯¹é½ */
                 double dx = (w - extractWidth(inner)) * 0.5;
-                double dy = asc - innerAsc;   // Ê¹×ÓÔªËØ»ùÏßÂäÔÚ y=0
+                double dy = asc - innerAsc;   // ä½¿å­å…ƒç´ åŸºçº¿è½åœ¨ y=0
 
                 std::ostringstream oss;
                 oss << "<g class=\"mpadded\" data-w=\"" << w
@@ -1192,9 +1192,9 @@ private:
             });
 
         // ------------------------------------------------------------------
-        // 3. mphantom  (Õ¼Î»µ«²»ÏÔÊ¾)
-        // Óï·¨: <mphantom> child </mphantom>
-        // Óë mpadded ÀàËÆ£¬µ«°ÑÄÚÈİÉèÎªÍ¸Ã÷
+        // 3. mphantom  (å ä½ä½†ä¸æ˜¾ç¤º)
+        // è¯­æ³•: <mphantom> child </mphantom>
+        // ä¸ mpadded ç±»ä¼¼ï¼Œä½†æŠŠå†…å®¹è®¾ä¸ºé€æ˜
         // ------------------------------------------------------------------
         registerTag("mphantom",
             [this](const XMLElement* e, const Style& st) -> std::string
@@ -1216,7 +1216,7 @@ private:
             });
 
         // ----------------------------------------------------------
-// 1. <none>  ¡ª¡ª ¿ÕÕ¼Î»£¬¿í 0£¬¸ß/Éî 0
+// 1. <none>  â€”â€” ç©ºå ä½ï¼Œå®½ 0ï¼Œé«˜/æ·± 0
 // ----------------------------------------------------------
         registerTag("none",
             [](const XMLElement*, const Style&) -> std::string
@@ -1225,7 +1225,7 @@ private:
             });
 
         // ----------------------------------------------------------
-        // mprescripts ¡ª¡ª Õ¼Î»½Úµã£¬³ß´ç 0£¬»ùÏß 0
+        // mprescripts â€”â€” å ä½èŠ‚ç‚¹ï¼Œå°ºå¯¸ 0ï¼ŒåŸºçº¿ 0
         // ----------------------------------------------------------
         registerTag("mprescripts",
             [](const XMLElement*, const Style&) -> std::string
@@ -1234,8 +1234,8 @@ private:
             });
 
         // ----------------------------------------------------------
-        // mspace ¡ª¡ª Ö»²úÉúË®Æ½¼ä¾à
-        // width Ö§³Ö 2.5¡¢2.5em¡¢2.5ex µÈĞ´·¨
+        // mspace â€”â€” åªäº§ç”Ÿæ°´å¹³é—´è·
+        // width æ”¯æŒ 2.5ã€2.5emã€2.5ex ç­‰å†™æ³•
         // ----------------------------------------------------------
         registerTag("mspace",
             [](const XMLElement* e, const Style& st) -> std::string
@@ -1249,10 +1249,10 @@ private:
                         width = std::stod(s) * std::stof(st.fontSize);
                     }
                     else if (s.find("ex") != std::string::npos) {
-                        width = std::stod(s) * std::stof(st.fontSize) * 0.5; // 1ex ¡Ö 0.5em
+                        width = std::stod(s) * std::stof(st.fontSize) * 0.5; // 1ex â‰ˆ 0.5em
                     }
                     else {
-                        width = std::stod(s);          // ´¿Êı×Ö£¬Ä¬ÈÏµ¥Î» em
+                        width = std::stod(s);          // çº¯æ•°å­—ï¼Œé»˜è®¤å•ä½ em
                     }
                 }
 
@@ -1284,7 +1284,7 @@ static std::wstring makeKey(const std::wstring & name, int style) {
 
 
 FT_Face FreeTypeTextMeasurer::loadFace(const std::wstring & fontName, int style) {
-    // ¼òµ¥Ó³Éä£ºWindows ×ÖÌåÄ¿Â¼
+    // ç®€å•æ˜ å°„ï¼šWindows å­—ä½“ç›®å½•
     wchar_t winFontPath[MAX_PATH];
     SHGetFolderPathW(nullptr, CSIDL_FONTS, nullptr, 0, winFontPath);
 
@@ -1330,7 +1330,7 @@ FreeTypeTextMeasurer::measure(const std::wstring & text,
         if (FT_Load_Glyph(face, idx, FT_LOAD_DEFAULT)) continue;
         FT_GlyphSlot g = face->glyph;
 
-        width += (g->advance.x >> 6);   // 26.6 ¹Ì¶¨Ğ¡Êı ¡ú ÏñËØ
+        width += (g->advance.x >> 6);   // 26.6 å›ºå®šå°æ•° â†’ åƒç´ 
         if (g->metrics.horiBearingY > maxY) maxY = g->metrics.horiBearingY >> 6;
         if (g->metrics.horiBearingY - g->metrics.height < minY)
             minY = (g->metrics.horiBearingY - g->metrics.height) >> 6;
@@ -1340,11 +1340,11 @@ FreeTypeTextMeasurer::measure(const std::wstring & text,
     sz.width = width;
     sz.height = (maxY - minY);
     sz.ascent = maxY;
-    sz.descent = minY;         // baseline ¡ú bottom£¨minY Îª¸ºÖµ£©
+    sz.descent = minY;         // baseline â†’ bottomï¼ˆminY ä¸ºè´Ÿå€¼ï¼‰
     return sz;
 }
 
-/* ---------- µ¥Àı ---------- */
+/* ---------- å•ä¾‹ ---------- */
 MathML2SVG& MathML2SVG::instance() {
     static MathML2SVG inst;
     return inst;
@@ -1352,7 +1352,7 @@ MathML2SVG& MathML2SVG::instance() {
 MathML2SVG::MathML2SVG() : pImpl(std::make_unique<Impl>()) {}
 MathML2SVG::~MathML2SVG() = default;
 
-/* ±©Â¶½Ó¿Ú */
+/* æš´éœ²æ¥å£ */
 std::string MathML2SVG::convert(const std::string & mathml) {
     return pImpl->convert(mathml);
 }

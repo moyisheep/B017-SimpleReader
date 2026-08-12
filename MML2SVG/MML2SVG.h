@@ -26,13 +26,13 @@ class MathML2SVG {
 public:
     static MathML2SVG& instance();
 
-    // É¾³ı¿½±´/ÒÆ¶¯
+    // åˆ é™¤æ‹·è´/ç§»åŠ¨
     MathML2SVG(const MathML2SVG&) = delete;
     MathML2SVG& operator=(const MathML2SVG&) = delete;
     MathML2SVG(MathML2SVG&&) = delete;
     MathML2SVG& operator=(MathML2SVG&&) = delete;
 
-    /* ÒµÎñ½Ó¿Ú */
+    /* ä¸šåŠ¡æ¥å£ */
     std::string convert(const std::string& mathml);
 
     struct Style {
@@ -42,7 +42,7 @@ public:
         std::string fontStyle;
         std::string fontWeight;
     };
-    /* À©Õ¹µã */
+    /* æ‰©å±•ç‚¹ */
     using AttrMap = std::unordered_map<std::string, std::string>;
     using RenderFn = std::function<std::string(const tinyxml2::XMLElement*, const Style&)>;
     using AttrFn = void(*)(const class tinyxml2::XMLAttribute*, class Style&);
@@ -64,12 +64,12 @@ private:
 
 class FreeTypeTextMeasurer {
 public:
-    static FreeTypeTextMeasurer& instance();   // Meyers µ¥Àı
+    static FreeTypeTextMeasurer& instance();   // Meyers å•ä¾‹
     struct Size {
         float width = 0.f;
         float height = 0.f;
-        float ascent = 0.f;   // baseline ¡ú top
-        float descent = 0.f;  // baseline ¡ú bottom
+        float ascent = 0.f;   // baseline â†’ top
+        float descent = 0.f;  // baseline â†’ bottom
     };
     Size measure(const std::wstring& text,
         const std::wstring& fontName,

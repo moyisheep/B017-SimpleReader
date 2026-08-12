@@ -39,12 +39,12 @@ void TimerOutput::print()
 
     for (auto& m : m_map)
     {
-        // ¸ñÊ½»¯Îª 9 Î»Ğ¡Êı£¨ÄÉÃë¾«¶È£©
+        // æ ¼å¼åŒ–ä¸º 9 ä½å°æ•°ï¼ˆçº³ç§’ç²¾åº¦ï¼‰
         std::ostringstream time_oss;
         time_oss << std::fixed << std::setprecision(9) << (m.duration / 1000000000.0);
         std::string time_str = time_oss.str();
 
-        // ÔÚ . ºóÃ¿ 3 Î»²åÈëÒ»¸ö¿Õ¸ñ
+        // åœ¨ . åæ¯ 3 ä½æ’å…¥ä¸€ä¸ªç©ºæ ¼
         size_t dot_pos = time_str.find('.');
         if (dot_pos != std::string::npos) {
             for (size_t i = dot_pos + 4; i < time_str.length(); i += 4) {
@@ -52,11 +52,11 @@ void TimerOutput::print()
             }
         }
 
-        // ¹¹½¨ÍêÕûÊä³ö×Ö·û´®
+        // æ„å»ºå®Œæ•´è¾“å‡ºå­—ç¬¦ä¸²
         std::ostringstream oss;
         oss << std::left << std::setw(30) << m.name << ": "
-            << std::right << std::setw(12) << time_str << " Ãë, "
-            << std::right << std::setw(6) << m.times << " ´Î\n";
+            << std::right << std::setw(12) << time_str << " ç§’, "
+            << std::right << std::setw(6) << m.times << " æ¬¡\n";
 
         OutputDebugStringA(oss.str().c_str());
     }
