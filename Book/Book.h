@@ -49,9 +49,13 @@ public:
     virtual OCFPackage& get_ocf_package() = 0;
 
 
-    virtual bool has_script() = 0;
-    virtual bool has_font() = 0;
-    virtual bool has_css() = 0;
+
     virtual void clear() = 0;
     virtual std::string resolve_path(std::string base_url, std::string href) = 0;
+
+    virtual size_t get_total_words() { return 0; }
+
+    virtual bool has_script() { return false; }
+    virtual bool has_font() { return false; }
+    virtual bool has_css() { return false; }
 };

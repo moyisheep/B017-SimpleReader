@@ -68,7 +68,7 @@ public:
     std::vector<OCFRef>& get_spine() override;
     OCFPackage& get_ocf_package() override;
 
-
+    size_t get_total_words() override;
  
     bool has_script() override;
     bool has_font() override;

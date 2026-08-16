@@ -18,6 +18,174 @@ namespace fs = std::filesystem;
 //    MultiByteToWideChar(CP_UTF8, 0, s.c_str(), -1, &out[0], len);
 //    return out;
 //}
+
+#include <iostream>
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <cctype>
+#include <gumbo.h>
+
+namespace HtmlWordCounter {
+
+    // ============================================================
+    // 模块 1: 文本提取与清理 (保持不变)
+    // ============================================================
+    void extract_text_from_node(GumboNode* node, std::string& output) {
+        if (node->type == GUMBO_NODE_TEXT) {
+            output.append(node->v.text.text);
+        }
+        else if (node->type == GUMBO_NODE_ELEMENT) {
+            if (node->v.element.tag == GUMBO_TAG_SCRIPT || node->v.element.tag == GUMBO_TAG_STYLE) {
+                return;
+            }
+            GumboVector* children = &node->v.element.children;
+            for (unsigned int i = 0; i < children->length; ++i) {
+                extract_text_from_node(static_cast<GumboNode*>(children->data[i]), output);
+            }
+        }
+    }
+
+    std::string clean_text(const std::string& raw_text) {
+        std::string result;
+        result.reserve(raw_text.size());
+        bool in_whitespace = false;
+        for (char c : raw_text) {
+            if (std::isspace(static_cast<unsigned char>(c))) {
+                if (!in_whitespace) { result += ' '; in_whitespace = true; }
+            }
+            else {
+                result += c; in_whitespace = false;
+            }
+        }
+        // 去除首尾空格
+        if (!result.empty() && result.back() == ' ') result.pop_back();
+        if (!result.empty() && result.front() == ' ') result.erase(0, 1);
+        return result;
+    }
+
+    // ============================================================
+    // 模块 2: Unicode 辅助工具 (多语言支持核心)
+    // ============================================================
+
+    // 获取 UTF-8 字符的字节长度
+    size_t get_utf8_char_len(unsigned char first_byte) {
+        if ((first_byte & 0x80) == 0x00) return 1;       // 0xxxxxxx (ASCII)
+        if ((first_byte & 0xE0) == 0xC0) return 2;       // 110xxxxx
+        if ((first_byte & 0xF0) == 0xE0) return 3;       // 1110xxxx
+        if ((first_byte & 0xF8) == 0xF0) return 4;       // 11110xxx
+        return 1; // 非法字符按单字节处理
+    }
+
+    // 判断一个 UTF-8 字符是否是 "单词字符" (字母或数字)
+    // 注意：简单的实现只覆盖 ASCII 字母。为了支持多语言单词（如 Café），理想情况下应使用 ICU 库。
+    // 这里为了轻量化，假设 ASCII 范围内的符号为分隔符，汉字等由 CJK 判断处理。
+    bool is_word_char(const std::string& text, size_t pos, size_t char_len) {
+        unsigned char c = text[pos];
+        // ASCII 字母数字
+        if (char_len == 1 && std::isalnum(c)) return true;
+        return false;
+    }
+
+    // 判断是否是 CJK (中日韩) 字符
+    // 范围覆盖常用汉字、日文假名、韩文谚文
+    bool is_cjk_char(const std::string& text, size_t pos, size_t char_len) {
+        if (char_len < 3) return false; // CJK 字符通常是 3 字节 (也有扩展区是 4 字节)
+
+        unsigned char b1 = text[pos];
+        unsigned char b2 = text[pos + 1];
+        unsigned char b3 = text[pos + 2];
+
+        // CJK Unified Ideographs (4E00-9FFF) -> E4 B8 80 - E9 BF BF
+        // 这是一个简化判断，覆盖了绝大多数字符
+        if (b1 == 0xE4 && b2 >= 0xB8) return true;
+        if (b1 >= 0xE5 && b1 <= 0xE9) return true;
+
+        // 日文假名等 (3040-30FF) -> E3 81 80 - E3 8F BF
+        if (b1 == 0xE3 && b2 >= 0x81 && b2 <= 0x8F) return true;
+
+        // 韩文 Hangul Syllables (AC00-D7AF) -> EA B0 80 - ED 9E AF
+        if (b1 == 0xEA && b2 >= 0xB0) return true;
+        if (b1 >= 0xEB && b1 <= 0xED) return true;
+
+        return false;
+    }
+
+    // ============================================================
+    // 模块 3: 多语言单词计数器
+    // 逻辑：
+    // 1. 如果是汉字 -> 直接计数 +1 (字=词)
+    // 2. 如果是空格/标点 -> 结束当前单词
+    // 3. 如果是英文字母 -> 累积，直到遇到分隔符，计数 +1
+    // ============================================================
+    size_t count_multilingual_words(const std::string& text) {
+        if (text.empty()) return 0;
+
+        size_t word_count = 0;
+        bool in_word = false; // 标记是否正在处理英文单词
+
+        for (size_t i = 0; i < text.size(); ) {
+            unsigned char lead_byte = text[i];
+            size_t char_len = get_utf8_char_len(lead_byte);
+
+            if (i + char_len > text.size()) break; // 防止越界
+
+            // 1. 检查 CJK 字符 (每个字算一个词)
+            if (is_cjk_char(text, i, char_len)) {
+                // 如果之前在统计英文单词，先结算那个单词
+                if (in_word) {
+                    word_count++;
+                    in_word = false;
+                }
+                word_count++; // 汉字直接计数
+            }
+            // 2. 检查 ASCII 单词字符 (英文字母/数字)
+            else if (char_len == 1 && std::isalnum(lead_byte)) {
+                if (!in_word) {
+                    in_word = true; // 开始一个新单词
+                }
+                // 否则继续在单词中，不做操作
+            }
+            // 3. 分隔符 (空格、标点符号、其他符号)
+            else {
+                if (in_word) {
+                    word_count++;
+                    in_word = false;
+                }
+                // 分隔符本身不计数
+            }
+
+            i += char_len;
+        }
+
+        // 处理字符串末尾可能残留的英文单词
+        if (in_word) {
+            word_count++;
+        }
+
+        return word_count;
+    }
+
+    // ============================================================
+    // 主接口
+    // ============================================================
+    size_t count_words(const std::string& html_content) {
+        GumboOutput* output = gumbo_parse(html_content.c_str());
+        if (!output || !output->root) return 0;
+
+        std::string raw_text;
+        extract_text_from_node(output->root, raw_text);
+
+        std::string clean_str = clean_text(raw_text);
+
+        gumbo_destroy_output(&kGumboDefaultOptions, output);
+
+        return count_multilingual_words(clean_str);
+    }
+
+} // namespace HtmlWordCounter
+
+
 bool EPUBBook::is_xhtml(const std::string& file_path)
 {
     auto dot = file_path.rfind('.');
@@ -133,9 +301,6 @@ EPUBBook::~EPUBBook() {
 
 void EPUBBook::clear()
 {
-
-
-
     mz_zip_reader_end(&zip);
     m_cache.clear();
 
@@ -208,6 +373,18 @@ std::vector<OCFRef>& EPUBBook::get_spine()
 OCFPackage& EPUBBook::get_ocf_package()
 {
     return m_ocf_pkg;
+}
+
+size_t EPUBBook::get_total_words()
+{
+    size_t total_words = 0;
+    for (auto& spine: m_ocf_pkg.spine)
+    {
+        auto html = get_string(spine.href);
+        total_words += HtmlWordCounter::count_words(html);
+    }
+
+    return total_words;
 }
 
 

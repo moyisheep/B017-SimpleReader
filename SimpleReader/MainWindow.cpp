@@ -317,6 +317,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         g_cfg.font_size = record.fontSize > 0 ? record.fontSize : g_cfg.default_font_size;
         g_cfg.line_height = record.lineHeightMul > 0 ? record.lineHeightMul : g_cfg.default_line_height;
         g_cfg.document_width = record.docWidth > 0 ? record.docWidth : g_cfg.default_document_width;
+        
 
         int spine_size = g_book->get_spine().size();
         SendMessage(g_hViewScroll, SBM_SETSPINECOUNT, spine_size, 0);
@@ -343,6 +344,15 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         PostMessage(hwnd, WM_SIZE, 0, 0);
 
         SetStatus(STATUSBAR_INFO, L"加载完成");
+
+        if (record.totalWords <= 0)
+        {
+            record.totalWords = g_book->get_total_words();
+            g_recorder->flush();
+            DumpBookRecord();
+            
+        }
+ 
         SetForegroundWindow(hwnd);          // 关键：把输入焦点抢过来
         return 0;
     }
